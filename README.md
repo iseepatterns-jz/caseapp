@@ -1,6 +1,6 @@
 # Court Case Management System
 
-A comprehensive legal case management platform With AI-powered document analysis, forensic email/text message analysis, and advanced timeline building capabilities.
+A comprehensive legal case management platform with AI-powered document analysis, forensic email/text message analysis, and advanced timeline building capabilities.
 
 ## Project Structure
 
