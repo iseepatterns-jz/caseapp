@@ -1,0 +1,12 @@
+# Trivy ignore file for known acceptable vulnerabilities
+# Format: CVE-ID or vulnerability ID
+
+# Python base image vulnerabilities that are acceptable for development
+# These should be reviewed and updated regularly
+
+# Example entries (uncomment and modify as needed):
+# CVE-2023-12345  # Description of why this is acceptable
+# GHSA-xxxx-xxxx-xxxx  # Another acceptable vulnerability
+
+# Note: This file should be regularly reviewed and updated
+# Remove entries when vulnerabilities are fixed in newer versions
