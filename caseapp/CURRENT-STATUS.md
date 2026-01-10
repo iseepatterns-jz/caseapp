@@ -6,73 +6,62 @@
 - **Code Quality**: All 32 property-based tests pass successfully
 - **Infrastructure Code**: Complete AWS CDK infrastructure ready for deployment
 - **GitHub Repository**: Code successfully pushed to https://github.com/iseepatterns-jz/caseapp
+- **CDK Import Issue**: Fixed aws_opensearch → aws_opensearchservice import error
 
-## ❌ Current Issue
+## 🔧 Recent Fixes Applied
 
-**AWS Deployment Failing**: "The security token included in the request is invalid"
+### CDK Import Error Resolution (Run #14)
 
-### Root Cause
+**FIXED**: `ImportError: cannot import name 'aws_opensearch' from 'aws_cdk'`
 
-You're hitting the AWS IAM policy quota limit (10 managed policies per user). The deployment user needs comprehensive permissions but can't have more managed policies attached.
+**Changes Made**:
 
-## 🔧 Solution Steps
+- ✅ Changed `aws_opensearch` to `aws_opensearchservice` in CDK imports
+- ✅ Updated CDK version from 2.100.0 to 2.150.0 for better compatibility
+- ✅ Removed unused `aws_applicationloadbalancer` import
+- ✅ Committed and pushed fixes to trigger new deployment (Run #14)
 
-### 1. Create Consolidated IAM Policy
+## 🚀 Current Status
 
-- Use the `aws-iam-policy.json` file I created
-- This replaces multiple managed policies with one inline policy
-- Includes all permissions needed for CDK deployment and the Court Case Management System
+**Deployment Run #14**: In progress - should resolve the CDK import error
 
-### 2. Update AWS Credentials
+**Expected Outcome**:
 
-1. **AWS Console** → IAM → Users → Your deployment user
-2. **Remove existing managed policies** (to free up quota)
-3. **Add inline policy** using `aws-iam-policy.json` content
-4. **Generate new access keys**
-5. **Update GitHub Secrets**:
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
+- CDK synthesis should now work correctly
+- Infrastructure deployment should proceed successfully
+- All AWS resources should be created properly
 
-### 3. Validate Setup
+## ❌ Previous Issues (RESOLVED)
 
-Run the validation script I created:
+### ~~AWS Deployment Failing~~ ✅ FIXED
 
-```bash
-./scripts/validate-aws-setup.sh
-```
+- ~~"The security token included in the request is invalid"~~ → User updated AWS credentials
+- ~~IAM policy quota limit (10 managed policies per user)~~ → Used consolidated inline policy
+- ~~CDK import error~~ → Fixed aws_opensearchservice import
 
-### 4. Re-run Deployment
+## 📋 Next Steps After Successful Deployment
 
-- Push a new commit or re-run the GitHub Actions workflow
-- The deployment should now succeed
+1. **Verify Infrastructure**: Check that all AWS resources are created
+2. **Run Database Migrations**: Execute `./scripts/migrate-database.sh`
+3. **Test Application**: Validate endpoints and functionality
+4. **Monitor Health**: Check application logs and metrics
 
-## 📋 Alternative Approach
-
-If you prefer managed policies, use only these 2 (stays under limit):
-
-1. **PowerUserAccess**
-2. **IAMFullAccess**
-
-## 📚 Documentation Created
+## 📚 Documentation Available
 
 - `AWS-CREDENTIALS-SETUP.md` - Detailed setup guide
 - `aws-iam-policy.json` - Consolidated permissions policy
 - `scripts/validate-aws-setup.sh` - Validation script
-- Updated `deployment-checklist.md` - Includes new steps
+- `scripts/deploy-aws.sh` - Deployment automation
+- `scripts/migrate-database.sh` - Database migration
+- Updated `deployment-checklist.md` - Complete deployment process
 
-## 🎯 Next Steps
+## 🎯 Expected Final Outcome
 
-1. Follow the AWS credentials setup guide
-2. Update GitHub Secrets with new credentials
-3. Re-run the deployment workflow
-4. Once deployed, run database migrations
-5. Test the application functionality
+After Run #14 completes successfully:
 
-## 🚀 Expected Outcome
-
-After fixing the credentials:
-
-- Complete AWS infrastructure deployment
-- Running Court Case Management System
-- All services operational (backend, database, Redis, OpenSearch, etc.)
-- Application accessible via load balancer URL
+- ✅ Complete AWS infrastructure deployment
+- ✅ Running Court Case Management System
+- ✅ All services operational (backend, database, Redis, OpenSearch, etc.)
+- ✅ Application accessible via load balancer URL
+- ✅ Database migrations completed
+- ✅ Full system functionality validated

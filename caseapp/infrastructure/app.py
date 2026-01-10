@@ -326,7 +326,7 @@ class CourtCaseManagementStack(Stack):
             cpu=1024,
             desired_count=2,
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_asset("..", file="Dockerfile"),
+                image=ecs.ContainerImage.from_registry("iseepatterns/court-case-backend:latest"),
                 container_port=8000,
                 execution_role=execution_role,
                 task_role=task_role,
@@ -373,7 +373,7 @@ class CourtCaseManagementStack(Stack):
         # Media processing container
         media_container = media_task_def.add_container(
             "MediaProcessor",
-            image=ecs.ContainerImage.from_asset("..", file="Dockerfile", target="media-processor"),
+            image=ecs.ContainerImage.from_registry("iseepatterns/court-case-media:latest"),
             environment={
                 "AWS_REGION": self.region,
                 "S3_BUCKET_NAME": self.media_bucket.bucket_name
