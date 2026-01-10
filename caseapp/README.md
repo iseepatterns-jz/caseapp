@@ -256,3 +256,4 @@ For technical support, feature requests, or bug reports:
 ---
 
 **Built with ❤️ for legal professionals who need powerful, secure, and intelligent case management tools.**
+# Deployment ready

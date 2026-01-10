@@ -2,132 +2,133 @@
 
 ## Current Issue
 
-The deployment is failing with "The security token included in the request is invalid" which indicates AWS credentials are not properly configured.
+The CI/CD pipeline is failing with "The security token included in the request is invalid" due to AWS IAM policy quota limits.
 
-## Required GitHub Secrets
+## Solution: Consolidated IAM Policy
 
-You need to add these secrets to your GitHub repository:
+### Step 1: Create Custom Inline Policy
 
-### 1. AWS_ACCESS_KEY_ID
+Instead of using multiple managed policies (which hit the 10-policy limit), create a single custom inline policy:
 
-- Your AWS access key ID
-- Format: `AKIA...` (20 characters)
+1. **Go to AWS IAM Console** → Users → Select your deployment user
+2. **Click "Add permissions"** → "Create inline policy"
+3. **Switch to JSON tab** and paste the contents of `aws-iam-policy.json`
+4. **Name the policy**: `CourtCaseManagementDeploymentPolicy`
+5. **Click "Create policy"**
 
-### 2. AWS_SECRET_ACCESS_KEY
+### Step 2: Remove Existing Managed Policies
 
-- Your AWS secret access key
-- Format: 40-character string
+Remove any existing managed policies to free up quota:
 
-### 3. Optional: AWS_SESSION_TOKEN
+- Go to the user's "Permissions" tab
+- Remove managed policies one by one
+- Keep only the new inline policy
 
-- Only needed if using temporary credentials
-- Not required for IAM user credentials
+### Step 3: Generate New Access Keys
 
-## How to Add GitHub Secrets
+1. **Go to Security credentials tab** for your user
+2. **Delete existing access keys** (if any)
+3. **Create new access key** → Choose "Command Line Interface (CLI)"
+4. **Download the credentials** or copy them securely
+
+### Step 4: Update GitHub Secrets
 
 1. **Go to your GitHub repository**: https://github.com/iseepatterns-jz/caseapp
-2. **Click Settings** (in the repository, not your profile)
-3. **Click "Secrets and variables"** → **"Actions"**
-4. **Click "New repository secret"**
-5. **Add each secret**:
-   - Name: `AWS_ACCESS_KEY_ID`
-   - Value: Your AWS access key ID
-   - Click "Add secret"
-   - Repeat for `AWS_SECRET_ACCESS_KEY`
+2. **Settings** → **Secrets and variables** → **Actions**
+3. **Update these secrets**:
+   - `AWS_ACCESS_KEY_ID`: Your new access key ID
+   - `AWS_SECRET_ACCESS_KEY`: Your new secret access key
 
-## How to Get AWS Credentials
+### Step 5: Test the Deployment
 
-### Option 1: Create IAM User (Recommended)
+1. **Go to Actions tab** in your GitHub repository
+2. **Re-run the failed workflow** or push a new commit to trigger deployment
+3. **Monitor the "deploy-production" job** to ensure it passes
 
-1. Go to AWS Console → IAM → Users
-2. Click "Create user"
-3. Username: `github-actions-caseapp`
-4. Select "Programmatic access"
-5. Attach policies:
-   - `PowerUserAccess` (or create custom policy)
-   - `IAMReadOnlyAccess`
-6. Download the credentials CSV file
-7. Use the Access Key ID and Secret Access Key
+## Alternative: Minimal Managed Policies Approach
 
-### Option 2: Use Existing IAM User
+If you prefer managed policies, use only these 2 (stays under 10-policy limit):
 
-If you already have an IAM user:
+1. **PowerUserAccess** - Provides full access except IAM user/group/role/policy management
+2. **IAMFullAccess** - Provides IAM permissions needed for CDK
 
-1. Go to AWS Console → IAM → Users
-2. Select your user
-3. Go to "Security credentials" tab
-4. Click "Create access key"
-5. Choose "Command Line Interface (CLI)"
-6. Download the credentials
+This gives you comprehensive permissions while staying under the quota.
 
-## Required AWS Permissions
+## Verification Commands
 
-The IAM user needs these permissions for deployment:
-
-- CloudFormation (full access)
-- ECS (full access)
-- VPC (full access)
-- RDS (full access)
-- ElastiCache (full access)
-- S3 (full access)
-- IAM (read access, create roles)
-- EC2 (full access)
-- Application Load Balancer (full access)
-
-## Testing AWS Credentials
-
-You can test your credentials locally:
+After updating credentials, verify they work:
 
 ```bash
-# Configure AWS CLI
-aws configure
-# Enter your Access Key ID
-# Enter your Secret Access Key
-# Enter region: us-east-1
-# Enter output format: json
-
-# Test credentials
+# Test AWS credentials
 aws sts get-caller-identity
+
+# Test CDK permissions
+aws cloudformation describe-stacks --region us-east-1
+
+# Test S3 permissions
+aws s3 ls
 ```
-
-## Security Best Practices
-
-1. **Use IAM User**: Don't use root account credentials
-2. **Minimal Permissions**: Only grant necessary permissions
-3. **Rotate Keys**: Regularly rotate access keys
-4. **Monitor Usage**: Set up CloudTrail for API monitoring
-5. **Use Temporary Credentials**: Consider AWS STS for temporary access
 
 ## Troubleshooting
 
-### Error: "The security token included in the request is invalid"
+### If deployment still fails:
 
-- **Cause**: Invalid or missing AWS credentials
-- **Solution**: Verify GitHub Secrets are correctly set
+1. **Check AWS region**: Ensure you're deploying to `us-east-1`
+2. **Verify account limits**: Check if you have service limits that prevent resource creation
+3. **Check CloudFormation events**: Look at the stack events in AWS Console for specific errors
+4. **Enable CDK debug**: Add `--debug` flag to CDK commands for verbose output
 
-### Error: "Access Denied"
+### Common Issues:
 
-- **Cause**: Insufficient IAM permissions
-- **Solution**: Add required permissions to IAM user
+- **VPC limits**: Default limit is 5 VPCs per region
+- **Elastic IP limits**: Default limit is 5 per region
+- **RDS subnet groups**: Check if you have existing subnet groups
+- **Security group limits**: Default limit is 2500 per VPC
 
-### Error: "Region not found"
+## Security Best Practices
 
-- **Cause**: Invalid AWS region
-- **Solution**: Ensure region is set to `us-east-1`
+1. **Use least privilege**: The provided policy gives necessary permissions but review for your specific needs
+2. **Rotate access keys**: Set up regular rotation (every 90 days)
+3. **Enable CloudTrail**: Monitor API calls for security
+4. **Use IAM roles**: Consider using IAM roles for EC2/ECS instead of access keys where possible
 
-## Next Steps After Adding Credentials
+## Next Steps After Successful Deployment
 
-1. Add the AWS credentials to GitHub Secrets
-2. Re-run the failed GitHub Actions workflow
-3. Monitor the deployment logs
-4. Verify the infrastructure is created in AWS Console
+1. **Verify all services are running**:
 
-## Alternative: AWS OIDC (Advanced)
+   ```bash
+   # Check ECS services
+   aws ecs list-services --cluster CourtCaseCluster
 
-For enhanced security, you can use OpenID Connect instead of long-lived credentials:
+   # Check RDS instance
+   aws rds describe-db-instances
 
-1. Create an OIDC identity provider in AWS
-2. Create an IAM role that trusts GitHub Actions
-3. Use `aws-actions/configure-aws-credentials@v4` with role assumption
+   # Check load balancer
+   aws elbv2 describe-load-balancers
+   ```
 
-This is more secure but requires additional setup.
+2. **Run database migrations**:
+
+   ```bash
+   # Connect to ECS and run migrations
+   ./scripts/migrate-database.sh
+   ```
+
+3. **Test the application**:
+
+   - Visit the load balancer URL
+   - Check `/health` endpoint
+   - Verify `/docs` API documentation
+
+4. **Set up monitoring**:
+   - CloudWatch dashboards
+   - Application logs
+   - Performance metrics
+
+## Support
+
+If you continue to have issues:
+
+1. Check the GitHub Actions logs for specific error messages
+2. Review AWS CloudFormation events in the console
+3. Verify all prerequisites are met in the deployment checklist

@@ -6,7 +6,13 @@
 
 - [ ] AWS Account with appropriate permissions
 - [ ] AWS CLI configured with credentials
-- [ ] CDK CLI installed and bootstrapped
+- [ ] CDK CLI installed (`npm install -g aws-cdk`)
+- [ ] IAM policy quota resolved (see AWS-CREDENTIALS-SETUP.md)
+- [ ] Consolidated IAM policy created and applied
+- [ ] New AWS access keys generated
+- [ ] GitHub Secrets updated with new credentials
+- [ ] AWS setup validated (`./scripts/validate-aws-setup.sh`)
+- [ ] CDK bootstrapped (done automatically during deployment)
 - [ ] Domain name registered (optional, for custom domain)
 - [ ] SSL certificate requested in AWS Certificate Manager
 

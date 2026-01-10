@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CDKBootstrapPermissions",
+      "Effect": "Allow",
+      "Action": ["cloudformation:*", "s3:*", "iam:*", "ssm:*", "ecr:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EC2VPCPermissions",
+      "Effect": "Allow",
+      "Action": ["ec2:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECSPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:*",
+        "elasticloadbalancing:*",
+        "application-autoscaling:*",
+        "logs:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RDSPermissions",
+      "Effect": "Allow",
+      "Action": ["rds:*", "secretsmanager:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ElastiCachePermissions",
+      "Effect": "Allow",
+      "Action": ["elasticache:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OpenSearchPermissions",
+      "Effect": "Allow",
+      "Action": ["es:*", "opensearch:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CognitoPermissions",
+      "Effect": "Allow",
+      "Action": ["cognito-idp:*", "cognito-identity:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AIServicesPermissions",
+      "Effect": "Allow",
+      "Action": ["textract:*", "comprehend:*", "transcribe:*", "bedrock:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudFrontPermissions",
+      "Effect": "Allow",
+      "Action": ["cloudfront:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "STSPermissions",
+      "Effect": "Allow",
+      "Action": ["sts:GetCallerIdentity", "sts:AssumeRole"],
+      "Resource": "*"
+    }
+  ]
+}
