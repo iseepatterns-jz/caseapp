@@ -235,8 +235,39 @@ jobs:
         env:
           ENVIRONMENT: production
         run: |
-          chmod +x scripts/deploy-aws.sh
-          ./scripts/deploy-aws.sh deploy
+          # Verify AWS credentials
+          echo "Verifying AWS credentials..."
+          aws sts get-caller-identity
+
+          # Check if we have the required secrets
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "❌ AWS credentials not configured in GitHub Secrets"
+            echo "Please add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to repository secrets"
+            exit 1
+          fi
+
+          # Install CDK dependencies
+          cd infrastructure
+          npm install
+
+          # Bootstrap CDK if needed
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS Account ID: $ACCOUNT_ID"
+
+          # Check if CDK is bootstrapped
+          if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "Bootstrapping CDK..."
+            npx cdk bootstrap aws://$ACCOUNT_ID/${{ env.AWS_REGION }}
+          else
+            echo "CDK already bootstrapped"
+          fi
+
+          # Deploy infrastructure
+          echo "Deploying infrastructure..."
+          npx cdk deploy CourtCaseManagementStack --require-approval never
+
+          cd ..
+          echo "✅ Deployment completed successfully"
 
       - name: Run post-deployment validation
         run: |
