@@ -183,12 +183,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install Node.js for CDK
+      - name: Set up Python for CDK
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Node.js for CDK CLI
         uses: actions/setup-node@v4
         with:
           node-version: "18"
 
-      - name: Install AWS CDK
+      - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
 
       - name: Deploy to staging
@@ -196,6 +201,12 @@ jobs:
         env:
           ENVIRONMENT: staging
         run: |
+          # Install Python CDK dependencies
+          cd infrastructure
+          pip install -r requirements.txt
+          npm install
+          cd ..
+
           chmod +x scripts/deploy-aws.sh
           ./scripts/deploy-aws.sh deploy
 
@@ -222,12 +233,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install Node.js for CDK
+      - name: Set up Python for CDK
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Node.js for CDK CLI
         uses: actions/setup-node@v4
         with:
           node-version: "18"
 
-      - name: Install AWS CDK
+      - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
 
       - name: Deploy to production
@@ -246,8 +262,13 @@ jobs:
             exit 1
           fi
 
-          # Install CDK dependencies
+          # Install Python CDK dependencies
           cd infrastructure
+          echo "Installing Python CDK dependencies..."
+          pip install -r requirements.txt
+
+          # Install Node.js CDK dependencies (for CLI)
+          echo "Installing Node.js CDK CLI dependencies..."
           npm install
 
           # Bootstrap CDK if needed
@@ -256,15 +277,19 @@ jobs:
 
           # Check if CDK is bootstrapped
           if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region ${{ env.AWS_REGION }} 2>/dev/null; then
-            echo "Bootstrapping CDK..."
-            npx cdk bootstrap aws://$ACCOUNT_ID/${{ env.AWS_REGION }}
+            echo "Bootstrapping CDK for Python app..."
+            cdk bootstrap aws://$ACCOUNT_ID/${{ env.AWS_REGION }}
           else
             echo "CDK already bootstrapped"
           fi
 
+          # Synthesize to verify the app works
+          echo "Synthesizing CDK app..."
+          cdk synth CourtCaseManagementStack
+
           # Deploy infrastructure
           echo "Deploying infrastructure..."
-          npx cdk deploy CourtCaseManagementStack --require-approval never
+          cdk deploy CourtCaseManagementStack --require-approval never
 
           cd ..
           echo "✅ Deployment completed successfully"

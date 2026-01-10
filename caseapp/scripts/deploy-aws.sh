@@ -33,6 +33,18 @@ print_error() {
 check_prerequisites() {
     print_status "Checking prerequisites..."
     
+    # Check Python
+    if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+        print_error "Python is not installed. Please install Python 3.11+."
+        exit 1
+    fi
+    
+    # Check pip
+    if ! command -v pip &> /dev/null && ! command -v pip3 &> /dev/null; then
+        print_error "pip is not installed. Please install pip."
+        exit 1
+    fi
+    
     # Check AWS CLI
     if ! command -v aws &> /dev/null; then
         print_error "AWS CLI is not installed. Please install it first."
@@ -41,7 +53,7 @@ check_prerequisites() {
     
     # Check CDK CLI
     if ! command -v cdk &> /dev/null; then
-        print_error "AWS CDK CLI is not installed. Please install it first."
+        print_error "AWS CDK CLI is not installed. Please install it first: npm install -g aws-cdk"
         exit 1
     fi
     
@@ -103,6 +115,16 @@ bootstrap_cdk() {
     else
         print_status "Bootstrapping CDK..."
         cd infrastructure
+        
+        # Install Python dependencies first
+        print_status "Installing Python CDK dependencies..."
+        pip install -r requirements.txt
+        
+        # Install Node.js dependencies for CLI
+        print_status "Installing Node.js CDK CLI dependencies..."
+        npm install
+        
+        # Bootstrap
         cdk bootstrap aws://$ACCOUNT_ID/$AWS_REGION
         cd ..
         print_status "CDK bootstrapped successfully ✅"
@@ -115,13 +137,20 @@ deploy_infrastructure() {
     
     cd infrastructure
     
-    # Install dependencies
+    # Install Python dependencies
+    print_status "Installing Python CDK dependencies..."
+    pip install -r requirements.txt
+    
+    # Install Node.js dependencies for CLI
+    print_status "Installing Node.js CDK CLI dependencies..."
     npm install
     
     # Synthesize CloudFormation template
+    print_status "Synthesizing CDK app..."
     cdk synth
     
     # Deploy the stack
+    print_status "Deploying CDK stack..."
     cdk deploy $STACK_NAME --require-approval never
     
     cd ..
