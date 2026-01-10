@@ -8,9 +8,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
 # Install system dependencies and clean up in single layer
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -33,8 +30,7 @@ WORKDIR /app
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip cache purge
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
 COPY backend/ ./backend/
@@ -42,8 +38,9 @@ COPY backend/ ./backend/
 # Create shared directory if it doesn't exist
 RUN mkdir -p ./shared
 
-# Change ownership to non-root user
-RUN chown -R appuser:appuser /app
+# Create non-root user for security (after file operations)
+RUN groupadd -r appuser && useradd -r -g appuser appuser \
+    && chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
