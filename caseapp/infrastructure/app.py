@@ -14,11 +14,10 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_cloudfront as cloudfront,
     aws_elasticache as elasticache,
-    aws_opensearch as opensearch,
+    aws_opensearchservice as opensearch,
     aws_cognito as cognito,
     aws_iam as iam,
     aws_logs as logs,
-    aws_applicationloadbalancer as alb,
     Duration,
     RemovalPolicy
 )
