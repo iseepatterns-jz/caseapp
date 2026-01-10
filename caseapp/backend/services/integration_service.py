@@ -21,7 +21,7 @@ from models.case import Case
 from models.document import Document
 from models.timeline import TimelineEvent
 from models.media import MediaEvidence
-from models.forensic import ForensicSource
+from models.forensic_analysis import ForensicSource
 from services.case_service import CaseService
 from services.document_service import DocumentService
 from services.timeline_service import TimelineService

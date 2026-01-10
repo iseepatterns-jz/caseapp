@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/core/auth.py
+# hypothesis_version: 6.150.0
+
+['Authentication error', 'Bearer', 'Data access logged', 'WWW-Authenticate', 'action', 'admin', 'admin_resource', 'attorney', 'attorney_resource', 'auto', 'bcrypt', 'case', 'client', 'client_ip', 'data_access', 'delete', 'document', 'event_type', 'exp', 'failure_reason', 'forensic', 'mfa_required', 'mfa_verified', 'read', 'requested_resource', 'required_roles', 'resource_id', 'resource_type', 'roles', 'share', 'staff', 'staff_resource', 'sub', 'success', 'timeline', 'timestamp', 'unknown', 'user-agent', 'user_agent', 'user_id', 'user_resource', 'user_roles', 'utf-8', 'write']

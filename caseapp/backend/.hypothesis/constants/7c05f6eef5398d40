@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/schemas/export.py
+# hypothesis_version: 6.150.0
+
+[300, 600, 800, 1080, 1920, 3000, 4000, '+00:00', 'Case ID', 'Current page number', 'Export filters', 'Export format', 'Export format name', 'Export timestamp', 'File size in bytes', 'Filter value', 'Format description', 'Format of the export', 'Image resolution', 'Status message', 'Type of filter', 'Visualization theme', 'Z', 'case_id', 'communication', 'comprehensive', 'csv', 'date_range', 'end_date', 'equals', 'event_types', 'evidence_collection', 'export_type', 'filters', 'forensic', 'incident', 'json', 'legal_action', 'meeting', 'other', 'pdf', 'png', 'professional', 'selective', 'source_ids', 'start_date', 'timeline']

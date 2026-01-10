@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/encryption_service.py
+# hypothesis_version: 6.150.0
+
+['AES-256-GCM', 'AES_256', 'AWS-KMS', 'CiphertextBlob', 'KMS_KEY_ID', 'KeyId', 'Plaintext', 'communication_id', 'communication_type', 'content_hash', 'document_encryption', 'document_id', 'encrypted_at', 'encrypted_content', 'encrypted_data', 'encrypted_data_key', 'encrypted_key', 'encrypted_metadata', 'encryption_algorithm', 'encryption_context', 'error', 'failed_count', 'failed_documents', 'key_id', 'key_management', 'kms', 'local-dev-key', 'local-fallback-key', 'message', 'message_length', 'metadata', 'plaintext_key', 'purpose', 'recipient_ids', 'rotated_count', 'rotation_timestamp', 'sender_id', 'utf-8']

@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/core/service_manager.py
+# hypothesis_version: 6.150.0
+
+['ai_services', 'aws_services', 'bedrock_integration', 'connection_closed', 'connection_verified', 'core_services', 'database', 'details', 'encryption_enabled', 'error', 'healthy', 'healthy_services', 'import_successful', 'initialized_services', 'integration_services', 'managed_by_boto3', 'message', 'partial', 'redis', 'security_services', 'service_details', 'service_errors', 'service_manager', 'services', 'services_available', 'services_initialized', 'shutdown_type', 'stateless', 'status', 'success', 'successful_services', 'tables_created', 'total_services']

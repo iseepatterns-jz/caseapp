@@ -16,7 +16,7 @@ from services.document_service import DocumentService
 from services.timeline_service import TimelineService
 from services.media_service import MediaService
 # from services.forensic_analysis_service import ForensicAnalysisService  # Skip due to missing dependencies
-from services.collaboration_service import CollaborationService
+from services.timeline_collaboration_service import TimelineCollaborationService as CollaborationService
 from services.case_insight_service import CaseInsightService
 from services.export_service import ExportService
 from services.integration_service import IntegrationService
