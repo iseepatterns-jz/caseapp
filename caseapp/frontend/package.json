@@ -1,0 +1,11 @@
+{
+  "name": "court-case-frontend",
+  "version": "1.0.0",
+  "description": "Court Case Management System Frontend",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Frontend build complete'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

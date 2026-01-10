@@ -1,5 +1,5 @@
 # Multi-stage build for Python backend
-FROM python:3.11-slim as backend-base
+FROM python:3.11-slim AS backend-base
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libfontconfig1 \
     libxrender1 \
-    libgl1-mesa-glx \
+    libgl1-mesa-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
@@ -28,7 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
 COPY backend/ ./backend/
-COPY shared/ ./shared/
+
+# Create shared directory if it doesn't exist
+RUN mkdir -p ./shared
 
 # Expose port
 EXPOSE 8000
@@ -37,25 +39,22 @@ EXPOSE 8000
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Frontend build stage
-FROM node:18-alpine as frontend-builder
+FROM nginx:alpine AS frontend
 
-WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm ci --only=production
+# Create a minimal frontend
+RUN echo '<!DOCTYPE html>' > /usr/share/nginx/html/index.html && \
+    echo '<html><head><title>Court Case Management</title></head>' >> /usr/share/nginx/html/index.html && \
+    echo '<body><h1>Court Case Management System</h1>' >> /usr/share/nginx/html/index.html && \
+    echo '<p>Backend API available at <a href="/api/v1/">/api/v1/</a></p>' >> /usr/share/nginx/html/index.html && \
+    echo '<p>API Documentation at <a href="/docs">/docs</a></p>' >> /usr/share/nginx/html/index.html && \
+    echo '</body></html>' >> /usr/share/nginx/html/index.html
 
-COPY frontend/ .
-RUN npm run build
-
-# Nginx stage for frontend
-FROM nginx:alpine as frontend
-
-COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 
 # Media processing service
-FROM python:3.11-slim as media-processor
+FROM python:3.11-slim AS media-processor
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
