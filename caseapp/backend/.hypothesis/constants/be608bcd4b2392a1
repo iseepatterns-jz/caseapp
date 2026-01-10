@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/main_simple.py
+# hypothesis_version: 6.150.0
+
+[8000, '*', '/', '/api/docs', '/api/redoc', '/health', '0.0.0.0', '1.0.0', '__main__', 'healthy', 'infrastructure', 'initialized', 'iso', 'main_simple:app', 'message', 'status', 'version']

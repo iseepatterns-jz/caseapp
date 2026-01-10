@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/models/forensic_analysis.py
+# hypothesis_version: 6.150.0
+
+[0.0, 5.0, 200, 500, 'Case', 'ForensicItem', 'ForensicSource', 'ForensicTimelinePin', 'TimelineEvent', 'User', 'all, delete-orphan', 'analysis_reports', 'app_data', 'browser_history', 'call_log', 'cases.id', 'completed', 'contact', 'email', 'failed', 'forensic_alerts', 'forensic_item', 'forensic_items', 'forensic_items.id', 'forensic_searches', 'forensic_sources', 'forensic_sources.id', 'imessage', 'location', 'partial', 'pending', 'processing', 'sms', 'source', 'timeline_events.id', 'timeline_pins', 'users.id', 'whatsapp']

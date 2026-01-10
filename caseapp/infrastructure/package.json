@@ -1,0 +1,28 @@
+{
+  "name": "court-case-infrastructure",
+  "version": "1.0.0",
+  "description": "AWS CDK infrastructure for Court Case Management System",
+  "main": "app.py",
+  "scripts": {
+    "build": "echo 'No build step required for Python CDK'",
+    "watch": "cdk watch",
+    "test": "python -m pytest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.100.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "infrastructure",
+    "legal",
+    "court-case"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

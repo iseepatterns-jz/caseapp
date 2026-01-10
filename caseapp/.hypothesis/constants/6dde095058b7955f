@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/models/media.py
+# hypothesis_version: 6.150.0
+
+[100, 255, 500, 1024, 3600, '#FF0000', 'CASCADE', 'Case', 'EvidencePin', 'MediaAnnotation', 'MediaEvidence', 'User', 'aac', 'all, delete-orphan', 'annotations', 'audio', 'avi', 'bmp', 'body_cam', 'cases.id', 'cctv', 'completed', 'dash_cam', 'document_scan', 'failed', 'flac', 'flv', 'gif', 'image', 'jpeg', 'media', 'media_access_logs', 'media_annotations', 'media_evidence', 'media_evidence.id', 'media_share_links', 'mkv', 'mov', 'mp3', 'mp4', 'ogg', 'other', 'pdf', 'pending', 'phone_recording', 'png', 'processing', 'raw', 'screenshot', 'skipped', 'surveillance', 'tiff', 'unknown', 'users.id', 'video', 'wav', 'webm', 'webp', 'wma', 'wmv']

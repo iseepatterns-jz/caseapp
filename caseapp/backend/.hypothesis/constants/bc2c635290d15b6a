@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/core/auth.py
+# hypothesis_version: 6.150.0
+
+['Authentication error', 'Bearer', 'WWW-Authenticate', 'admin', 'attorney', 'auto', 'bcrypt', 'client', 'exp', 'roles', 'staff', 'sub']

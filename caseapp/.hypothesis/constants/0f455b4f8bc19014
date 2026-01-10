@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/core/exceptions.py
+# hypothesis_version: 6.150.0
+
+['HTTP exception', 'VALIDATION_ERROR', 'Validation error', 'details', 'error_code', 'message', 'success', 'validation_errors']

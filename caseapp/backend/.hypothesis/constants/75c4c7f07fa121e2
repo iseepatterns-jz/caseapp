@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/document_service.py
+# hypothesis_version: 6.150.0
+
+[1024, 3600, 'Bucket', 'CASE_NOT_FOUND', 'DOCUMENT_NOT_FOUND', 'FILE_SIZE_EXCEEDED', 'File uploaded to S3', 'Key', '_level', '_type', 'by_status', 'by_type', 'case_id', 'delete', 'document', 'download_requested', 'generated_at', 'get_object', 'original_filename', 's3', 'standard', 'status', 'total_documents', 'total_size_bytes', 'total_size_mb', 'update', 'upload', 'upload_timestamp', 'uploaded_by', 'value']

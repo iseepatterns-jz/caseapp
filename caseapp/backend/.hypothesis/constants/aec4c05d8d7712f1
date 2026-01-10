@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/audit_service.py
+# hypothesis_version: 6.150.0
+
+[100, 'API request logged', 'Audit log created', 'activity_count', 'api_call', 'api_request', 'by_action', 'by_entity_type', 'description', 'duration_ms', 'generated_at', 'info', 'most_active_users', 'period_days', 'query_params', 'response_data', 'security', 'security_event', 'severity', 'status', 'total_entries', 'user_id']

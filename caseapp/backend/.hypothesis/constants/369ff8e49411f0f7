@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/media_service.py
+# hypothesis_version: 6.150.0
+
+['...', './uploads/media', '.aac', '.avi', '.bmp', '.flac', '.flv', '.gif', '.jpeg', '.jpg', '.m4a', '.mkv', '.mov', '.mp3', '.mp4', '.ogg', '.pdf', '.png', '.tif', '.tiff', '.wav', '.webm', '.webp', '.wma', '.wmv', 'Failed to get media', 'MEDIA_UPLOAD_PATH', 'Media access logged', 'Media search failed', 'Media upload failed', 'aac', 'application/pdf', 'audio/', 'avi', 'bmp', 'create', 'expires_at', 'flac', 'flv', 'gif', 'image/', 'jpeg', 'm4a', 'media', 'media_evidence', 'media_id', 'media_share_link', 'mkv', 'mp3', 'mp4', 'ocr', 'ogg', 'png', 'quicktime', 'share_link', 'shared_view', 'thumbnail', 'tiff', 'token', 'transcription', 'video/', 'view_limit', 'views_remaining', 'wav', 'wb', 'webm', 'webp', 'wma', 'wmv']

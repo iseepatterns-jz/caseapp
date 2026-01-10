@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/webhook_service.py
+# hypothesis_version: 6.150.0
+
+[100, 200, 300, 'Content-Type', 'Endpoint not found', 'User-Agent', 'X-Webhook-Signature', 'active_endpoints', 'ai.insight.generated', 'application/json', 'average_retries', 'cancelled', 'case.closed', 'case.created', 'case.updated', 'data', 'delivered', 'delivered_at', 'delivery_id', 'document.analyzed', 'document.uploaded', 'endpoint_breakdown', 'endpoint_id', 'error', 'error_message', 'event', 'event_breakdown', 'export.generated', 'failed', 'id', 'media.processed', 'message', 'normal', 'pending', 'period_hours', 'response_body', 'response_code', 'retrying', 'status_breakdown', 'success', 'success_rate_percent', 'test', 'timestamp', 'total_deliveries', 'total_endpoints', 'webhook_delivery']

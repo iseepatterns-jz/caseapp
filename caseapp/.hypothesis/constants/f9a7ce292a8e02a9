@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/timeline_service.py
+# hypothesis_version: 6.150.0
+
+[100, '+00:00', 'CASE_NOT_FOUND', 'EVENT_NOT_FOUND', 'EVIDENCE_NOT_FOUND', 'Evidence pin removed', 'Evidence pin updated', 'INVALID_DATE_RANGE', 'PIN_NOT_FOUND', 'Z', 'create', 'delete', 'display_order', 'document', 'end_date', 'event_date', 'event_id', 'event_type', 'evidence_pin', 'new_date', 'reorder', 'timeline', 'timeline_event', 'update', 'value']

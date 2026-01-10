@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/core/config.py
+# hypothesis_version: 6.150.0
+
+[1024, '.doc', '.docx', '.env', '.pdf', '.txt', '/api/v1', '1.0.0', 'HS256', 'INFO', 'court-case-documents', 'us-east-1']

@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/timeline_collaboration_service.py
+# hypothesis_version: 6.150.0
+
+['access_level', 'can_add_events', 'can_comment', 'can_edit', 'can_pin_evidence', 'can_share', 'can_view', 'case_id', 'case_title', 'collaboration_id', 'comment_text', 'created_at', 'created_by_id', 'expires_at', 'id', 'is_internal', 'is_resolved', 'parent_comment_id', 'password_protected', 'permissions', 'share_token', 'shared_at', 'thread_depth', 'timeline_event_id', 'timeline_id', 'timeline_title', 'updated_at', 'user_email', 'user_id', 'user_name', 'view_limit']

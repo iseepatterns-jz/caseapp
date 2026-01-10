@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/case_service.py
+# hypothesis_version: 6.150.0
+
+['CASE_NOT_FOUND', 'Case status updated', 'Failed to get case', 'INVALID_CASE_TYPE', 'by_priority', 'by_status', 'by_type', 'case', 'closed_at', 'closed_by', 'closure_notes', 'closure_reason', 'create', 'delete', 'desc', 'generated_at', 'status', 'status_change', 'total_cases', 'update']

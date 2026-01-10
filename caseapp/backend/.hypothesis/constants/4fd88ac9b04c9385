@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/models/case.py
+# hypothesis_version: 6.150.0
+
+[100, 200, 'AuditLog', 'Case', 'Client', 'User', 'active', 'all, delete-orphan', 'archived', 'audit_logs', 'bankruptcy', 'case', 'cases', 'cases.id', 'civil', 'clients.id', 'closed', 'corporate', 'criminal', 'family', 'high', 'immigration', 'low', 'medium', 'on_hold', 'other', 'pending', 'personal_injury', 'real_estate', 'urgent', 'users.id']

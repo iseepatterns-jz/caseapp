@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/media_processing_service.py
+# hypothesis_version: 6.150.0
+
+[200, 600, 800, 'Failed to retry jobs', 'JPEG', 'Job marked as failed', 'LA', 'P', 'RGB', 'RGBA', 'Thumbnail generated', 'compression_ratio', 'detected_faces', 'detected_objects', 'extracted_text', 'face_detection', 'object_detection', 'ocr', 'original_size', 'preview', 'preview_path', 'preview_size', 'previews', 'reason', 'thumbnail', 'thumbnail_path', 'thumbnail_size', 'thumbnails', 'transcript', 'transcription']

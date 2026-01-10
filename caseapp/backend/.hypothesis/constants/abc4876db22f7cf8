@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/efiling_service.py
+# hypothesis_version: 6.150.0
+
+[0.1, 25.0, 50.0, 75.0, 100.0, 100, 300, '24 hours', '24-48 hours', 'Cancelled by user', 'accepted', 'allowed_formats', 'attorney_bar_number', 'brief', 'case_number', 'court_rules', 'doc', 'document_count', 'docx', 'error', 'errors', 'estimated_fees', 'exhibit', 'federal_pacer', 'filed', 'filing_fees', 'invalid', 'local_efiling', 'max_file_size_mb', 'mock_court', 'mock_local_key', 'mock_pacer_key', 'mock_state_key', 'mock_test_key', 'motion', 'party_name', 'pdf', 'pending', 'pending_filings', 'period_days', 'pleading', 'processing', 'reference_number', 'rejected', 'rejection_reason', 'required_metadata', 'state_ecourts', 'status', 'status_breakdown', 'submitted', 'success_rate_percent', 'total_filings', 'tracking_url', 'valid', 'warning', 'warnings']

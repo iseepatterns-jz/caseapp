@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/ai_timeline_service.py
+# hypothesis_version: 6.150.0
+
+[0.1, 0.5, 500, 2000, '%Y-%m-%d', 'Bedrock API error', 'Invalid date format', 'Invalid event type', 'T', 'Untitled Event', '\\[.*\\]', '\\{.*\\}', 'anthropic_version', 'application/json', 'bedrock-2023-05-31', 'bedrock-runtime', 'body', 'confidence_score', 'content', 'description', 'enhanced_description', 'enhanced_title', 'event_type', 'improvements_made', 'location', 'max_tokens', 'messages', 'participants', 'reasoning', 'role', 'source_reference', 'suggested_date', 'temperature', 'text', 'text_input', 'title', 'user']

@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: courtcase_db
+      POSTGRES_USER: courtcase_user
+      POSTGRES_PASSWORD: courtcase_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U courtcase_user -d courtcase_db" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      target: backend-base
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://courtcase_user:courtcase_password@postgres:5432/courtcase_db
+      - REDIS_URL=redis://redis:6379
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=court-case-documents
+      - ENABLE_AI_FEATURES=true
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+      - media_storage:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Media Processing Service
+  media-processor:
+    build:
+      context: .
+      target: media-processor
+    environment:
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=court-case-media
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - media_storage:/app/media
+      - ./backend/services:/app/services
+    depends_on:
+      - redis
+      - backend
+
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      target: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - media_storage:/var/www/media
+    depends_on:
+      - frontend
+      - backend
+
+  # LocalStack for AWS services development
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,textract,comprehend,lambda,apigateway
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - localstack_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_storage:
+  localstack_data:

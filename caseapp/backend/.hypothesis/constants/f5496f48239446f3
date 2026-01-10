@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/schemas/case.py
+# hypothesis_version: 6.150.0
+
+[100, 200, 'Associated client ID', 'Case description', 'Case jurisdiction', 'Case priority', 'Case title', 'Court name', 'Date case was filed', 'Field to sort by', 'Filter by case type', 'Filter by client', 'Filter by priority', 'Filter by status', 'Important deadline', 'Items per page', 'Judge name', 'New case status', 'Next court date', 'Page number', 'Search query', 'Sort order', 'Type of case', 'Unique case number', '^(asc|desc)$', 'closure_reason', 'created_at', 'desc', 'status']

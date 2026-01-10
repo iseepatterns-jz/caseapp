@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/models/document.py
+# hypothesis_version: 6.150.0
+
+[100, 255, 500, 'AuditLog', 'AuditLog.entity_id', 'Case', 'Document', 'User', 'archived', 'cases.id', 'contract', 'correspondence', 'court_filing', 'deposition', 'discovery', 'document_versions', 'documents', 'documents.id', 'evidence', 'expert_report', 'extracted_entities', 'failed', 'legal_brief', 'other', 'parent_document', 'processed', 'processing', 'standard', 'uploaded', 'users.id']

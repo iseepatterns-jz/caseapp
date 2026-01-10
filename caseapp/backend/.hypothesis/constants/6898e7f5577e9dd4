@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/models/timeline.py
+# hypothesis_version: 6.150.0
+
+[1.0, 255, 500, 'Case', 'CaseTimeline', 'EvidencePin', 'TimelineComment', 'TimelineEvent', 'User', 'all, delete-orphan', 'appeal', 'case_timelines', 'case_timelines.id', 'cases.id', 'collaborations', 'comments', 'correspondence', 'deposition', 'discovery', 'events', 'evidence_collection', 'evidence_pins', 'expert_consultation', 'extend_existing', 'filing', 'hearing', 'incident', 'meeting', 'negotiation', 'other', 'parent_comment', 'settlement', 'timeline', 'timeline_comments', 'timeline_comments.id', 'timeline_event', 'timeline_events', 'timeline_events.id', 'timeline_templates', 'timelines', 'trial', 'users.id', 'verdict', 'viewer', 'witness_interview']

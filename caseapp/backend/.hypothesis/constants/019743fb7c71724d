@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/schemas/timeline.py
+# hypothesis_version: 6.150.0
+
+[0.0, 1.0, 255, 500, 'Additional notes', 'Comment text', 'Event location', 'Event title', 'Export format', 'Hex color code', 'Include comments', 'List of participants', 'Type of event', 'Type of evidence', '^#[0-9A-Fa-f]{6}$', '^(pdf|png|json)$', 'appeal', 'correspondence', 'deposition', 'discovery', 'document', 'end_date', 'event_date', 'evidence_collection', 'expert_consultation', 'filing', 'forensic', 'hearing', 'incident', 'media', 'meeting', 'negotiation', 'other', 'settlement', 'trial', 'verdict', 'witness_interview']

@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/document_analysis_service.py
+# hypothesis_version: 6.150.0
+
+[0.0, 0.8, 100, 1000, 1024, 5000, 'ANALYSIS_FAILED', 'BeginOffset', 'BlockType', 'Blocks', 'Bucket', 'DOCUMENT_NOT_FOUND', 'DOCUMENT_PROCESSING', 'EndOffset', 'Entities', 'FAILED', 'JobId', 'JobStatus', 'KeyPhrases', 'LINE', 'NEUTRAL', 'Name', 'NextToken', 'S3Object', 'SUCCEEDED', 'Score', 'Sentiment', 'SentimentScore', 'Text', 'Type', 'analysis_completed', 'analysis_failed', 'analysis_started', 'by_type', 'completed', 'comprehend', 'confidence', 'confidence_scores', 'document', 'document_id', 'en', 'entity_count', 'entity_extraction', 'has_ai_summary', 'has_extracted_text', 'high_confidence', 'processing_error', 's3', 'scores', 'sentiment', 'status', 'text', 'text_extraction', 'textract', 'total_count', 'type']

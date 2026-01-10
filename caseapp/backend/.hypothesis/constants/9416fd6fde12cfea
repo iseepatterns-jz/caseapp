@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/schemas/document.py
+# hypothesis_version: 6.150.0
+
+[100, 500, 1024, 'Access control level', 'Filter by case ID', 'Search query', 'Type of document', 'application/msword', 'application/pdf', 'application/rtf', 'archived', 'confidential', 'contract', 'correspondence', 'court_filing', 'deposition', 'discovery', 'doc', 'docx', 'evidence', 'expert_report', 'failed', 'legal_brief', 'odt', 'other', 'pdf', 'processed', 'processing', 'public', 'restricted', 'rtf', 'standard', 'text/plain', 'text/rtf', 'txt', 'uploaded']

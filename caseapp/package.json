@@ -1,0 +1,33 @@
+{
+  "name": "court-case-management",
+  "version": "1.0.0",
+  "description": "Court Case Management System with AI-powered features",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "deploy": "cd infrastructure && cdk deploy",
+    "destroy": "cd infrastructure && cdk destroy",
+    "test": "cd backend && pytest",
+    "lint": "cd backend && black . && isort . && flake8",
+    "setup": "npm run setup:backend && npm run setup:frontend && npm run setup:infrastructure",
+    "setup:backend": "cd backend && pip install -r ../requirements.txt",
+    "setup:frontend": "cd frontend && npm install",
+    "setup:infrastructure": "cd infrastructure && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "legal",
+    "case-management",
+    "aws",
+    "ai",
+    "textract",
+    "comprehend"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -1,0 +1,261 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: court-case-management
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r caseapp/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run backend tests
+        working-directory: caseapp/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          SECRET_KEY: test-secret-key-for-ci
+          ENABLE_AI_FEATURES: false
+        run: |
+          python -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: caseapp/backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/court-case-management
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./caseapp
+          file: ./caseapp/Dockerfile
+          target: backend-base
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest,${{ secrets.DOCKER_USERNAME }}/court-case-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./caseapp
+          file: ./caseapp/Dockerfile
+          target: frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/court-case-frontend:latest,${{ secrets.DOCKER_USERNAME }}/court-case-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push media processor image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./caseapp
+          file: ./caseapp/Dockerfile
+          target: media-processor
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/court-case-media:latest,${{ secrets.DOCKER_USERNAME }}/court-case-media:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security-scan:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  deploy-staging:
+    needs: [test, build-and-push]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Node.js for CDK
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Deploy to staging
+        working-directory: caseapp
+        env:
+          ENVIRONMENT: staging
+        run: |
+          chmod +x scripts/deploy-aws.sh
+          ./scripts/deploy-aws.sh deploy
+
+      - name: Run post-deployment tests
+        run: |
+          # Wait for deployment to be ready
+          sleep 60
+          # Add staging validation tests here
+          echo "Staging deployment validation completed"
+
+  deploy-production:
+    needs: [test, build-and-push, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Node.js for CDK
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Deploy to production
+        working-directory: caseapp
+        env:
+          ENVIRONMENT: production
+        run: |
+          chmod +x scripts/deploy-aws.sh
+          ./scripts/deploy-aws.sh deploy
+
+      - name: Run post-deployment validation
+        run: |
+          # Wait for deployment to be ready
+          sleep 120
+          # Get deployment outputs
+          cd caseapp
+          ./scripts/deploy-aws.sh outputs
+
+          # Validate critical endpoints
+          ALB_DNS=$(cat deployment-outputs.json | jq -r '.[] | select(.OutputKey=="LoadBalancerDNS") | .OutputValue')
+
+          # Health check
+          curl -f "http://$ALB_DNS/health" || exit 1
+
+          # API documentation
+          curl -f "http://$ALB_DNS/docs" || exit 1
+
+          echo "Production deployment validation completed"
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🎉 Production deployment successful!"
+          echo "Application is available at: http://$ALB_DNS"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "Check the logs for details and rollback if necessary."

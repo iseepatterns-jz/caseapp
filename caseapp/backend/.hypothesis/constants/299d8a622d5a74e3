@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/services/presence_service.py
+# hypothesis_version: 6.150.0
+
+[3600, 6379, 'case_id', 'case_title', 'current_view', 'cursor_position', 'data', 'editing_event_id', 'ip_address', 'is_active', 'last_activity', 'localhost', 'presence_update', 'selected_events', 'session_id', 'started_at', 'timeline_id', 'timeline_title', 'timestamp', 'type', 'user_agent', 'user_email', 'user_id', 'user_name']

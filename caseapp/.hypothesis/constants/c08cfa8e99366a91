@@ -1,0 +1,4 @@
+# file: /Users/showboat/locker/ISEEPATTERNS-2026-LOCKER/caseapp/backend/models/user.py
+# hypothesis_version: 6.150.0
+
+[100, 255, 'admin', 'attorney', 'client', 'staff', 'users']
