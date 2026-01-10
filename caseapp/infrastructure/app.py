@@ -213,13 +213,6 @@ class CourtCaseManagementStack(Stack):
     def create_opensearch(self):
         """Create OpenSearch cluster for document search"""
         
-        # Create OpenSearch service-linked role first
-        opensearch_service_role = iam.CfnServiceLinkedRole(
-            self, "OpenSearchServiceLinkedRole",
-            aws_service_name="opensearchservice.amazonaws.com",
-            description="Service-linked role for Amazon OpenSearch Service"
-        )
-        
         self.opensearch_domain = opensearch.Domain(
             self, "CourtCaseSearch",
             version=opensearch.EngineVersion.OPENSEARCH_2_3,
@@ -253,9 +246,6 @@ class CourtCaseManagementStack(Stack):
             enforce_https=True,
             removal_policy=RemovalPolicy.DESTROY
         )
-        
-        # Ensure service-linked role is created before OpenSearch domain
-        self.opensearch_domain.node.add_dependency(opensearch_service_role)
     
     def create_cognito(self):
         """Create Cognito User Pool for authentication"""

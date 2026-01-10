@@ -1,16 +1,16 @@
 # Current Deployment Status
 
-## ❌ Run #15 Failed - OpenSearch Service-Linked Role Issue (🔧 FIXING)
+## ❌ Run #16 Failed - OpenSearch Service-Linked Role Already Exists (🔧 FIXING)
 
-**ISSUE IDENTIFIED**: `Before you can proceed, you must enable a service-linked role to give Amazon OpenSearch Service permissions to access your VPC.`
+**ISSUE IDENTIFIED**: `Service role name AWSServiceRoleForAmazonOpenSearchService has been taken in this account, please try a different suffix.`
 
-**ROOT CAUSE**: AWS OpenSearch Service requires a service-linked role to be created before deploying OpenSearch domains in VPCs. This is a one-time setup requirement.
+**ROOT CAUSE**: The OpenSearch service-linked role already exists in the AWS account from a previous attempt. AWS doesn't allow creating duplicate service-linked roles.
 
 **SOLUTION APPLIED**:
 
-- ✅ Added `iam.CfnServiceLinkedRole` creation for OpenSearch Service in CDK infrastructure
-- ✅ Added dependency to ensure service-linked role is created before OpenSearch domain
-- 🔄 **Ready for Run #16** - This should resolve the OpenSearch VPC permissions issue
+- ✅ Removed the explicit service-linked role creation from CDK code
+- ✅ OpenSearch will use the existing service-linked role automatically
+- 🔄 **Ready for Run #17** - This should resolve the duplicate service-linked role issue
 
 ## 🚀 Previous Progress (All Working)
 
@@ -22,57 +22,49 @@
 - **Docker Builds**: All Docker images successfully built and pushed to Docker Hub ✅
 - **Docker Asset Path Issue**: Fixed by using pre-built Docker Hub images ✅
 
-## 🔧 Run #15 Results
+## 🔧 Run #16 Results
 
 ### ✅ Successful Stages
 
-- **test** - completed successfully (1m 30s)
-- **build-and-push** - completed successfully (6m 1s)
-- **security-scan** - completed successfully (48s)
+- **test** - completed successfully (1m 32s)
+- **build-and-push** - completed successfully (7m 46s)
+- **security-scan** - completed successfully (45s)
 - **deploy-staging** - skipped (expected for main branch)
 
 ### ❌ Failed Stage
 
-- **deploy-production** - failed after 4m 25s due to OpenSearch service-linked role issue
+- **deploy-production** - failed after 1m 22s due to duplicate OpenSearch service-linked role
 
 **Specific Error**:
 
 ```
-CourtCaseManagementStack | CREATE_FAILED | AWS::OpenSearchService::Domain | CourtCaseSearch
-Resource handler returned message: "Invalid request provided: Before you can proceed, you must enable a service-linked role to give Amazon OpenSearch Service permissions to access your VPC. (Service: OpenSearch, Status Code: 400, Request ID: 32a872eb-99df-40b2-9d32-4e0484feb135)"
+AWS::IAM::ServiceLinkedRole | OpenSearchServiceLinkedRole
+Resource handler returned message: "Service role name AWSServiceRoleForAmazonOpenSearchService has been taken in this account, please try a different suffix. (Service: Iam, Status Code: 400, Request ID: 10dbffa8-3864-421c-96f9-325613927a23)"
 ```
 
 ## 🛠️ Fix Applied
 
 **Updated `caseapp/infrastructure/app.py`**:
 
-```python
-# Create OpenSearch service-linked role first
-opensearch_service_role = iam.CfnServiceLinkedRole(
-    self, "OpenSearchServiceLinkedRole",
-    aws_service_name="opensearchservice.amazonaws.com",
-    description="Service-linked role for Amazon OpenSearch Service"
-)
-
-# Ensure service-linked role is created before OpenSearch domain
-self.opensearch_domain.node.add_dependency(opensearch_service_role)
-```
+- Removed explicit service-linked role creation
+- OpenSearch Domain will automatically use existing service-linked role
+- This is the standard approach when the role already exists
 
 ## 📊 Pipeline Progress Summary
 
-| Stage             | Run #13       | Run #14          | Run #15           | Run #16 (Next)   |
-| ----------------- | ------------- | ---------------- | ----------------- | ---------------- |
-| Tests             | ❌ CDK Import | ✅ Pass (1m 37s) | ✅ Pass (1m 30s)  | 🔄 Expected Pass |
-| Docker Build      | ❌ CDK Import | ✅ Pass (6m 3s)  | ✅ Pass (6m 1s)   | 🔄 Expected Pass |
-| Security Scan     | ❌ CDK Import | ✅ Pass (51s)    | ✅ Pass (48s)     | 🔄 Expected Pass |
-| Deploy Production | ❌ CDK Import | ❌ Path Length   | ❌ OpenSearch SLR | 🔄 Expected Pass |
+| Stage             | Run #15           | Run #16          | Run #17 (Next)   |
+| ----------------- | ----------------- | ---------------- | ---------------- |
+| Tests             | ✅ Pass (1m 30s)  | ✅ Pass (1m 32s) | 🔄 Expected Pass |
+| Docker Build      | ✅ Pass (6m 1s)   | ✅ Pass (7m 46s) | 🔄 Expected Pass |
+| Security Scan     | ✅ Pass (48s)     | ✅ Pass (45s)    | 🔄 Expected Pass |
+| Deploy Production | ❌ OpenSearch SLR | ❌ Duplicate SLR | 🔄 Expected Pass |
 
-## 🎯 Expected Run #16 Outcome
+## 🎯 Expected Run #17 Outcome
 
-After committing and pushing the OpenSearch service-linked role fix:
+After committing and pushing the service-linked role fix:
 
 - ✅ All previous stages should continue to pass
-- ✅ OpenSearch domain creation should succeed with proper VPC permissions
+- ✅ OpenSearch domain creation should succeed using existing service-linked role
 - ✅ Complete AWS infrastructure deployment
 - ✅ Running Court Case Management System
 - ✅ All services operational (backend, database, Redis, OpenSearch, etc.)
@@ -80,8 +72,8 @@ After committing and pushing the OpenSearch service-linked role fix:
 
 ## 📋 Next Steps
 
-1. **Commit & Push Fix**: Push the OpenSearch service-linked role fix
-2. **Monitor Run #16**: Watch the deployment progress
+1. **Commit & Push Fix**: Push the updated OpenSearch configuration
+2. **Monitor Run #17**: Watch the deployment progress
 3. **Run Database Migrations**: Execute `./scripts/migrate-database.sh` after successful deployment
 4. **Test Application**: Validate endpoints and functionality
 5. **Monitor Health**: Check application logs and metrics
@@ -99,7 +91,7 @@ After committing and pushing the OpenSearch service-linked role fix:
 - VPC with public/private/database subnets
 - RDS PostgreSQL database with encryption
 - ElastiCache Redis cluster
-- **OpenSearch domain for document search** (🔧 Fixed VPC permissions)
+- **OpenSearch domain for document search** (🔧 Fixed duplicate role issue)
 - Cognito User Pool with MFA
 - ECS Fargate cluster with load balancer
 - S3 buckets for documents and media
