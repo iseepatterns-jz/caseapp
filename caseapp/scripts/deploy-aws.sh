@@ -151,7 +151,11 @@ deploy_infrastructure() {
     
     # Deploy the stack
     print_status "Deploying CDK stack..."
-    cdk deploy $STACK_NAME --require-approval never
+    if [ -n "$DOCKER_USERNAME" ]; then
+        cdk deploy $STACK_NAME --require-approval never --context docker_username=$DOCKER_USERNAME
+    else
+        cdk deploy $STACK_NAME --require-approval never
+    fi
     
     cd ..
     

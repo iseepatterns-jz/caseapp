@@ -162,7 +162,7 @@ class CourtCaseManagementStack(Stack):
         self.database = rds.DatabaseInstance(
             self, "CourtCaseDatabase",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15_15
+                version=rds.PostgresEngineVersion.VER_15
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
@@ -291,6 +291,9 @@ class CourtCaseManagementStack(Stack):
     def create_ecs_cluster(self):
         """Create ECS cluster for containerized applications"""
         
+        # Get Docker username from environment or use default
+        docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
+        
         # ECS Cluster
         self.cluster = ecs.Cluster(
             self, "CourtCaseCluster",
@@ -318,6 +321,9 @@ class CourtCaseManagementStack(Stack):
         self.media_bucket.grant_read_write(task_role)
         self.database.secret.grant_read(task_role)
         
+        # Get Docker username from environment or use default
+        docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
+        
         # Backend service
         self.backend_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "BackendService",
@@ -326,7 +332,7 @@ class CourtCaseManagementStack(Stack):
             cpu=1024,
             desired_count=2,
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_registry("iseepatterns/court-case-backend:latest"),
+                image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-backend:latest"),
                 container_port=8000,
                 execution_role=execution_role,
                 task_role=task_role,
@@ -360,6 +366,9 @@ class CourtCaseManagementStack(Stack):
     def create_media_services(self):
         """Create media processing services"""
         
+        # Get Docker username from environment or use default
+        docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
+        
         # Media processing task definition
         media_task_def = ecs.FargateTaskDefinition(
             self, "MediaProcessingTask",
@@ -373,7 +382,7 @@ class CourtCaseManagementStack(Stack):
         # Media processing container
         media_container = media_task_def.add_container(
             "MediaProcessor",
-            image=ecs.ContainerImage.from_registry("iseepatterns/court-case-media:latest"),
+            image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-media:latest"),
             environment={
                 "AWS_REGION": self.region,
                 "S3_BUCKET_NAME": self.media_bucket.bucket_name

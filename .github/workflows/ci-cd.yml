@@ -200,6 +200,7 @@ jobs:
         working-directory: caseapp
         env:
           ENVIRONMENT: staging
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           # Install Python CDK dependencies
           cd infrastructure
@@ -250,6 +251,7 @@ jobs:
         working-directory: caseapp
         env:
           ENVIRONMENT: production
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           # Verify AWS credentials
           echo "Verifying AWS credentials..."
@@ -289,7 +291,7 @@ jobs:
 
           # Deploy infrastructure
           echo "Deploying infrastructure..."
-          cdk deploy CourtCaseManagementStack --require-approval never
+          cdk deploy CourtCaseManagementStack --require-approval never --context docker_username=${{ secrets.DOCKER_USERNAME }}
 
           cd ..
           echo "✅ Deployment completed successfully"
