@@ -156,7 +156,7 @@ jobs:
         continue-on-error: true # Don't fail if scan has issues
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always() # Upload results even if scan partially failed
         with:
           sarif_file: "trivy-results.sarif"
