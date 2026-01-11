@@ -180,3 +180,7 @@ MIT License - see LICENSE file for details.
 ## Support
 
 For support and documentation, please refer to the individual component README files in the caseapp directory.
+
+---
+
+**Deployment Status**: Testing fixes for PostgreSQL version compatibility and CodeQL Action (Deployment #21 - January 10, 2026)
