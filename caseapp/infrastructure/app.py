@@ -162,7 +162,7 @@ class CourtCaseManagementStack(Stack):
         self.database = rds.DatabaseInstance(
             self, "CourtCaseDatabase",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15_15
+                version=rds.PostgresEngineVersion.VER_16_11
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
