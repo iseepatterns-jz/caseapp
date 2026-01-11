@@ -9,8 +9,8 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
 
-from ..services.background_job_service import JobPriority, JobStatus, JobResult
-from ..services.webhook_service import WebhookEvent, WebhookStatus
+from services.background_job_service import JobPriority, JobStatus, JobResult
+from services.webhook_service import WebhookEvent, WebhookStatus
 
 class JobSubmissionRequest(BaseModel):
     """Request model for job submission"""

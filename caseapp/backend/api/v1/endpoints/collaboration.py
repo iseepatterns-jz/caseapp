@@ -21,7 +21,7 @@ from schemas.collaboration import (
     SessionStartRequest, SessionUpdateRequest, CommentCreateRequest, CommentResponse,
     ExternalShareRequest, ExternalShareResponse
 )
-from api.deps import get_current_user
+from core.auth import get_current_user
 
 logger = structlog.get_logger()
 router = APIRouter()

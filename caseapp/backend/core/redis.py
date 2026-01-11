@@ -22,9 +22,12 @@ class RedisService:
     async def initialize(self) -> None:
         """Initialize Redis connection"""
         try:
+            # Get Redis URL from environment or use default
+            redis_url = getattr(settings, 'REDIS_URL', 'redis://redis:6379')
+            
             # Create Redis connection
             self.redis_client = redis.from_url(
-                "redis://localhost:6379",
+                redis_url,
                 encoding="utf-8",
                 decode_responses=True
             )

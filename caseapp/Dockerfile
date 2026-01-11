@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libfontconfig1 \
     libxrender1 \
     libgl1-mesa-dev \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/* \
@@ -32,8 +33,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
-COPY backend/ ./backend/
+# Copy backend code to the app root (not in a subdirectory)
+COPY backend/ ./
 
 # Create shared directory if it doesn't exist
 RUN mkdir -p ./shared
@@ -48,8 +49,12 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ready || exit 1
+
+# Command to run the application (now main.py is directly in /app)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Frontend build stage
 FROM nginx:alpine AS frontend

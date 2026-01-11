@@ -28,10 +28,10 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 def get_media_service(
-    db: AsyncSession = Depends(get_db),
-    audit_service: AuditService = Depends()
+    db: AsyncSession = Depends(get_db)
 ) -> MediaService:
     """Get media service instance"""
+    audit_service = AuditService(db)
     return MediaService(db, audit_service)
 
 @router.post("/upload", response_model=MediaEvidenceResponse, status_code=status.HTTP_201_CREATED)

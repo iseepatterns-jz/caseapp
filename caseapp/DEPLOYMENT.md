@@ -48,6 +48,147 @@ The following secrets must be configured in your GitHub repository:
 - `SLACK_WEBHOOK_URL`: For deployment notifications
 - `DATADOG_API_KEY`: For monitoring integration
 
+## Deployment Validation Gates
+
+The deployment pipeline includes comprehensive validation gates that run before deployment to prevent common failures and ensure environment readiness.
+
+### Validation Gates Overview
+
+The system performs the following validation checks:
+
+1. **Docker Image Accessibility**: Verifies all required Docker images are accessible
+2. **AWS Service Availability**: Confirms AWS services are available and accessible
+3. **Deployment Prerequisites**: Validates required tools and files are present
+
+### Running Validation Gates
+
+#### Automatic Integration
+
+Validation gates run automatically in the CI/CD pipeline:
+
+- **Pre-deployment**: Before any deployment attempt
+- **Post-build**: After Docker images are built and pushed
+- **Environment-specific**: Different validation levels for staging vs production
+
+#### Manual Validation
+
+You can run validation gates manually:
+
+```bash
+# Run all validation gates
+./scripts/deployment-validation-gates.sh
+
+# Run with integration script (recommended)
+./scripts/run-validation-gates.sh
+
+# Run in strict mode (fail on warnings)
+./scripts/run-validation-gates.sh --strict
+
+# Show help
+./scripts/deployment-validation-gates.sh --help
+```
+
+#### Validation Results
+
+- **Exit Code 0**: All gates passed, deployment can proceed
+- **Exit Code 1**: Warnings found, deployment may proceed with caution
+- **Exit Code 2**: Critical failures, deployment should not proceed
+
+### Validation Gate Details
+
+#### Gate 1: Docker Image Accessibility
+
+Validates that required Docker images are accessible:
+
+- `iseepatterns/court-case-backend:latest`
+- `iseepatterns/court-case-media:latest`
+
+**Common Issues:**
+
+- Images not pushed to Docker Hub
+- Incorrect image tags
+- Docker Hub authentication issues
+
+#### Gate 2: AWS Service Availability
+
+Checks availability of required AWS services:
+
+- ECS (Elastic Container Service)
+- RDS (Relational Database Service)
+- S3 (Simple Storage Service)
+- CloudFormation
+- EC2 (Elastic Compute Cloud)
+
+**Common Issues:**
+
+- AWS credentials not configured
+- Insufficient permissions
+- Service outages in target region
+
+#### Gate 3: Deployment Prerequisites
+
+Validates deployment environment:
+
+- Required tools (Python, pip, curl)
+- Required files (infrastructure code, requirements, Dockerfile)
+- AWS CLI configuration
+
+**Common Issues:**
+
+- Missing dependencies
+- Incorrect file paths
+- AWS CLI not configured
+
+### Troubleshooting Validation Failures
+
+#### Docker Image Issues
+
+```bash
+# Check if images exist
+docker manifest inspect iseepatterns/court-case-backend:latest
+docker manifest inspect iseepatterns/court-case-media:latest
+
+# Re-build and push if needed
+docker build -t iseepatterns/court-case-backend:latest .
+docker push iseepatterns/court-case-backend:latest
+```
+
+#### AWS Service Issues
+
+```bash
+# Test AWS credentials
+aws sts get-caller-identity
+
+# Test service access
+aws ecs list-clusters --region us-east-1
+aws rds describe-db-instances --region us-east-1
+```
+
+#### Prerequisites Issues
+
+```bash
+# Install missing tools
+pip install -r requirements.txt
+
+# Verify file structure
+ls -la caseapp/infrastructure/
+ls -la caseapp/requirements.txt
+ls -la caseapp/Dockerfile
+```
+
+### Integration with CI/CD
+
+The validation gates are integrated into the GitHub Actions workflow:
+
+1. **Build Stage**: Validates Docker images after build
+2. **Pre-deployment**: Runs full validation before deployment
+3. **Force Cleanup**: Can automatically clean up resources if validation fails
+
+#### Workflow Options
+
+- **force_cleanup**: Automatically clean up failed resources
+- **environment**: Target environment (staging/production)
+
 ## Deployment Methods
 
 ### Method 1: Automated CI/CD (Recommended)

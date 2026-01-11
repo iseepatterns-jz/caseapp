@@ -8,17 +8,17 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-from ....services.background_job_service import BackgroundJobService, JobPriority
-from ....services.webhook_service import WebhookService, WebhookEvent
-from ....schemas.background_jobs import (
+from services.background_job_service import BackgroundJobService, JobPriority
+from services.webhook_service import WebhookService, WebhookEvent
+from schemas.background_jobs import (
     JobSubmissionRequest, JobSubmissionResponse,
     JobStatusResponse, JobStatisticsResponse,
     WebhookEndpointRequest, WebhookEndpointResponse,
     WebhookDeliveryResponse, WebhookTestResponse,
     WebhookStatisticsResponse
 )
-from ....core.auth import get_current_user
-from ....models.user import User
+from core.auth import get_current_user
+from models.user import User
 
 router = APIRouter()
 

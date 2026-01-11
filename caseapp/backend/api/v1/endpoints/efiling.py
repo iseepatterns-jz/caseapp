@@ -8,15 +8,15 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-from ....services.efiling_service import EFilingService, CourtSystem, FilingStatus
-from ....schemas.efiling import (
+from services.efiling_service import EFilingService, CourtSystem, FilingStatus
+from schemas.efiling import (
     FilingSubmissionRequest, FilingSubmissionResponse,
     FilingStatusResponse, CourtRequirementsResponse,
     DocumentValidationRequest, DocumentValidationResponse,
     FilingStatisticsResponse, FilingListResponse
 )
-from ....core.auth import get_current_user
-from ....models.user import User
+from core.auth import get_current_user
+from models.user import User
 
 router = APIRouter()
 efiling_service = EFilingService()

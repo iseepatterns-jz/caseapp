@@ -2,6 +2,7 @@
 Court Case Management System - Main FastAPI Application
 """
 
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -10,7 +11,7 @@ import structlog
 from contextlib import asynccontextmanager
 
 from core.config import settings
-from core.database import engine, Base
+from core.database import engine, Base, get_db
 from core.redis import redis_service
 from core.audit_middleware import audit_middleware
 from core.service_manager import ServiceManager
@@ -229,36 +230,106 @@ async def root():
         "status": "healthy"
     }
 
+@app.get("/health/ready")
+async def readiness_check():
+    """
+    Readiness check optimized for ECS health checks
+    Fast check that returns 200 when service is ready to accept traffic
+    """
+    try:
+        # Quick database connectivity check
+        async for db in get_db():
+            from sqlalchemy import text
+            result = await db.execute(text("SELECT 1"))
+            row = result.fetchone()
+            
+            if row and row[0] == 1:
+                return {
+                    "status": "ready",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "message": "Service ready for traffic"
+                }
+            else:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "status": "not_ready",
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "message": "Database not responding correctly"
+                    }
+                )
+    except Exception as e:
+        logger.error("Readiness check failed", error=str(e))
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "not_ready",
+                "timestamp": datetime.utcnow().isoformat(),
+                "error": str(e),
+                "message": "Service not ready for traffic"
+            }
+        )
+
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
+    """
+    Comprehensive health check endpoint for ECS and load balancer
+    Returns HTTP 200 when service is ready to accept traffic
+    """
     from services.health_service import HealthService
     
     try:
         health_service = HealthService()
         
-        # Quick health check for basic endpoint
+        # Quick health check for basic endpoint (faster for load balancer)
         db_result = await health_service._check_database()
         redis_result = await health_service._check_redis()
         
         database_status = "connected" if db_result.status == "healthy" else "error"
         redis_status = "connected" if redis_result.status == "healthy" else "error"
         
-        return {
-            "status": "healthy" if database_status == "connected" and redis_status == "connected" else "degraded",
+        # Determine overall health
+        is_healthy = database_status == "connected" and redis_status == "connected"
+        overall_status = "healthy" if is_healthy else "degraded"
+        
+        response = {
+            "status": overall_status,
+            "timestamp": datetime.utcnow().isoformat(),
             "database": database_status,
-            "aws_services": "initialized",
             "redis": redis_status,
+            "aws_services": "initialized",
+            "version": "1.0.0",
             "message": "Use /api/v1/health/detailed for comprehensive health check"
         }
+        
+        # Return HTTP 200 only if core services are healthy
+        if is_healthy:
+            return response
+        else:
+            # Return HTTP 503 Service Unavailable if core services are down
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    **response,
+                    "error": "Core services unavailable - service not ready for traffic"
+                }
+            )
+            
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "database": "error",
-            "aws_services": "unknown",
-            "redis": "error",
-            "error": str(e)
-        }
+        logger.error("Health check failed", error=str(e))
+        # Return HTTP 503 for any health check failures
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "unhealthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "database": "error",
+                "redis": "error",
+                "aws_services": "unknown",
+                "error": str(e),
+                "message": "Service not ready for traffic"
+            }
+        )
 
 if __name__ == "__main__":
     import uvicorn

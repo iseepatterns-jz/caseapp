@@ -22,7 +22,7 @@ from schemas.forensic import (
     ForensicSourceCreate, ForensicSourceResponse, ForensicItemResponse,
     ForensicAnalysisReportResponse, ForensicSearchRequest, ForensicSearchResponse
 )
-from api.deps import get_current_user
+from core.auth import get_current_user
 
 logger = structlog.get_logger()
 router = APIRouter()

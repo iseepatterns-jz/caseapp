@@ -104,7 +104,7 @@ class NotificationPreferences(BaseModel):
     receive_notifications: bool = True
     email_notifications: bool = True
     in_app_notifications: bool = True
-    notification_frequency: str = Field("immediate", regex="^(immediate|hourly|daily)$")
+    notification_frequency: str = Field("immediate", pattern="^(immediate|hourly|daily)$")
 
 class CollaborationAuditEntry(BaseModel):
     """Audit entry for collaboration activities"""

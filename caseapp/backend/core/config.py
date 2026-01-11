@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost/courtcase_db"
     
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379"
+    
     # AWS Configuration
     AWS_REGION: str = "us-east-1"
     AWS_ACCESS_KEY_ID: Optional[str] = None

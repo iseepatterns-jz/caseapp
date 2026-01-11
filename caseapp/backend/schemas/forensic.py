@@ -110,7 +110,7 @@ class ForensicSearchRequest(BaseModel):
     sender: Optional[str] = None
     min_relevance: Optional[float] = Field(None, ge=0.0, le=1.0)
     has_attachments: Optional[bool] = None
-    sentiment_range: Optional[str] = Field(None, regex="^(positive|negative|neutral)$")
+    sentiment_range: Optional[str] = Field(None, pattern="^(positive|negative|neutral)$")
     limit: int = Field(100, le=1000)
     offset: int = Field(0, ge=0)
 

@@ -10,7 +10,6 @@ services:
       POSTGRES_PASSWORD: courtcase_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -42,7 +41,7 @@ services:
       - S3_BUCKET_NAME=court-case-documents
       - ENABLE_AI_FEATURES=true
     volumes:
-      - ./backend:/app/backend
+      - ./backend:/app
       - ./shared:/app/shared
       - media_storage:/app/media
     depends_on:

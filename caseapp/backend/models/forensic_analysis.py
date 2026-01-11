@@ -175,7 +175,7 @@ class ForensicTimelinePin(Base):
     __tablename__ = "forensic_timeline_pins"
     
     id = Column(Integer, primary_key=True, index=True)
-    timeline_event_id = Column(Integer, ForeignKey("timeline_events.id"), nullable=False)
+    timeline_event_id = Column(UUID(as_uuid=True), ForeignKey("timeline_events.id"), nullable=False)
     forensic_item_id = Column(Integer, ForeignKey("forensic_items.id"), nullable=False)
     
     # Pin details

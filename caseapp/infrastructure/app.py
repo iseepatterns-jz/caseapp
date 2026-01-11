@@ -328,9 +328,10 @@ class CourtCaseManagementStack(Stack):
         self.backend_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "BackendService",
             cluster=self.cluster,
-            memory_limit_mib=2048,
-            cpu=1024,
+            memory_limit_mib=4096,  # Increased from 2048 MiB to 4096 MiB for complex applications
+            cpu=2048,               # Increased from 1024 to 2048 (2 vCPU) for better performance
             desired_count=2,
+            health_check_grace_period=Duration.seconds(300),  # 5 minute grace period for startup
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-backend:latest"),
                 container_port=8000,
@@ -353,14 +354,32 @@ class CourtCaseManagementStack(Stack):
                 )
             ),
             public_load_balancer=True,
-            listener_port=80
+            listener_port=80,
+            deployment_configuration=ecs.DeploymentConfiguration(
+                maximum_percent=200,        # Allow up to 200% of desired capacity during deployment
+                minimum_healthy_percent=50  # Maintain at least 50% healthy tasks during deployment
+            )
         )
+        
+        # Configure ECS service health check settings
+        cfn_service = self.backend_service.service.node.default_child
+        cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
         
         # Allow backend to access database
         self.backend_service.service.connections.allow_to(
             self.database,
             ec2.Port.tcp(5432),
             "Backend to database"
+        )
+        
+        # Configure load balancer health check
+        self.backend_service.target_group.configure_health_check(
+            path="/health/ready",           # Use fast readiness endpoint
+            healthy_threshold_count=2,      # Require 2 consecutive successful checks
+            unhealthy_threshold_count=3,    # Allow 3 consecutive failures before marking unhealthy
+            timeout=Duration.seconds(10),   # 10 second timeout per check
+            interval=Duration.seconds(30),  # Check every 30 seconds
+            port="8000"                     # Health check on application port
         )
     
     def create_media_services(self):
@@ -372,8 +391,8 @@ class CourtCaseManagementStack(Stack):
         # Media processing task definition
         media_task_def = ecs.FargateTaskDefinition(
             self, "MediaProcessingTask",
-            memory_limit_mib=4096,
-            cpu=2048
+            memory_limit_mib=4096,  # Increased for media processing workloads
+            cpu=2048                # Increased for better media processing performance
         )
         
         # Grant permissions

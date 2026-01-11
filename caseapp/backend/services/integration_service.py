@@ -9,10 +9,13 @@ import asyncio
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, or_, desc, func
 import structlog
 import httpx
 import hashlib
+
+from services.audit_service import AuditService
 import hmac
 
 from core.config import settings
@@ -31,10 +34,12 @@ logger = structlog.get_logger()
 class IntegrationService:
     """Service for external system integration"""
     
-    def __init__(self):
-        self.case_service = CaseService()
-        self.document_service = DocumentService()
-        self.timeline_service = TimelineService()
+    def __init__(self, db: AsyncSession, audit_service: AuditService):
+        self.db = db
+        self.audit_service = audit_service
+        self.case_service = CaseService(db, audit_service)
+        self.document_service = DocumentService(db, audit_service)
+        self.timeline_service = TimelineService(db, audit_service)
         self.webhook_configs = {}
         self.sync_operations = {}
         self.api_keys = {}

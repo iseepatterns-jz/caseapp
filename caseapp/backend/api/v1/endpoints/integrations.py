@@ -6,10 +6,12 @@ Provides comprehensive API for case management system integration
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from core.database import get_db
 from core.auth import get_current_user, require_admin, require_attorney
+from services.audit_service import AuditService
 from schemas.integrations import (
     IntegrationResponse, CaseIntegrationResponse, DocumentIntegrationResponse,
     TimelineIntegrationResponse, MediaIntegrationResponse, ForensicIntegrationResponse,
@@ -26,12 +28,16 @@ logger = structlog.get_logger()
 
 router = APIRouter()
 
-# Initialize services
-integration_service = IntegrationService()
-case_service = CaseService()
-document_service = DocumentService()
-timeline_service = TimelineService()
-media_service = MediaService()
+# Dependency functions
+async def get_integration_service(db: AsyncSession = Depends(get_db)) -> IntegrationService:
+    """Dependency to get integration service instance"""
+    audit_service = AuditService(db)
+    return IntegrationService(db, audit_service)
+
+async def get_case_service_for_integration(db: AsyncSession = Depends(get_db)) -> CaseService:
+    """Dependency to get case service instance for integrations"""
+    audit_service = AuditService(db)
+    return CaseService(db, audit_service)
 
 @router.get("/health", response_model=IntegrationHealthResponse)
 async def get_integration_health(
