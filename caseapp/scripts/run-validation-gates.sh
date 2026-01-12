@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Deployment Validation Gates Integration Script
 # This script provides a simple interface to run validation gates from other scripts
