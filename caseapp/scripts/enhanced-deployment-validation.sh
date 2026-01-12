@@ -304,7 +304,7 @@ main() {
     fi
     
     echo
-    log_phase "Validation Complete")
+    log_phase "Validation Complete"
     log_success "✅ All deployment validation checks passed"
     log_info "Deployment can proceed safely"
     
