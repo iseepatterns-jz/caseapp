@@ -214,7 +214,7 @@ deploy_cdk() {
     log_info "Starting CDK deployment..."
     
     # Change to infrastructure directory
-    cd caseapp/infrastructure
+    cd infrastructure
     
     # Install Python dependencies
     log_info "Installing Python dependencies..."
@@ -232,7 +232,7 @@ deploy_cdk() {
     log_info "Deploying CDK stack..."
     cdk deploy --require-approval never --region $REGION
     
-    cd ../..
+    cd ..
     
     log_success "CDK deployment completed"
     return 0
@@ -243,7 +243,7 @@ deploy_cloudformation() {
     log_info "Starting CloudFormation deployment..."
     
     # Generate CloudFormation template
-    cd caseapp/infrastructure
+    cd infrastructure
     
     log_info "Generating CloudFormation template..."
     python3 -c "
