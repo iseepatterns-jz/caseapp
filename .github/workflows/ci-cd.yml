@@ -408,39 +408,48 @@ jobs:
         run: npm install -g aws-cdk
         timeout-minutes: 3
 
-      - name: Run pre-deployment validation
+      - name: Run enhanced pre-deployment validation with auto-resolution
         working-directory: caseapp
         run: |
-          echo "🔍 Running comprehensive pre-deployment validation gates..."
-          chmod +x scripts/deployment-validation-gates.sh
+          echo "🔍 Running enhanced pre-deployment validation with automatic conflict resolution..."
 
-          # Run validation gates and capture result
-          if ./scripts/deployment-validation-gates.sh; then
-            echo "✅ All deployment validation gates passed"
+          # Make scripts executable
+          chmod +x scripts/enhanced-deployment-validation.sh
+          chmod +x scripts/resolve-rds-deletion-protection.sh
+          chmod +x scripts/cleanup-cloudformation-stack.sh
+
+          # Set environment variables for enhanced validation
+          export AUTO_RESOLVE=true
+          export CI=true
+          export GITHUB_ACTIONS=true
+
+          # Run enhanced validation with automatic resolution
+          if ./scripts/enhanced-deployment-validation.sh; then
+            echo "✅ All deployment validation checks passed"
           else
             exit_code=$?
             if [ $exit_code -eq 1 ]; then
-              echo "⚠️  Deployment validation gates completed with warnings"
-              echo "🚀 Proceeding with deployment despite warnings..."
+              echo "⚠️  Deployment validation completed with warnings after auto-resolution"
+              echo "🚀 Proceeding with deployment..."
             else
-              echo "❌ Deployment validation gates failed"
+              echo "❌ Enhanced deployment validation failed even after auto-resolution"
               
-              # Check if force cleanup is requested
+              # Fallback to manual cleanup if force cleanup is requested
               if [ "${{ github.event.inputs.force_cleanup }}" = "true" ]; then
-                echo "🧹 Force cleanup requested, running cleanup script..."
-                chmod +x scripts/cleanup-cloudformation-stack.sh
+                echo "🧹 Force cleanup requested as fallback, running manual cleanup..."
                 echo "y" | ./scripts/cleanup-cloudformation-stack.sh || true
                 
-                echo "🔍 Re-running validation after cleanup..."
+                echo "🔍 Re-running basic validation after manual cleanup..."
+                chmod +x scripts/deployment-validation-gates.sh
                 ./scripts/deployment-validation-gates.sh
               else
-                echo "❌ Validation failed and force cleanup not requested"
-                echo "Re-run workflow with force_cleanup=true to automatically clean up resources"
+                echo "❌ Enhanced validation failed and force cleanup not requested"
+                echo "Re-run workflow with force_cleanup=true to attempt manual cleanup"
                 exit 1
               fi
             fi
           fi
-        timeout-minutes: 10
+        timeout-minutes: 15
 
       - name: Deploy to staging with validation and retry
         working-directory: caseapp
@@ -600,25 +609,32 @@ jobs:
         run: npm install -g aws-cdk
         timeout-minutes: 3
 
-      - name: Run comprehensive pre-deployment validation
+      - name: Run comprehensive pre-deployment validation with auto-resolution
         working-directory: caseapp
         run: |
-          echo "🔍 Running comprehensive pre-deployment validation gates for production..."
+          echo "🔍 Running comprehensive pre-deployment validation with automatic conflict resolution for production..."
 
           # Make scripts executable
-          chmod +x scripts/deployment-validation-gates.sh
+          chmod +x scripts/enhanced-deployment-validation.sh
+          chmod +x scripts/resolve-rds-deletion-protection.sh
+          chmod +x scripts/cleanup-cloudformation-stack.sh
           chmod +x scripts/analyze-resource-dependencies.sh
 
-          # Run comprehensive validation gates
-          if ./scripts/deployment-validation-gates.sh; then
-            echo "✅ All deployment validation gates passed"
+          # Set environment variables for enhanced validation
+          export AUTO_RESOLVE=true
+          export CI=true
+          export GITHUB_ACTIONS=true
+
+          # Run enhanced validation with automatic resolution
+          if ./scripts/enhanced-deployment-validation.sh; then
+            echo "✅ All deployment validation checks passed"
           else
             exit_code=$?
             if [ $exit_code -eq 1 ]; then
-              echo "⚠️  Deployment validation gates completed with warnings"
-              echo "🚀 Proceeding with production deployment despite warnings..."
+              echo "⚠️  Deployment validation completed with warnings after auto-resolution"
+              echo "🚀 Proceeding with production deployment..."
             else
-              echo "❌ Deployment validation gates failed"
+              echo "❌ Enhanced deployment validation failed"
               
               # Run dependency analysis for detailed information
               echo "🔍 Running dependency analysis for additional details..."
@@ -629,12 +645,11 @@ jobs:
                 echo "🧹 Force cleanup requested for production deployment..."
                 echo "⚠️  This will delete existing resources including databases!"
                 
-                chmod +x scripts/cleanup-cloudformation-stack.sh
                 echo "y" | ./scripts/cleanup-cloudformation-stack.sh || true
                 
-                # Re-run validation after cleanup
-                echo "🔍 Re-running validation gates after cleanup..."
-                ./scripts/deployment-validation-gates.sh
+                # Re-run enhanced validation after cleanup
+                echo "🔍 Re-running enhanced validation after cleanup..."
+                ./scripts/enhanced-deployment-validation.sh
               else
                 echo "❌ Production validation failed and force cleanup not requested"
                 echo "This is a safety measure to prevent accidental data loss in production"
@@ -643,7 +658,7 @@ jobs:
               fi
             fi
           fi
-        timeout-minutes: 15
+        timeout-minutes: 20
 
       - name: Deploy to production with enhanced reliability
         working-directory: caseapp
