@@ -144,55 +144,59 @@ watch -n 10 'gh run list --limit 3'
 
 This troubleshooting approach ensures systematic resolution of CI pipeline issues while building resilience for future deployments.
 
-## Solution Implementation - Version 2
+## Solution Implementation - Version 3 (FINAL FIX)
 
-### Analysis of First Attempt
+### Root Cause Identified
 
-**Run ID**: 20933604287  
-**Result**: Still failed after 3 minutes  
-**Insight**: The issue is more fundamental than just timeout values - services need more time to initialize in GitHub Actions environment.
+**Issue**: The `pg_isready` and `redis-cli` commands are not available on GitHub Actions runner host systems, even though the PostgreSQL and Redis containers are running and healthy.
 
-### Enhanced Solution (Current)
+**Evidence**: Local testing revealed that:
 
-**Service Health Check Improvements**:
+- Host system commands fail: `pg_isready -h localhost` and `redis-cli -h localhost`
+- Docker exec commands work: `docker exec <container> pg_isready` and `docker exec <container> redis-cli`
 
-- **PostgreSQL**: Extended start period to 60 seconds, increased retries to 20, 3s intervals
-- **Redis**: Extended start period to 30 seconds, increased retries to 20, 3s intervals
-- **Rationale**: GitHub Actions runners may have variable performance affecting service startup
+### Final Solution Applied
 
-**Service Readiness Check Enhancements**:
-
-- Extended timeout to 5 minutes (from 3 minutes)
-- Increased retry attempts to 15 (from 10)
-- Added debugging output for failed services (container logs, process status)
-- Implemented connection testing beyond basic readiness checks
-- Added exponential backoff with maximum delay cap (10 seconds)
-
-**New Debugging Features**:
+**Changed from host commands**:
 
 ```bash
-# Container log output for failed services
-docker logs $(docker ps -q --filter ancestor=postgres:15)
-docker logs $(docker ps -q --filter ancestor=redis:7-alpine)
-
-# Process status checking
-ps aux | grep postgres
-ps aux | grep redis
-
-# Connection testing
-psql -h localhost -p 5432 -U postgres -d test_db -c 'SELECT 1;'
-redis-cli -h localhost -p 6379 set test_key test_value
+pg_isready -h localhost -p 5432 -U postgres -q
+redis-cli -h localhost -p 6379 ping > /dev/null 2>&1
 ```
+
+**To Docker exec commands**:
+
+```bash
+docker exec $(docker ps -q --filter ancestor=postgres:15) pg_isready -U postgres -d test_db > /dev/null 2>&1
+docker exec $(docker ps -q --filter ancestor=redis:7-alpine) redis-cli ping > /dev/null 2>&1
+```
+
+### Why This Works
+
+1. **Container Isolation**: Commands execute inside containers where tools are guaranteed to be available
+2. **No Host Dependencies**: Doesn't rely on GitHub Actions runner having PostgreSQL or Redis clients installed
+3. **Direct Container Access**: Tests the actual service running inside the container
+4. **Reliable Detection**: Uses container-specific image filters to find the right containers
+
+### Updated Files
+
+1. **`.github/workflows/ci-cd.yml`**: Updated "Wait for services to be ready" step to use Docker exec
+2. **`caseapp/scripts/test-ci-services-locally.sh`**: Enhanced to validate both approaches and demonstrate the fix
 
 ### Expected Outcome
 
-With these enhanced configurations:
+The next GitHub Actions run should:
 
-- Services should have sufficient time to initialize (60s for PostgreSQL, 30s for Redis)
-- More frequent health checks (3s intervals) for faster detection
-- Extended overall timeout (5 minutes) to accommodate slower GitHub Actions runners
-- Comprehensive debugging if services still fail to start
+- ✅ Successfully detect when PostgreSQL is ready via Docker exec
+- ✅ Successfully detect when Redis is ready via Docker exec
+- ✅ Proceed to run backend tests without timeout failures
+- ✅ Complete the full CI/CD pipeline including deployment
 
-### Monitoring Next Run
+### Validation
 
-The next workflow run should provide detailed diagnostic information if services still fail, allowing us to identify the root cause and implement targeted fixes.
+The local test script now validates:
+
+- Host command availability (demonstrates the problem)
+- Docker exec command reliability (demonstrates the solution)
+- Full service readiness using the new approach
+- Backend test execution with proper service dependencies

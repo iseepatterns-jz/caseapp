@@ -88,12 +88,12 @@ jobs:
 
       - name: Wait for services to be ready
         run: |
-          echo "🔍 Waiting for services to be ready with enhanced retry logic..."
+          echo "🔍 Waiting for services to be ready with Docker exec commands..."
 
-          # Function for exponential backoff retry with better error handling
+          # Function for exponential backoff retry with Docker exec
           retry_with_backoff() {
-            local max_attempts=20  # Increased to 20 attempts
-            local delay=3          # Start with 3 seconds
+            local max_attempts=20
+            local delay=3
             local attempt=1
             local command="$1"
             local service_name="$2"
@@ -116,22 +116,28 @@ jobs:
                 
                 # Additional debugging for PostgreSQL
                 if [ "$service_name" = "PostgreSQL" ]; then
-                  echo "PostgreSQL processes:"
-                  ps aux | grep postgres || true
                   echo "PostgreSQL container logs:"
-                  docker logs $(docker ps -q --filter ancestor=postgres:15) 2>/dev/null | tail -30 || true
-                  echo "Testing basic PostgreSQL connection:"
-                  pg_isready -h localhost -p 5432 -U postgres || true
+                  POSTGRES_CONTAINER=$(docker ps -q --filter ancestor=postgres:15)
+                  if [ -n "$POSTGRES_CONTAINER" ]; then
+                    docker logs "$POSTGRES_CONTAINER" 2>/dev/null | tail -30 || true
+                    echo "Testing PostgreSQL connection via Docker exec:"
+                    docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d test_db || true
+                  else
+                    echo "PostgreSQL container not found"
+                  fi
                 fi
                 
                 # Additional debugging for Redis
                 if [ "$service_name" = "Redis" ]; then
-                  echo "Redis processes:"
-                  ps aux | grep redis || true
                   echo "Redis container logs:"
-                  docker logs $(docker ps -q --filter ancestor=redis:7-alpine) 2>/dev/null | tail -30 || true
-                  echo "Testing basic Redis connection:"
-                  redis-cli -h localhost -p 6379 ping || true
+                  REDIS_CONTAINER=$(docker ps -q --filter ancestor=redis:7-alpine)
+                  if [ -n "$REDIS_CONTAINER" ]; then
+                    docker logs "$REDIS_CONTAINER" 2>/dev/null | tail -30 || true
+                    echo "Testing Redis connection via Docker exec:"
+                    docker exec "$REDIS_CONTAINER" redis-cli ping || true
+                  else
+                    echo "Redis container not found"
+                  fi
                 fi
                 
                 return 1
@@ -149,13 +155,13 @@ jobs:
             done
           }
 
-          # Wait for PostgreSQL with retry logic
+          # Wait for PostgreSQL with Docker exec
           echo "🐘 Waiting for PostgreSQL to be ready..."
-          retry_with_backoff "pg_isready -h localhost -p 5432 -U postgres -q" "PostgreSQL"
+          retry_with_backoff "docker exec \$(docker ps -q --filter ancestor=postgres:15) pg_isready -U postgres -d test_db > /dev/null 2>&1" "PostgreSQL"
 
-          # Wait for Redis with retry logic  
+          # Wait for Redis with Docker exec
           echo "🔴 Waiting for Redis to be ready..."
-          retry_with_backoff "redis-cli -h localhost -p 6379 ping > /dev/null 2>&1" "Redis"
+          retry_with_backoff "docker exec \$(docker ps -q --filter ancestor=redis:7-alpine) redis-cli ping > /dev/null 2>&1" "Redis"
 
           echo "🎉 All services are ready and healthy!"
         timeout-minutes: 6
