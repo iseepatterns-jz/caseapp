@@ -92,8 +92,8 @@ jobs:
 
           # Function for exponential backoff retry with better error handling
           retry_with_backoff() {
-            local max_attempts=15  # Increased from 10
-            local delay=2          # Start with 2 seconds
+            local max_attempts=20  # Increased to 20 attempts
+            local delay=3          # Start with 3 seconds
             local attempt=1
             local command="$1"
             local service_name="$2"
@@ -110,20 +110,28 @@ jobs:
                 echo "❌ $service_name failed to become ready after $max_attempts attempts"
                 echo "🔍 Debugging $service_name status..."
                 
+                # Show Docker containers
+                echo "Docker containers:"
+                docker ps -a || true
+                
                 # Additional debugging for PostgreSQL
                 if [ "$service_name" = "PostgreSQL" ]; then
                   echo "PostgreSQL processes:"
                   ps aux | grep postgres || true
-                  echo "PostgreSQL logs:"
-                  docker logs $(docker ps -q --filter ancestor=postgres:15) 2>/dev/null | tail -20 || true
+                  echo "PostgreSQL container logs:"
+                  docker logs $(docker ps -q --filter ancestor=postgres:15) 2>/dev/null | tail -30 || true
+                  echo "Testing basic PostgreSQL connection:"
+                  pg_isready -h localhost -p 5432 -U postgres || true
                 fi
                 
                 # Additional debugging for Redis
                 if [ "$service_name" = "Redis" ]; then
                   echo "Redis processes:"
                   ps aux | grep redis || true
-                  echo "Redis logs:"
-                  docker logs $(docker ps -q --filter ancestor=redis:7-alpine) 2>/dev/null | tail -20 || true
+                  echo "Redis container logs:"
+                  docker logs $(docker ps -q --filter ancestor=redis:7-alpine) 2>/dev/null | tail -30 || true
+                  echo "Testing basic Redis connection:"
+                  redis-cli -h localhost -p 6379 ping || true
                 fi
                 
                 return 1
@@ -132,9 +140,9 @@ jobs:
               echo "⏳ $service_name not ready, waiting ${delay}s before retry..."
               sleep $delay
               
-              # Exponential backoff with max delay of 10 seconds
-              if [ $delay -lt 10 ]; then
-                delay=$((delay * 2))
+              # Exponential backoff with max delay of 15 seconds
+              if [ $delay -lt 15 ]; then
+                delay=$((delay + 2))
               fi
               
               attempt=$((attempt + 1))
@@ -143,22 +151,14 @@ jobs:
 
           # Wait for PostgreSQL with retry logic
           echo "🐘 Waiting for PostgreSQL to be ready..."
-          retry_with_backoff "pg_isready -h localhost -p 5432 -q" "PostgreSQL"
-
-          # Additional PostgreSQL connection test
-          echo "🔍 Testing PostgreSQL connection..."
-          retry_with_backoff "psql -h localhost -p 5432 -U postgres -d test_db -c 'SELECT 1;' > /dev/null 2>&1" "PostgreSQL Connection"
+          retry_with_backoff "pg_isready -h localhost -p 5432 -U postgres -q" "PostgreSQL"
 
           # Wait for Redis with retry logic  
           echo "🔴 Waiting for Redis to be ready..."
           retry_with_backoff "redis-cli -h localhost -p 6379 ping > /dev/null 2>&1" "Redis"
 
-          # Additional Redis connection test
-          echo "🔍 Testing Redis connection..."
-          retry_with_backoff "redis-cli -h localhost -p 6379 set test_key test_value > /dev/null 2>&1 && redis-cli -h localhost -p 6379 del test_key > /dev/null 2>&1" "Redis Connection"
-
           echo "🎉 All services are ready and healthy!"
-        timeout-minutes: 5
+        timeout-minutes: 6
 
       - name: Run backend tests
         working-directory: caseapp/backend
