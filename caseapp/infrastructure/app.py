@@ -70,6 +70,9 @@ class CourtCaseManagementStack(Stack):
         # ECS Cluster
         self.create_ecs_cluster()
         
+        # Monitoring and Alerting
+        self.create_monitoring_dashboard()
+        
         # Media Processing
         self.create_media_services()
         
@@ -138,7 +141,7 @@ class CourtCaseManagementStack(Stack):
         )
     
     def create_database(self):
-        """Create RDS PostgreSQL database"""
+        """Create RDS PostgreSQL database with optimized security configuration"""
         
         # Database subnet group
         db_subnet_group = rds.SubnetGroup(
@@ -150,13 +153,16 @@ class CourtCaseManagementStack(Stack):
             )
         )
         
-        # Database security group
-        db_security_group = ec2.SecurityGroup(
+        # Database security group with minimal required permissions
+        self.db_security_group = ec2.SecurityGroup(
             self, "DatabaseSecurityGroup",
             vpc=self.vpc,
-            description="Security group for court case database",
+            description="Security group for court case database - minimal required access",
             allow_all_outbound=False
         )
+        
+        # Only allow inbound PostgreSQL connections from ECS tasks
+        # This will be configured after ECS service is created
         
         # Database instance
         self.database = rds.DatabaseInstance(
@@ -170,7 +176,7 @@ class CourtCaseManagementStack(Stack):
             ),
             vpc=self.vpc,
             subnet_group=db_subnet_group,
-            security_groups=[db_security_group],
+            security_groups=[self.db_security_group],
             database_name="courtcase_db",
             credentials=rds.Credentials.from_generated_secret(
                 "courtcase_admin",
@@ -180,11 +186,21 @@ class CourtCaseManagementStack(Stack):
             storage_encrypted=True,
             backup_retention=Duration.days(7),
             deletion_protection=True,
-            removal_policy=RemovalPolicy.RETAIN
+            removal_policy=RemovalPolicy.RETAIN,
+            # Enhanced monitoring and performance insights
+            monitoring_interval=Duration.seconds(60),
+            enable_performance_insights=True,
+            performance_insight_retention=rds.PerformanceInsightRetention.DEFAULT,
+            # Multi-AZ for high availability
+            multi_az=True,
+            # Automated backups
+            backup_retention=Duration.days(7),
+            preferred_backup_window="03:00-04:00",
+            preferred_maintenance_window="sun:04:00-sun:05:00"
         )
     
     def create_redis_cache(self):
-        """Create ElastiCache Redis cluster"""
+        """Create ElastiCache Redis cluster with optimized security"""
         
         # Redis subnet group
         redis_subnet_group = elasticache.CfnSubnetGroup(
@@ -193,25 +209,49 @@ class CourtCaseManagementStack(Stack):
             subnet_ids=[subnet.subnet_id for subnet in self.vpc.private_subnets]
         )
         
-        # Redis security group
-        redis_security_group = ec2.SecurityGroup(
+        # Redis security group with minimal required permissions
+        self.redis_security_group = ec2.SecurityGroup(
             self, "RedisSecurityGroup",
             vpc=self.vpc,
-            description="Security group for Redis cache"
+            description="Security group for Redis cache - minimal required access",
+            allow_all_outbound=False
         )
         
-        # Redis cluster
+        # Only allow inbound Redis connections from ECS tasks
+        # This will be configured after ECS service is created
+        
+        # Redis cluster with enhanced security
         self.redis_cluster = elasticache.CfnCacheCluster(
             self, "RedisCluster",
             cache_node_type="cache.t3.micro",
             engine="redis",
             num_cache_nodes=1,
             cache_subnet_group_name=redis_subnet_group.ref,
-            vpc_security_group_ids=[redis_security_group.security_group_id]
+            vpc_security_group_ids=[self.redis_security_group.security_group_id],
+            # Enhanced security settings
+            engine_version="7.0",
+            port=6379,
+            # Enable encryption in transit
+            transit_encryption_enabled=True,
+            # Enable encryption at rest
+            at_rest_encryption_enabled=True,
+            # Enable auth token for additional security
+            auth_token="your-redis-auth-token-change-in-production"
         )
     
     def create_opensearch(self):
-        """Create OpenSearch cluster for document search"""
+        """Create OpenSearch cluster for document search with enhanced security"""
+        
+        # OpenSearch security group with minimal required permissions
+        self.opensearch_security_group = ec2.SecurityGroup(
+            self, "OpenSearchSecurityGroup",
+            vpc=self.vpc,
+            description="Security group for OpenSearch - minimal required access",
+            allow_all_outbound=False
+        )
+        
+        # Only allow HTTPS connections from ECS tasks
+        # This will be configured after ECS service is created
         
         self.opensearch_domain = opensearch.Domain(
             self, "CourtCaseSearch",
@@ -234,16 +274,32 @@ class CourtCaseManagementStack(Stack):
             vpc_subnets=[ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
             )],
-            security_groups=[
-                ec2.SecurityGroup(
-                    self, "OpenSearchSecurityGroup",
-                    vpc=self.vpc,
-                    description="Security group for OpenSearch"
-                )
-            ],
+            security_groups=[self.opensearch_security_group],
             encryption_at_rest=opensearch.EncryptionAtRestOptions(enabled=True),
             node_to_node_encryption=True,
             enforce_https=True,
+            # Enhanced security with fine-grained access control
+            fine_grained_access_control=opensearch.AdvancedSecurityOptions(
+                master_user_name="admin",
+                master_user_password=cdk.SecretValue.secrets_manager(
+                    "opensearch-master-password",
+                    json_field="password"
+                )
+            ),
+            # Domain access policy - restrict to VPC only
+            access_policies=[
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    principals=[iam.AnyPrincipal()],
+                    actions=["es:*"],
+                    resources=["*"],
+                    conditions={
+                        "IpAddress": {
+                            "aws:SourceIp": [self.vpc.vpc_cidr_block]
+                        }
+                    }
+                )
+            ],
             removal_policy=RemovalPolicy.DESTROY
         )
     
@@ -289,7 +345,7 @@ class CourtCaseManagementStack(Stack):
         )
     
     def create_ecs_cluster(self):
-        """Create ECS cluster for containerized applications"""
+        """Create ECS cluster for containerized applications with optimized security"""
         
         # Get Docker username from environment or use default
         docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
@@ -310,21 +366,18 @@ class CourtCaseManagementStack(Stack):
             ]
         )
         
-        # Task role with permissions for AWS services
+        # Task role with minimal required permissions for AWS services
         task_role = iam.Role(
             self, "TaskRole",
             assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com")
         )
         
-        # Grant permissions to access AWS services
+        # Grant minimal required permissions to access AWS services
         self.documents_bucket.grant_read_write(task_role)
         self.media_bucket.grant_read_write(task_role)
         self.database.secret.grant_read(task_role)
         
-        # Get Docker username from environment or use default
-        docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
-        
-        # Backend service
+        # Backend service (this will create the ALB and its security group)
         self.backend_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "BackendService",
             cluster=self.cluster,
@@ -358,19 +411,59 @@ class CourtCaseManagementStack(Stack):
             deployment_configuration=ecs.DeploymentConfiguration(
                 maximum_percent=200,        # Allow up to 200% of desired capacity during deployment
                 minimum_healthy_percent=50  # Maintain at least 50% healthy tasks during deployment
+            ),
+            # Use private subnets for ECS tasks
+            task_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
             )
         )
         
-        # Configure ECS service health check settings
-        cfn_service = self.backend_service.service.node.default_child
-        cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
+        # Get ALB security group reference
+        self.alb_security_group = self.backend_service.load_balancer.connections.security_groups[0]
         
-        # Allow backend to access database
-        self.backend_service.service.connections.allow_to(
-            self.database,
-            ec2.Port.tcp(5432),
-            "Backend to database"
+        # Create ECS Service Security Group with minimal required permissions
+        self.ecs_security_group = ec2.SecurityGroup(
+            self, "ECSServiceSecurityGroup",
+            vpc=self.vpc,
+            description="Security group for ECS service - minimal required access",
+            allow_all_outbound=True  # Allow outbound for AWS service calls
         )
+        
+        # Allow inbound HTTP traffic from ALB only
+        self.ecs_security_group.add_ingress_rule(
+            peer=ec2.Peer.security_group_id(self.alb_security_group.security_group_id),
+            connection=ec2.Port.tcp(8000),
+            description="Allow HTTP traffic from ALB"
+        )
+        
+        # Configure database access from ECS
+        self.db_security_group.add_ingress_rule(
+            peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
+            connection=ec2.Port.tcp(5432),
+            description="Allow PostgreSQL access from ECS tasks"
+        )
+        
+        # Configure Redis access from ECS
+        self.redis_security_group.add_ingress_rule(
+            peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
+            connection=ec2.Port.tcp(6379),
+            description="Allow Redis access from ECS tasks"
+        )
+        
+        # Configure OpenSearch access from ECS
+        self.opensearch_security_group.add_ingress_rule(
+            peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
+            connection=ec2.Port.tcp(443),
+            description="Allow HTTPS access to OpenSearch from ECS tasks"
+        )
+        
+        # Apply custom security group to ECS service
+        cfn_service = self.backend_service.service.node.default_child
+        cfn_service.add_property_override("NetworkConfiguration.AwsvpcConfiguration.SecurityGroups", 
+                                        [self.ecs_security_group.security_group_id])
+        
+        # Configure ECS service health check settings
+        cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
         
         # Configure load balancer health check
         self.backend_service.target_group.configure_health_check(
@@ -380,6 +473,307 @@ class CourtCaseManagementStack(Stack):
             timeout=Duration.seconds(10),   # 10 second timeout per check
             interval=Duration.seconds(30),  # Check every 30 seconds
             port="8000"                     # Health check on application port
+        )
+    
+    def create_monitoring_dashboard(self):
+        """Create CloudWatch dashboard and alarms for deployment monitoring"""
+        
+        # Import CloudWatch constructs
+        from aws_cdk import aws_cloudwatch as cloudwatch
+        from aws_cdk import aws_sns as sns
+        
+        # Create SNS topic for alerts
+        self.alerts_topic = sns.Topic(
+            self, "DeploymentAlerts",
+            topic_name="court-case-deployment-alerts",
+            display_name="Court Case Deployment Alerts"
+        )
+        
+        # Extract service and cluster names
+        service_name = self.backend_service.service.service_name
+        cluster_name = self.cluster.cluster_name
+        
+        # Extract load balancer name from ARN
+        lb_arn = self.backend_service.load_balancer.load_balancer_arn
+        lb_name_parts = lb_arn.split('/')
+        lb_name = f"{lb_name_parts[-3]}/{lb_name_parts[-2]}/{lb_name_parts[-1]}"
+        
+        # Extract database identifier
+        db_identifier = self.database.instance_identifier
+        
+        # Create CloudWatch dashboard
+        dashboard = cloudwatch.Dashboard(
+            self, "DeploymentMonitoringDashboard",
+            dashboard_name="CourtCase-Deployment-Monitoring",
+            widgets=[
+                [
+                    # ECS Service Metrics
+                    cloudwatch.GraphWidget(
+                        title="ECS Service Metrics",
+                        left=[
+                            cloudwatch.Metric(
+                                namespace="AWS/ECS",
+                                metric_name="CPUUtilization",
+                                dimensions_map={
+                                    "ServiceName": service_name,
+                                    "ClusterName": cluster_name
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            ),
+                            cloudwatch.Metric(
+                                namespace="AWS/ECS",
+                                metric_name="MemoryUtilization",
+                                dimensions_map={
+                                    "ServiceName": service_name,
+                                    "ClusterName": cluster_name
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            )
+                        ],
+                        right=[
+                            cloudwatch.Metric(
+                                namespace="AWS/ECS",
+                                metric_name="RunningTaskCount",
+                                dimensions_map={
+                                    "ServiceName": service_name,
+                                    "ClusterName": cluster_name
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            )
+                        ],
+                        width=12,
+                        height=6
+                    ),
+                    
+                    # Load Balancer Metrics
+                    cloudwatch.GraphWidget(
+                        title="Load Balancer Metrics",
+                        left=[
+                            cloudwatch.Metric(
+                                namespace="AWS/ApplicationELB",
+                                metric_name="RequestCount",
+                                dimensions_map={
+                                    "LoadBalancer": lb_name
+                                },
+                                statistic="Sum",
+                                period=Duration.minutes(5)
+                            ),
+                            cloudwatch.Metric(
+                                namespace="AWS/ApplicationELB",
+                                metric_name="HTTPCode_ELB_5XX_Count",
+                                dimensions_map={
+                                    "LoadBalancer": lb_name
+                                },
+                                statistic="Sum",
+                                period=Duration.minutes(5)
+                            )
+                        ],
+                        right=[
+                            cloudwatch.Metric(
+                                namespace="AWS/ApplicationELB",
+                                metric_name="TargetResponseTime",
+                                dimensions_map={
+                                    "LoadBalancer": lb_name
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            ),
+                            cloudwatch.Metric(
+                                namespace="AWS/ApplicationELB",
+                                metric_name="HealthyHostCount",
+                                dimensions_map={
+                                    "LoadBalancer": lb_name
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            )
+                        ],
+                        width=12,
+                        height=6
+                    )
+                ],
+                [
+                    # Database Metrics
+                    cloudwatch.GraphWidget(
+                        title="Database Metrics",
+                        left=[
+                            cloudwatch.Metric(
+                                namespace="AWS/RDS",
+                                metric_name="CPUUtilization",
+                                dimensions_map={
+                                    "DBInstanceIdentifier": db_identifier
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            ),
+                            cloudwatch.Metric(
+                                namespace="AWS/RDS",
+                                metric_name="DatabaseConnections",
+                                dimensions_map={
+                                    "DBInstanceIdentifier": db_identifier
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            )
+                        ],
+                        right=[
+                            cloudwatch.Metric(
+                                namespace="AWS/RDS",
+                                metric_name="ReadLatency",
+                                dimensions_map={
+                                    "DBInstanceIdentifier": db_identifier
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            ),
+                            cloudwatch.Metric(
+                                namespace="AWS/RDS",
+                                metric_name="WriteLatency",
+                                dimensions_map={
+                                    "DBInstanceIdentifier": db_identifier
+                                },
+                                statistic="Average",
+                                period=Duration.minutes(5)
+                            )
+                        ],
+                        width=12,
+                        height=6
+                    ),
+                    
+                    # Log Insights Widget
+                    cloudwatch.LogQueryWidget(
+                        title="Recent Application Errors",
+                        log_groups=[
+                            logs.LogGroup.from_log_group_name(
+                                self, "BackendLogGroup",
+                                f"/ecs/{service_name}"
+                            )
+                        ],
+                        query_lines=[
+                            "fields @timestamp, @message",
+                            "filter @message like /ERROR/",
+                            "sort @timestamp desc",
+                            "limit 100"
+                        ],
+                        width=12,
+                        height=6
+                    )
+                ]
+            ]
+        )
+        
+        # Create CloudWatch Alarms
+        
+        # ECS Service CPU Alarm
+        cpu_alarm = cloudwatch.Alarm(
+            self, "ECSHighCPUAlarm",
+            alarm_name=f"{service_name}-HighCPU",
+            alarm_description=f"High CPU utilization for {service_name}",
+            metric=cloudwatch.Metric(
+                namespace="AWS/ECS",
+                metric_name="CPUUtilization",
+                dimensions_map={
+                    "ServiceName": service_name,
+                    "ClusterName": cluster_name
+                },
+                statistic="Average",
+                period=Duration.minutes(5)
+            ),
+            threshold=80,
+            evaluation_periods=2,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+        )
+        cpu_alarm.add_alarm_action(
+            cloudwatch.SnsAction(self.alerts_topic)
+        )
+        
+        # ECS Service Memory Alarm
+        memory_alarm = cloudwatch.Alarm(
+            self, "ECSHighMemoryAlarm",
+            alarm_name=f"{service_name}-HighMemory",
+            alarm_description=f"High memory utilization for {service_name}",
+            metric=cloudwatch.Metric(
+                namespace="AWS/ECS",
+                metric_name="MemoryUtilization",
+                dimensions_map={
+                    "ServiceName": service_name,
+                    "ClusterName": cluster_name
+                },
+                statistic="Average",
+                period=Duration.minutes(5)
+            ),
+            threshold=85,
+            evaluation_periods=2,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+        )
+        memory_alarm.add_alarm_action(
+            cloudwatch.SnsAction(self.alerts_topic)
+        )
+        
+        # ALB 5XX Error Alarm
+        alb_5xx_alarm = cloudwatch.Alarm(
+            self, "ALBHigh5XXAlarm",
+            alarm_name=f"{service_name}-ALB-High5XX",
+            alarm_description=f"High 5XX error rate for {service_name}",
+            metric=cloudwatch.Metric(
+                namespace="AWS/ApplicationELB",
+                metric_name="HTTPCode_ELB_5XX_Count",
+                dimensions_map={
+                    "LoadBalancer": lb_name
+                },
+                statistic="Sum",
+                period=Duration.minutes(5)
+            ),
+            threshold=10,
+            evaluation_periods=2,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
+        )
+        alb_5xx_alarm.add_alarm_action(
+            cloudwatch.SnsAction(self.alerts_topic)
+        )
+        
+        # RDS CPU Alarm
+        rds_cpu_alarm = cloudwatch.Alarm(
+            self, "RDSHighCPUAlarm",
+            alarm_name=f"{db_identifier}-HighCPU",
+            alarm_description=f"High CPU utilization for database {db_identifier}",
+            metric=cloudwatch.Metric(
+                namespace="AWS/RDS",
+                metric_name="CPUUtilization",
+                dimensions_map={
+                    "DBInstanceIdentifier": db_identifier
+                },
+                statistic="Average",
+                period=Duration.minutes(5)
+            ),
+            threshold=75,
+            evaluation_periods=2,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+        )
+        rds_cpu_alarm.add_alarm_action(
+            cloudwatch.SnsAction(self.alerts_topic)
+        )
+        
+        # Store references for outputs
+        self.monitoring_dashboard = dashboard
+        self.monitoring_alarms = [cpu_alarm, memory_alarm, alb_5xx_alarm, rds_cpu_alarm]
+        
+        # Output dashboard URL
+        cdk.CfnOutput(
+            self, "MonitoringDashboardURL",
+            value=f"https://{self.region}.console.aws.amazon.com/cloudwatch/home?region={self.region}#dashboards:name={dashboard.dashboard_name}",
+            description="CloudWatch Dashboard URL for deployment monitoring"
+        )
+        
+        # Output SNS topic ARN
+        cdk.CfnOutput(
+            self, "AlertsTopicARN",
+            value=self.alerts_topic.topic_arn,
+            description="SNS Topic ARN for deployment alerts"
         )
     
     def create_media_services(self):

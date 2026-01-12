@@ -10,6 +10,10 @@ REGION="us-east-1"
 STACK_NAME="CourtCaseManagementStack"
 DOCKER_USERNAME="${DOCKER_USERNAME:-}"
 
+# Generate correlation ID for this deployment
+CORRELATION_ID="${CORRELATION_ID:-$(date +%Y%m%d-%H%M%S)-$(openssl rand -hex 4)}"
+export CORRELATION_ID
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,21 +21,53 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Logging functions
+# Enhanced logging functions with correlation ID and timestamps
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    local timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+    echo -e "${BLUE}[INFO]${NC} [$timestamp] [ID:$CORRELATION_ID] $1"
+    
+    # Also log to structured log file if available
+    if [ -n "${DEPLOYMENT_LOG_FILE:-}" ]; then
+        echo "{\"timestamp\":\"$timestamp\",\"level\":\"INFO\",\"correlation_id\":\"$CORRELATION_ID\",\"message\":\"$1\"}" >> "$DEPLOYMENT_LOG_FILE"
+    fi
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    local timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+    echo -e "${GREEN}[SUCCESS]${NC} [$timestamp] [ID:$CORRELATION_ID] $1"
+    
+    if [ -n "${DEPLOYMENT_LOG_FILE:-}" ]; then
+        echo "{\"timestamp\":\"$timestamp\",\"level\":\"SUCCESS\",\"correlation_id\":\"$CORRELATION_ID\",\"message\":\"$1\"}" >> "$DEPLOYMENT_LOG_FILE"
+    fi
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    local timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+    echo -e "${YELLOW}[WARNING]${NC} [$timestamp] [ID:$CORRELATION_ID] $1"
+    
+    if [ -n "${DEPLOYMENT_LOG_FILE:-}" ]; then
+        echo "{\"timestamp\":\"$timestamp\",\"level\":\"WARNING\",\"correlation_id\":\"$CORRELATION_ID\",\"message\":\"$1\"}" >> "$DEPLOYMENT_LOG_FILE"
+    fi
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    local timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+    echo -e "${RED}[ERROR]${NC} [$timestamp] [ID:$CORRELATION_ID] $1"
+    
+    if [ -n "${DEPLOYMENT_LOG_FILE:-}" ]; then
+        echo "{\"timestamp\":\"$timestamp\",\"level\":\"ERROR\",\"correlation_id\":\"$CORRELATION_ID\",\"message\":\"$1\"}" >> "$DEPLOYMENT_LOG_FILE"
+    fi
+}
+
+# Log deployment phase transitions
+log_phase() {
+    local phase="$1"
+    local timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+    echo -e "${BLUE}[PHASE]${NC} [$timestamp] [ID:$CORRELATION_ID] === $phase ==="
+    
+    if [ -n "${DEPLOYMENT_LOG_FILE:-}" ]; then
+        echo "{\"timestamp\":\"$timestamp\",\"level\":\"PHASE\",\"correlation_id\":\"$CORRELATION_ID\",\"phase\":\"$phase\"}" >> "$DEPLOYMENT_LOG_FILE"
+    fi
 }
 
 # Check if we're running in CI environment
@@ -187,11 +223,13 @@ resolve_stack_conflicts() {
 
 # Main validation function
 main() {
-    log_info "Starting enhanced deployment validation..."
+    log_phase "Enhanced Deployment Validation Started"
     log_info "Stack: $STACK_NAME"
     log_info "Region: $REGION"
+    log_info "Correlation ID: $CORRELATION_ID"
     echo
     
+    log_phase "Basic Infrastructure Checks"
     # Basic checks
     if ! check_aws_cli; then
         log_error "AWS CLI check failed"
@@ -205,6 +243,7 @@ main() {
     
     echo
     
+    log_phase "Resource Conflict Detection"
     # Check for resource conflicts
     local conflict_count
     if ! check_resource_conflicts; then
@@ -213,6 +252,7 @@ main() {
         
         # In CI environment or if AUTO_RESOLVE is set, attempt automatic resolution
         if is_ci_environment || [ "${AUTO_RESOLVE:-false}" = "true" ]; then
+            log_phase "Automatic Conflict Resolution"
             log_info "Attempting automatic conflict resolution..."
             
             # Resolve RDS deletion protection first
@@ -234,6 +274,7 @@ main() {
             fi
             
             # Re-check after resolution
+            log_phase "Post-Resolution Validation"
             log_info "Re-validating after conflict resolution..."
             if check_resource_conflicts; then
                 log_success "All conflicts resolved successfully"
@@ -263,6 +304,7 @@ main() {
     fi
     
     echo
+    log_phase "Validation Complete")
     log_success "✅ All deployment validation checks passed"
     log_info "Deployment can proceed safely"
     

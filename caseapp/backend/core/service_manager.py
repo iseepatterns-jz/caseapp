@@ -206,19 +206,40 @@ class ServiceManager:
             from services.efiling_service import EFilingService
             from services.background_job_service import BackgroundJobService
             from services.webhook_service import WebhookService
+            from services.deployment_monitoring_service import DeploymentMonitoringService
+            from services.comprehensive_health_service import ComprehensiveHealthService
+            from services.diagnostic_service import DiagnosticService
+            from services.resource_optimization_service import ResourceOptimizationService
+            from services.deployment_validation_service import DeploymentValidationService
+            from services.disaster_recovery_service import DisasterRecoveryService
+            from services.deployment_orchestration_service import DeploymentOrchestrationService
             
             # Test instantiation
             services = [
                 IntegrationService(),
                 EFilingService(),
                 BackgroundJobService(),
-                WebhookService()
+                WebhookService(),
+                DeploymentMonitoringService(),
+                ComprehensiveHealthService(),
+                DiagnosticService(),
+                ResourceOptimizationService(),
+                DeploymentValidationService(),
+                DisasterRecoveryService(),
+                DeploymentOrchestrationService()
             ]
             
             return {
                 "integration_services_available": len(services),
                 "background_processing_enabled": True,
-                "webhook_support_enabled": True
+                "webhook_support_enabled": True,
+                "deployment_monitoring_enabled": True,
+                "comprehensive_health_monitoring_enabled": True,
+                "diagnostic_tools_enabled": True,
+                "resource_optimization_enabled": True,
+                "deployment_validation_enabled": True,
+                "disaster_recovery_enabled": True,
+                "deployment_orchestration_enabled": True
             }
         
         except Exception as e:

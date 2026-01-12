@@ -1,222 +1,377 @@
 #!/bin/bash
 
-# Database Migration Script for AWS Deployment
-set -e
+# Database Migration Script for Court Case Management System
+# This script handles database migrations safely with rollback capabilities
 
-echo "🗄️ Starting database migration for Court Case Management System..."
+set -euo pipefail
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+BACKEND_DIR="$PROJECT_ROOT/backend"
 
 # Colors for output
+RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-print_warning() {
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-print_error() {
+log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Configuration
-STACK_NAME="CourtCaseManagementStack"
-AWS_REGION=${AWS_REGION:-us-east-1}
-CLUSTER_NAME="CourtCaseCluster"
+# Function to check if database is accessible
+check_database_connection() {
+    log_info "Checking database connection..."
+    
+    cd "$BACKEND_DIR"
+    
+    if python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
 
-# Get database connection details from stack outputs
-get_db_details() {
-    print_status "Retrieving database connection details..."
-    
-    # Get RDS endpoint from CloudFormation outputs
-    DB_ENDPOINT=$(aws cloudformation describe-stacks \
-        --stack-name $STACK_NAME \
-        --region $AWS_REGION \
-        --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' \
-        --output text)
-    
-    # Get database secret ARN
-    DB_SECRET_ARN=$(aws cloudformation describe-stacks \
-        --stack-name $STACK_NAME \
-        --region $AWS_REGION \
-        --query 'Stacks[0].Outputs[?OutputKey==`DatabaseSecretArn`].OutputValue' \
-        --output text)
-    
-    if [ -z "$DB_ENDPOINT" ] || [ -z "$DB_SECRET_ARN" ]; then
-        print_error "Could not retrieve database details from CloudFormation stack"
-        exit 1
-    fi
-    
-    print_status "Database endpoint: $DB_ENDPOINT"
-    print_status "Database secret ARN: $DB_SECRET_ARN"
-}
+async def test_connection():
+    try:
+        from core.database import validate_database_connection
+        return await validate_database_connection()
+    except Exception as e:
+        print(f'Connection error: {e}')
+        return False
 
-# Run migration via ECS task
-run_migration_task() {
-    print_status "Running database migration via ECS task..."
-    
-    # Create task definition for migration
-    TASK_DEF_ARN=$(aws ecs register-task-definition \
-        --family court-case-migration \
-        --network-mode awsvpc \
-        --requires-compatibilities FARGATE \
-        --cpu 256 \
-        --memory 512 \
-        --execution-role-arn "arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):role/ecsTaskExecutionRole" \
-        --task-role-arn "arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):role/CourtCaseTaskRole" \
-        --container-definitions '[
-            {
-                "name": "migration",
-                "image": "court-case-backend:latest",
-                "command": ["alembic", "upgrade", "head"],
-                "environment": [
-                    {
-                        "name": "AWS_REGION",
-                        "value": "'$AWS_REGION'"
-                    }
-                ],
-                "secrets": [
-                    {
-                        "name": "DATABASE_URL",
-                        "valueFrom": "'$DB_SECRET_ARN':connectionString::"
-                    }
-                ],
-                "logConfiguration": {
-                    "logDriver": "awslogs",
-                    "options": {
-                        "awslogs-group": "/ecs/court-case-migration",
-                        "awslogs-region": "'$AWS_REGION'",
-                        "awslogs-stream-prefix": "migration"
-                    }
-                }
-            }
-        ]' \
-        --query 'taskDefinition.taskDefinitionArn' \
-        --output text)
-    
-    print_status "Created migration task definition: $TASK_DEF_ARN"
-    
-    # Get VPC and subnet information
-    VPC_ID=$(aws ec2 describe-vpcs \
-        --filters "Name=tag:Name,Values=CourtCaseVPC*" \
-        --query 'Vpcs[0].VpcId' \
-        --output text)
-    
-    SUBNET_ID=$(aws ec2 describe-subnets \
-        --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=*Private*" \
-        --query 'Subnets[0].SubnetId' \
-        --output text)
-    
-    SECURITY_GROUP_ID=$(aws ec2 describe-security-groups \
-        --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=*Backend*" \
-        --query 'SecurityGroups[0].GroupId' \
-        --output text)
-    
-    # Run the migration task
-    TASK_ARN=$(aws ecs run-task \
-        --cluster $CLUSTER_NAME \
-        --task-definition $TASK_DEF_ARN \
-        --launch-type FARGATE \
-        --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_ID],securityGroups=[$SECURITY_GROUP_ID],assignPublicIp=DISABLED}" \
-        --query 'tasks[0].taskArn' \
-        --output text)
-    
-    print_status "Started migration task: $TASK_ARN"
-    
-    # Wait for task completion
-    print_status "Waiting for migration to complete..."
-    aws ecs wait tasks-stopped --cluster $CLUSTER_NAME --tasks $TASK_ARN
-    
-    # Check task exit code
-    EXIT_CODE=$(aws ecs describe-tasks \
-        --cluster $CLUSTER_NAME \
-        --tasks $TASK_ARN \
-        --query 'tasks[0].containers[0].exitCode' \
-        --output text)
-    
-    if [ "$EXIT_CODE" = "0" ]; then
-        print_status "Database migration completed successfully ✅"
+result = asyncio.run(test_connection())
+sys.exit(0 if result else 1)
+    "; then
+        log_success "Database connection successful"
+        return 0
     else
-        print_error "Database migration failed with exit code: $EXIT_CODE"
-        
-        # Get logs for debugging
-        print_status "Fetching migration logs..."
-        LOG_GROUP="/ecs/court-case-migration"
-        LOG_STREAM=$(aws logs describe-log-streams \
-            --log-group-name $LOG_GROUP \
-            --order-by LastEventTime \
-            --descending \
-            --max-items 1 \
-            --query 'logStreams[0].logStreamName' \
-            --output text)
-        
-        if [ "$LOG_STREAM" != "None" ]; then
-            aws logs get-log-events \
-                --log-group-name $LOG_GROUP \
-                --log-stream-name $LOG_STREAM \
-                --query 'events[].message' \
-                --output text
-        fi
-        
-        exit 1
+        log_error "Database connection failed"
+        return 1
     fi
 }
 
-# Create initial admin user
-create_admin_user() {
-    print_status "Creating initial admin user..."
+# Function to get current migration version
+get_current_version() {
+    cd "$BACKEND_DIR"
     
-    # This would run another ECS task to create the admin user
-    print_warning "Admin user creation should be done manually or via separate script"
-    print_warning "Connect to the application and use the admin creation endpoint"
+    python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
+
+async def get_version():
+    try:
+        from core.database_migration import migration_manager
+        version = await migration_manager.get_current_schema_version()
+        print(version or 'None')
+    except Exception as e:
+        print('Error')
+
+asyncio.run(get_version())
+    "
 }
 
-# Validate database schema
+# Function to get pending migrations
+get_pending_migrations() {
+    cd "$BACKEND_DIR"
+    
+    python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
+
+async def get_pending():
+    try:
+        from core.database_migration import migration_manager
+        pending = await migration_manager.get_pending_migrations()
+        print(len(pending))
+    except Exception as e:
+        print('0')
+
+asyncio.run(get_pending())
+    "
+}
+
+# Function to run migrations
+run_migrations() {
+    local target_revision="${1:-head}"
+    
+    log_info "Running database migrations to revision: $target_revision"
+    
+    cd "$BACKEND_DIR"
+    
+    # Check if alembic is available
+    if ! python3 -c "import alembic" 2>/dev/null; then
+        log_error "Alembic is not installed. Please install it with: pip install alembic"
+        return 1
+    fi
+    
+    # Run migrations using our migration manager
+    python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
+
+async def run_migration():
+    try:
+        from core.database_migration import migration_manager
+        result = await migration_manager.run_migrations('$target_revision')
+        
+        if result['status'] == 'success':
+            print('Migration completed successfully')
+            print(f'Applied migrations: {result[\"migrations_applied\"]}')
+            return True
+        else:
+            print(f'Migration failed: {result[\"message\"]}')
+            return False
+    except Exception as e:
+        print(f'Migration error: {e}')
+        return False
+
+success = asyncio.run(run_migration())
+sys.exit(0 if success else 1)
+    "
+    
+    if [ $? -eq 0 ]; then
+        log_success "Database migrations completed successfully"
+        return 0
+    else
+        log_error "Database migrations failed"
+        return 1
+    fi
+}
+
+# Function to rollback migrations
+rollback_migrations() {
+    local target_revision="$1"
+    
+    log_warning "Rolling back database to revision: $target_revision"
+    
+    cd "$BACKEND_DIR"
+    
+    python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
+
+async def rollback_migration():
+    try:
+        from core.database_migration import migration_manager
+        result = await migration_manager.rollback_migration('$target_revision')
+        
+        if result['status'] == 'success':
+            print('Rollback completed successfully')
+            return True
+        else:
+            print(f'Rollback failed: {result[\"message\"]}')
+            return False
+    except Exception as e:
+        print(f'Rollback error: {e}')
+        return False
+
+success = asyncio.run(rollback_migration())
+sys.exit(0 if success else 1)
+    "
+    
+    if [ $? -eq 0 ]; then
+        log_success "Database rollback completed successfully"
+        return 0
+    else
+        log_error "Database rollback failed"
+        return 1
+    fi
+}
+
+# Function to validate schema integrity
 validate_schema() {
-    print_status "Validating database schema..."
+    log_info "Validating database schema integrity..."
     
-    # Run a simple query to validate the schema
-    print_status "Schema validation completed ✅"
+    cd "$BACKEND_DIR"
+    
+    python3 -c "
+import asyncio
+import sys
+sys.path.append('.')
+
+async def validate():
+    try:
+        from core.database_migration import migration_manager
+        result = await migration_manager.validate_schema_integrity()
+        
+        print(f'Schema status: {result[\"status\"]}')
+        print(f'Message: {result[\"message\"]}')
+        
+        if 'existing_tables' in result:
+            print(f'Existing tables: {len(result[\"existing_tables\"])}')
+        
+        if 'missing_tables' in result and result['missing_tables']:
+            print(f'Missing tables: {result[\"missing_tables\"]}')
+        
+        return result['status'] in ['valid', 'incomplete']
+    except Exception as e:
+        print(f'Validation error: {e}')
+        return False
+
+success = asyncio.run(validate())
+sys.exit(0 if success else 1)
+    "
+    
+    if [ $? -eq 0 ]; then
+        log_success "Schema validation completed"
+        return 0
+    else
+        log_error "Schema validation failed"
+        return 1
+    fi
 }
 
-# Main function
-main() {
-    print_status "Starting database migration process..."
+# Function to show migration status
+show_status() {
+    log_info "Database Migration Status"
+    echo "=========================="
     
-    get_db_details
-    run_migration_task
-    create_admin_user
+    if ! check_database_connection; then
+        log_error "Cannot connect to database"
+        return 1
+    fi
+    
+    local current_version
+    current_version=$(get_current_version)
+    echo "Current version: $current_version"
+    
+    local pending_count
+    pending_count=$(get_pending_migrations)
+    echo "Pending migrations: $pending_count"
+    
+    if [ "$pending_count" -gt 0 ]; then
+        log_warning "There are $pending_count pending migrations"
+    else
+        log_success "Database is up to date"
+    fi
+    
     validate_schema
-    
-    print_status "🎉 Database migration completed successfully!"
-    print_status "Next steps:"
-    echo "  1. Create initial admin user via application"
-    echo "  2. Test database connectivity"
-    echo "  3. Verify all tables are created"
-    echo "  4. Run application health checks"
 }
 
-# Handle script arguments
-case "${1:-migrate}" in
-    "migrate")
-        main
-        ;;
-    "validate")
-        get_db_details
-        validate_schema
-        ;;
-    "admin")
-        create_admin_user
-        ;;
-    *)
-        echo "Usage: $0 [migrate|validate|admin]"
-        echo "  migrate  - Run database migrations (default)"
-        echo "  validate - Validate database schema"
-        echo "  admin    - Create admin user"
-        exit 1
-        ;;
-esac
+# Function to create a new migration
+create_migration() {
+    local message="$1"
+    
+    log_info "Creating new migration: $message"
+    
+    cd "$BACKEND_DIR"
+    
+    if ! command -v alembic &> /dev/null; then
+        log_error "Alembic command not found. Please ensure alembic is installed and in PATH"
+        return 1
+    fi
+    
+    alembic revision --autogenerate -m "$message"
+    
+    if [ $? -eq 0 ]; then
+        log_success "Migration created successfully"
+        return 0
+    else
+        log_error "Failed to create migration"
+        return 1
+    fi
+}
+
+# Function to show help
+show_help() {
+    echo "Database Migration Script for Court Case Management System"
+    echo ""
+    echo "Usage: $0 [COMMAND] [OPTIONS]"
+    echo ""
+    echo "Commands:"
+    echo "  status                    Show current migration status"
+    echo "  migrate [revision]        Run migrations (default: head)"
+    echo "  rollback <revision>       Rollback to specific revision"
+    echo "  validate                  Validate schema integrity"
+    echo "  create <message>          Create new migration"
+    echo "  help                      Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 status                 # Show migration status"
+    echo "  $0 migrate                # Run all pending migrations"
+    echo "  $0 migrate abc123         # Migrate to specific revision"
+    echo "  $0 rollback def456        # Rollback to revision def456"
+    echo "  $0 create 'Add user table' # Create new migration"
+    echo ""
+    echo "Environment Variables:"
+    echo "  DATABASE_URL              Database connection string"
+    echo ""
+}
+
+# Main script logic
+main() {
+    local command="${1:-help}"
+    
+    case "$command" in
+        "status")
+            show_status
+            ;;
+        "migrate")
+            local revision="${2:-head}"
+            if check_database_connection; then
+                run_migrations "$revision"
+            else
+                log_error "Cannot connect to database. Please check your DATABASE_URL"
+                exit 1
+            fi
+            ;;
+        "rollback")
+            if [ -z "${2:-}" ]; then
+                log_error "Rollback requires a target revision"
+                show_help
+                exit 1
+            fi
+            if check_database_connection; then
+                rollback_migrations "$2"
+            else
+                log_error "Cannot connect to database. Please check your DATABASE_URL"
+                exit 1
+            fi
+            ;;
+        "validate")
+            if check_database_connection; then
+                validate_schema
+            else
+                log_error "Cannot connect to database. Please check your DATABASE_URL"
+                exit 1
+            fi
+            ;;
+        "create")
+            if [ -z "${2:-}" ]; then
+                log_error "Create requires a migration message"
+                show_help
+                exit 1
+            fi
+            create_migration "$2"
+            ;;
+        "help"|"--help"|"-h")
+            show_help
+            ;;
+        *)
+            log_error "Unknown command: $command"
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"

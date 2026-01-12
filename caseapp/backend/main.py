@@ -50,7 +50,28 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Court Case Management System")
     
-    # Initialize service manager
+    # Step 1: Validate database connection
+    from core.database import validate_database_connection
+    logger.info("Validating database connection...")
+    
+    db_valid = await validate_database_connection()
+    if not db_valid:
+        logger.error("Database connection validation failed during startup")
+        # Continue startup but log the issue
+    else:
+        logger.info("Database connection validated successfully")
+    
+    # Step 2: Run database migrations
+    from core.database_migration import run_startup_migrations
+    logger.info("Running database migrations...")
+    
+    migration_success = await run_startup_migrations()
+    if migration_success:
+        logger.info("Database migrations completed successfully")
+    else:
+        logger.warning("Database migrations failed or were skipped")
+    
+    # Step 3: Initialize service manager
     service_manager = ServiceManager()
     app.state.service_manager = service_manager
     
@@ -237,27 +258,29 @@ async def readiness_check():
     Fast check that returns 200 when service is ready to accept traffic
     """
     try:
-        # Quick database connectivity check
-        async for db in get_db():
-            from sqlalchemy import text
-            result = await db.execute(text("SELECT 1"))
-            row = result.fetchone()
-            
-            if row and row[0] == 1:
-                return {
-                    "status": "ready",
+        from core.database import validate_database_connection
+        
+        # Quick database connectivity check with enhanced validation
+        db_valid = await validate_database_connection()
+        
+        if db_valid:
+            return {
+                "status": "ready",
+                "timestamp": datetime.utcnow().isoformat(),
+                "message": "Service ready for traffic",
+                "database": "connected",
+                "validation_method": "enhanced_pooled_connection"
+            }
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "status": "not_ready",
                     "timestamp": datetime.utcnow().isoformat(),
-                    "message": "Service ready for traffic"
+                    "message": "Database connection validation failed",
+                    "database": "disconnected"
                 }
-            else:
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "status": "not_ready",
-                        "timestamp": datetime.utcnow().isoformat(),
-                        "message": "Database not responding correctly"
-                    }
-                )
+            )
     except Exception as e:
         logger.error("Readiness check failed", error=str(e))
         raise HTTPException(
@@ -266,7 +289,8 @@ async def readiness_check():
                 "status": "not_ready",
                 "timestamp": datetime.utcnow().isoformat(),
                 "error": str(e),
-                "message": "Service not ready for traffic"
+                "message": "Service not ready for traffic",
+                "database": "error"
             }
         )
 
@@ -288,6 +312,10 @@ async def health_check():
         database_status = "connected" if db_result.status == "healthy" else "error"
         redis_status = "connected" if redis_result.status == "healthy" else "error"
         
+        # Check migration status
+        from core.database_migration import get_migration_status
+        migration_status = await get_migration_status()
+        
         # Determine overall health
         is_healthy = database_status == "connected" and redis_status == "connected"
         overall_status = "healthy" if is_healthy else "degraded"
@@ -298,6 +326,11 @@ async def health_check():
             "database": database_status,
             "redis": redis_status,
             "aws_services": "initialized",
+            "migrations": {
+                "current_version": migration_status.get("current_version"),
+                "pending_count": migration_status.get("pending_count", 0),
+                "schema_status": migration_status.get("schema_status", "unknown")
+            },
             "version": "1.0.0",
             "message": "Use /api/v1/health/detailed for comprehensive health check"
         }
@@ -326,6 +359,7 @@ async def health_check():
                 "database": "error",
                 "redis": "error",
                 "aws_services": "unknown",
+                "migrations": {"status": "unknown"},
                 "error": str(e),
                 "message": "Service not ready for traffic"
             }

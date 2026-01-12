@@ -108,31 +108,49 @@ class HealthService:
         return response
     
     async def _check_database(self) -> HealthCheckResult:
-        """Check database connectivity and basic operations"""
+        """Check database connectivity and basic operations with enhanced validation"""
         try:
-            async for db in get_db():
-                # Test basic query
-                result = await db.execute(text("SELECT 1"))
-                row = result.fetchone()
+            from core.database import validate_database_connection, get_database_info
+            
+            # Use enhanced database validation
+            connection_valid = await validate_database_connection()
+            
+            if connection_valid:
+                # Get additional database information
+                db_info = await get_database_info()
                 
-                if row and row[0] == 1:
-                    return HealthCheckResult(
-                        name="database",
-                        status=HealthStatus.HEALTHY,
-                        message="Database connection successful",
-                        details={"query_result": "OK"}
-                    )
-                else:
-                    return HealthCheckResult(
-                        name="database",
-                        status=HealthStatus.UNHEALTHY,
-                        message="Database query returned unexpected result"
-                    )
+                return HealthCheckResult(
+                    name="database",
+                    status=HealthStatus.HEALTHY,
+                    message="Database connection successful with connection pooling",
+                    details={
+                        "connection_valid": True,
+                        "pool_info": db_info.get("pool_info", {}),
+                        "validation_method": "enhanced_with_retry"
+                    }
+                )
+            else:
+                db_info = await get_database_info()
+                return HealthCheckResult(
+                    name="database",
+                    status=HealthStatus.UNHEALTHY,
+                    message="Database connection validation failed",
+                    details={
+                        "connection_valid": False,
+                        "error_info": db_info.get("error", "Unknown error"),
+                        "validation_method": "enhanced_with_retry"
+                    }
+                )
+                
         except Exception as e:
             return HealthCheckResult(
                 name="database",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Database connection failed: {str(e)}"
+                message=f"Database connection failed: {str(e)}",
+                details={
+                    "error_type": type(e).__name__,
+                    "validation_method": "enhanced_with_retry"
+                }
             )
     
     async def _check_redis(self) -> HealthCheckResult:

@@ -50,10 +50,34 @@ calculate_delay() {
 
 # Run pre-deployment validation
 run_validation() {
-    log_info "Running pre-deployment validation..."
+    log_info "Running comprehensive pre-deployment validation..."
     
-    # Run the comprehensive deployment validation gates
-    if [ -f "./scripts/deployment-validation-gates.sh" ]; then
+    # First try enhanced validation if available
+    if [ -f "./scripts/enhanced-deployment-validation.sh" ]; then
+        log_info "Using enhanced deployment validation with auto-resolution..."
+        
+        # Set environment variables for enhanced validation
+        export AUTO_RESOLVE=true
+        export CI=${CI:-false}
+        export GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
+        
+        if ./scripts/enhanced-deployment-validation.sh; then
+            log_success "Enhanced deployment validation passed"
+            return 0
+        else
+            local exit_code=$?
+            if [ $exit_code -eq 1 ]; then
+                log_warning "Enhanced validation completed with warnings after auto-resolution"
+                log_info "Proceeding with deployment..."
+                return 0
+            else
+                log_error "Enhanced deployment validation failed"
+                return 1
+            fi
+        fi
+    # Fall back to basic validation gates
+    elif [ -f "./scripts/deployment-validation-gates.sh" ]; then
+        log_info "Using basic deployment validation gates..."
         if ./scripts/deployment-validation-gates.sh; then
             log_success "Deployment validation gates passed"
             return 0
@@ -68,6 +92,7 @@ run_validation() {
                 return 1
             fi
         fi
+    # Legacy validation script
     elif [ -f "./scripts/validate-deployment-readiness.sh" ]; then
         log_info "Using legacy validation script..."
         if ./scripts/validate-deployment-readiness.sh; then
@@ -83,7 +108,58 @@ run_validation() {
     fi
 }
 
-# Check if cleanup is needed
+# Check for orphaned resources that could interfere with deployment
+check_orphaned_resources() {
+    log_info "Checking for orphaned resources..."
+    
+    local issues_found=0
+    
+    # Check for orphaned RDS instances
+    local orphaned_rds
+    orphaned_rds=$(aws rds describe-db-instances \
+        --region "$REGION" \
+        --query 'DBInstances[?contains(DBInstanceIdentifier, `courtcase`)].DBInstanceIdentifier' \
+        --output text 2>/dev/null || echo "")
+    
+    if [ -n "$orphaned_rds" ]; then
+        log_warning "Found orphaned RDS instances: $orphaned_rds"
+        issues_found=$((issues_found + 1))
+    fi
+    
+    # Check for orphaned security groups
+    local orphaned_sgs
+    orphaned_sgs=$(aws ec2 describe-security-groups \
+        --region "$REGION" \
+        --filters "Name=group-name,Values=*CourtCase*" \
+        --query 'SecurityGroups[?GroupName!=`default`].GroupId' \
+        --output text 2>/dev/null || echo "")
+    
+    if [ -n "$orphaned_sgs" ]; then
+        log_warning "Found orphaned security groups: $orphaned_sgs"
+        issues_found=$((issues_found + 1))
+    fi
+    
+    # Check for orphaned subnet groups
+    local orphaned_subnet_groups
+    orphaned_subnet_groups=$(aws rds describe-db-subnet-groups \
+        --region "$REGION" \
+        --query 'DBSubnetGroups[?contains(DBSubnetGroupName, `courtcase`)].DBSubnetGroupName' \
+        --output text 2>/dev/null || echo "")
+    
+    if [ -n "$orphaned_subnet_groups" ]; then
+        log_warning "Found orphaned DB subnet groups: $orphaned_subnet_groups"
+        issues_found=$((issues_found + 1))
+    fi
+    
+    if [ $issues_found -gt 0 ]; then
+        log_warning "Found $issues_found types of orphaned resources"
+        log_info "These may be cleaned up automatically by enhanced validation"
+        return 1
+    else
+        log_success "No orphaned resources found"
+        return 0
+    fi
+}
 check_cleanup_needed() {
     local stack_status
     stack_status=$(aws cloudformation describe-stacks \
@@ -320,7 +396,14 @@ main() {
     log_info "Max Retries: $MAX_RETRIES"
     echo
     
-    # Step 1: Run pre-deployment validation
+    # Step 1: Check for orphaned resources
+    if ! check_orphaned_resources; then
+        log_warning "Orphaned resources detected. Enhanced validation should handle these."
+    fi
+    
+    echo
+    
+    # Step 2: Run pre-deployment validation
     if ! run_validation; then
         log_error "Pre-deployment validation failed. Aborting deployment."
         exit 1
@@ -328,7 +411,7 @@ main() {
     
     echo
     
-    # Step 2: Run cleanup if needed
+    # Step 3: Run cleanup if needed
     if ! run_cleanup; then
         log_error "Cleanup failed. Aborting deployment."
         exit 1
@@ -336,7 +419,7 @@ main() {
     
     echo
     
-    # Step 3: Deploy with retry logic
+    # Step 4: Deploy with retry logic
     if deploy_with_retry; then
         log_success "🎉 Deployment completed successfully!"
         echo
