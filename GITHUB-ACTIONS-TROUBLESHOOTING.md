@@ -143,3 +143,56 @@ watch -n 10 'gh run list --limit 3'
 ✅ **Error Handling**: Clear diagnostic messages for any remaining issues
 
 This troubleshooting approach ensures systematic resolution of CI pipeline issues while building resilience for future deployments.
+
+## Solution Implementation - Version 2
+
+### Analysis of First Attempt
+
+**Run ID**: 20933604287  
+**Result**: Still failed after 3 minutes  
+**Insight**: The issue is more fundamental than just timeout values - services need more time to initialize in GitHub Actions environment.
+
+### Enhanced Solution (Current)
+
+**Service Health Check Improvements**:
+
+- **PostgreSQL**: Extended start period to 60 seconds, increased retries to 20, 3s intervals
+- **Redis**: Extended start period to 30 seconds, increased retries to 20, 3s intervals
+- **Rationale**: GitHub Actions runners may have variable performance affecting service startup
+
+**Service Readiness Check Enhancements**:
+
+- Extended timeout to 5 minutes (from 3 minutes)
+- Increased retry attempts to 15 (from 10)
+- Added debugging output for failed services (container logs, process status)
+- Implemented connection testing beyond basic readiness checks
+- Added exponential backoff with maximum delay cap (10 seconds)
+
+**New Debugging Features**:
+
+```bash
+# Container log output for failed services
+docker logs $(docker ps -q --filter ancestor=postgres:15)
+docker logs $(docker ps -q --filter ancestor=redis:7-alpine)
+
+# Process status checking
+ps aux | grep postgres
+ps aux | grep redis
+
+# Connection testing
+psql -h localhost -p 5432 -U postgres -d test_db -c 'SELECT 1;'
+redis-cli -h localhost -p 6379 set test_key test_value
+```
+
+### Expected Outcome
+
+With these enhanced configurations:
+
+- Services should have sufficient time to initialize (60s for PostgreSQL, 30s for Redis)
+- More frequent health checks (3s intervals) for faster detection
+- Extended overall timeout (5 minutes) to accommodate slower GitHub Actions runners
+- Comprehensive debugging if services still fail to start
+
+### Monitoring Next Run
+
+The next workflow run should provide detailed diagnostic information if services still fail, allowing us to identify the root cause and implement targeted fixes.
