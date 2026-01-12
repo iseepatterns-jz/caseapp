@@ -49,7 +49,12 @@ get_failed_resources() {
         --query 'StackResources[?ResourceStatus==`DELETE_FAILED`]' \
         --output json 2>/dev/null || echo "[]")
     
-    echo "$failed_resources"
+    # Validate JSON output
+    if echo "$failed_resources" | jq empty 2>/dev/null; then
+        echo "$failed_resources"
+    else
+        echo "[]"
+    fi
 }
 
 # Analyze RDS dependencies
@@ -290,13 +295,17 @@ generate_resolution_plan() {
     local failed_resources
     failed_resources=$(get_failed_resources)
     
-    if [ "$failed_resources" != "[]" ]; then
+    if [ "$failed_resources" != "[]" ] && [ -n "$failed_resources" ]; then
         echo "FAILED RESOURCES:"
-        echo "$failed_resources" | jq -r '.[] | 
-        "- \(.LogicalResourceId) (\(.ResourceType))
-          Physical ID: \(.PhysicalResourceId // "N/A")
-          Status: \(.ResourceStatus)
-          Reason: \(.ResourceStatusReason // "N/A")"'
+        if echo "$failed_resources" | jq empty 2>/dev/null; then
+            echo "$failed_resources" | jq -r '.[] | 
+            "- \(.LogicalResourceId) (\(.ResourceType))
+              Physical ID: \(.PhysicalResourceId // "N/A")
+              Status: \(.ResourceStatus)
+              Reason: \(.ResourceStatusReason // "N/A")"' 2>/dev/null || echo "Failed to parse resource details"
+        else
+            echo "Invalid JSON response from CloudFormation API"
+        fi
         echo
     fi
     
