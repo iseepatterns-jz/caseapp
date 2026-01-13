@@ -542,7 +542,7 @@ jobs:
   deploy-production:
     needs: [test, build-and-push, security-scan]
     runs-on: ubuntu-latest
-    timeout-minutes: 60 # Extended timeout for production deployment
+    timeout-minutes: 120 # Extended timeout for production deployment (2 hours)
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     environment: production
 
@@ -676,7 +676,7 @@ jobs:
           ./scripts/deploy-with-validation.sh
 
           echo "✅ Production deployment completed successfully"
-        timeout-minutes: 60
+        timeout-minutes: 90
 
       - name: Run comprehensive post-deployment validation
         run: |
