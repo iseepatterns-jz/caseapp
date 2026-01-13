@@ -63,6 +63,7 @@ class CDKParameterValidator:
                 unsupported_parameters=[
                     "at_rest_encryption_enabled",  # Not supported in CfnCacheCluster
                     "auth_token",  # Not supported in CfnCacheCluster, use CfnReplicationGroup
+                    "transit_encryption_enabled",  # Not supported with t3.micro instances
                 ],
                 deprecated_parameters=[],
                 parameter_mappings={},
@@ -216,6 +217,7 @@ class CDKParameterValidator:
         param_patterns = [
             r'at_rest_encryption_enabled\s*=\s*True',
             r'auth_token\s*=\s*["\'][^"\']*["\']',
+            r'transit_encryption_enabled\s*=\s*True',
             r'deployment_configuration\s*=\s*ecs\.DeploymentConfiguration',
             r'log_groups\s*=\s*\[',
             r'cloudwatch\.SnsAction',
@@ -235,6 +237,8 @@ class CDKParameterValidator:
                         params['at_rest_encryption_enabled'] = True
                     elif 'auth_token' in check_line:
                         params['auth_token'] = "token_value"
+                    elif 'transit_encryption_enabled' in check_line:
+                        params['transit_encryption_enabled'] = True
                     elif 'deployment_configuration' in check_line:
                         params['deployment_configuration'] = "DeploymentConfiguration"
                     elif 'log_groups' in check_line:
@@ -270,6 +274,12 @@ class CDKParameterValidator:
                     fixes[key] = (
                         "Remove the 'auth_token' parameter. "
                         "For authentication, use CfnReplicationGroup which supports auth tokens."
+                    )
+                elif issue.parameter == "transit_encryption_enabled":
+                    fixes[key] = (
+                        "Remove the 'transit_encryption_enabled' parameter. "
+                        "Transit encryption is not supported with t3.micro instances in CfnCacheCluster. "
+                        "Use CfnReplicationGroup or higher instance types for encryption features."
                     )
             
             elif issue.construct_type == "ApplicationLoadBalancedFargateService":

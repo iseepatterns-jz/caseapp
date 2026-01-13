@@ -245,7 +245,9 @@ class CourtCaseManagementStack(Stack):
         # Only allow inbound Redis connections from ECS tasks
         # This will be configured after ECS service is created
         
-        # Redis cluster with enhanced security
+        # Redis cluster with basic configuration
+        # Note: transit_encryption_enabled is not supported with cache.t3.micro instances
+        # For encryption features, use CfnReplicationGroup or higher-level constructs
         self.redis_cluster = elasticache.CfnCacheCluster(
             self, "RedisCluster",
             cache_node_type="cache.t3.micro",
@@ -253,13 +255,12 @@ class CourtCaseManagementStack(Stack):
             num_cache_nodes=1,
             cache_subnet_group_name=redis_subnet_group.ref,
             vpc_security_group_ids=[self.redis_security_group.security_group_id],
-            # Enhanced security settings
+            # Basic configuration for t3.micro instances
             engine_version="7.0",
-            port=6379,
-            # Enable encryption in transit
-            transit_encryption_enabled=True
-            # Note: at_rest_encryption_enabled and auth_token are not supported in CfnCacheCluster
-            # For these features, consider using CfnReplicationGroup or higher-level constructs
+            port=6379
+            # Note: transit_encryption_enabled, at_rest_encryption_enabled, and auth_token 
+            # are not supported in CfnCacheCluster with t3.micro instances
+            # For encryption features, consider using CfnReplicationGroup or higher-level constructs
         )
     
     def create_opensearch(self):
