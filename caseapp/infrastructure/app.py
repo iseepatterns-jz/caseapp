@@ -18,6 +18,9 @@ from aws_cdk import (
     aws_cognito as cognito,
     aws_iam as iam,
     aws_logs as logs,
+    aws_cloudwatch as cloudwatch,
+    aws_cloudwatch_actions as cw_actions,
+    aws_sns as sns,
     Duration,
     RemovalPolicy
 )
@@ -198,6 +201,29 @@ class CourtCaseManagementStack(Stack):
             preferred_maintenance_window="sun:04:00-sun:05:00"
         )
     
+    def validate_cdk_parameters(self, construct_type: str, parameters: dict) -> dict:
+        """
+        Validate CDK parameters for compatibility with current CDK version
+        Remove unsupported parameters and log warnings
+        """
+        # Known incompatible parameters for different construct types
+        incompatible_params = {
+            'CfnCacheCluster': [
+                'at_rest_encryption_enabled',  # Not supported in CfnCacheCluster
+                'auth_token',  # Not supported in CfnCacheCluster, use CfnReplicationGroup instead
+            ]
+        }
+        
+        if construct_type in incompatible_params:
+            validated_params = parameters.copy()
+            for param in incompatible_params[construct_type]:
+                if param in validated_params:
+                    print(f"WARNING: Removing unsupported parameter '{param}' from {construct_type}")
+                    del validated_params[param]
+            return validated_params
+        
+        return parameters
+    
     def create_redis_cache(self):
         """Create ElastiCache Redis cluster with optimized security"""
         
@@ -231,11 +257,9 @@ class CourtCaseManagementStack(Stack):
             engine_version="7.0",
             port=6379,
             # Enable encryption in transit
-            transit_encryption_enabled=True,
-            # Enable encryption at rest
-            at_rest_encryption_enabled=True,
-            # Enable auth token for additional security
-            auth_token="your-redis-auth-token-change-in-production"
+            transit_encryption_enabled=True
+            # Note: at_rest_encryption_enabled and auth_token are not supported in CfnCacheCluster
+            # For these features, consider using CfnReplicationGroup or higher-level constructs
         )
     
     def create_opensearch(self):
@@ -407,10 +431,9 @@ class CourtCaseManagementStack(Stack):
             ),
             public_load_balancer=True,
             listener_port=80,
-            deployment_configuration=ecs.DeploymentConfiguration(
-                maximum_percent=200,        # Allow up to 200% of desired capacity during deployment
-                minimum_healthy_percent=50  # Maintain at least 50% healthy tasks during deployment
-            ),
+            # Deployment configuration - use direct parameters instead of DeploymentConfiguration object
+            min_healthy_percent=50,     # Maintain at least 50% healthy tasks during deployment
+            max_healthy_percent=200,    # Allow up to 200% of desired capacity during deployment
             # Use private subnets for ECS tasks
             task_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
@@ -492,10 +515,16 @@ class CourtCaseManagementStack(Stack):
         service_name = self.backend_service.service.service_name
         cluster_name = self.cluster.cluster_name
         
-        # Extract load balancer name from ARN
+        # Extract load balancer name from ARN with error handling
         lb_arn = self.backend_service.load_balancer.load_balancer_arn
         lb_name_parts = lb_arn.split('/')
-        lb_name = f"{lb_name_parts[-3]}/{lb_name_parts[-2]}/{lb_name_parts[-1]}"
+        
+        # Ensure we have enough parts for the load balancer name
+        if len(lb_name_parts) >= 3:
+            lb_name = f"{lb_name_parts[-3]}/{lb_name_parts[-2]}/{lb_name_parts[-1]}"
+        else:
+            # Fallback to a simpler name if ARN format is unexpected
+            lb_name = lb_name_parts[-1] if lb_name_parts else "unknown-lb"
         
         # Extract database identifier
         db_identifier = self.database.instance_identifier
@@ -645,11 +674,8 @@ class CourtCaseManagementStack(Stack):
                     # Log Insights Widget
                     cloudwatch.LogQueryWidget(
                         title="Recent Application Errors",
-                        log_groups=[
-                            logs.LogGroup.from_log_group_name(
-                                self, "BackendLogGroup",
-                                f"/ecs/{service_name}"
-                            )
+                        log_group_names=[
+                            f"/ecs/{service_name}"
                         ],
                         query_lines=[
                             "fields @timestamp, @message",
@@ -686,7 +712,7 @@ class CourtCaseManagementStack(Stack):
             comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
         )
         cpu_alarm.add_alarm_action(
-            cloudwatch.SnsAction(self.alerts_topic)
+            cw_actions.SnsAction(self.alerts_topic)
         )
         
         # ECS Service Memory Alarm
@@ -709,7 +735,7 @@ class CourtCaseManagementStack(Stack):
             comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
         )
         memory_alarm.add_alarm_action(
-            cloudwatch.SnsAction(self.alerts_topic)
+            cw_actions.SnsAction(self.alerts_topic)
         )
         
         # ALB 5XX Error Alarm
@@ -732,7 +758,7 @@ class CourtCaseManagementStack(Stack):
             treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
         )
         alb_5xx_alarm.add_alarm_action(
-            cloudwatch.SnsAction(self.alerts_topic)
+            cw_actions.SnsAction(self.alerts_topic)
         )
         
         # RDS CPU Alarm
@@ -754,7 +780,7 @@ class CourtCaseManagementStack(Stack):
             comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
         )
         rds_cpu_alarm.add_alarm_action(
-            cloudwatch.SnsAction(self.alerts_topic)
+            cw_actions.SnsAction(self.alerts_topic)
         )
         
         # Store references for outputs

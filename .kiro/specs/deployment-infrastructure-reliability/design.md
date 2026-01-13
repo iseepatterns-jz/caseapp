@@ -397,6 +397,11 @@ _For any_ completed deployment, the validation tests should confirm that all cri
 _For any_ deployment process, all relevant logs should be collected and made available for troubleshooting.
 **Validates: Requirements 10.1, 10.3**
 
+### Property 11: CDK Parameter Compatibility
+
+_For any_ CDK infrastructure code, all parameters used in constructs should be compatible with the target CDK version and not cause deployment failures.
+**Validates: Requirements 11.1, 11.2, 11.3**
+
 ## Error Handling
 
 ### Error Classification

@@ -138,3 +138,17 @@ The Deployment Infrastructure Reliability system ensures robust, scalable, and m
 3. WHEN errors occur, THE System SHALL correlate logs across different services and provide root cause analysis
 4. THE System SHALL maintain deployment audit trails with timestamps, user attribution, and change details
 5. WHEN troubleshooting is needed, THE System SHALL provide diagnostic tools and guided troubleshooting workflows
+
+### Requirement 11: CDK Version Compatibility and Infrastructure Code Validation
+
+**User Story:** As a DevOps engineer, I want CDK infrastructure code to be compatible with the deployed CDK version, so that deployments don't fail due to API incompatibilities.
+
+#### Acceptance Criteria
+
+1. WHEN CDK infrastructure code is written, THE System SHALL validate parameter compatibility with the target CDK version
+2. WHEN using ElastiCache CfnCacheCluster, THE System SHALL only use supported parameters (transit_encryption_enabled, not at_rest_encryption_enabled)
+3. THE System SHALL provide clear error messages when unsupported CDK parameters are detected
+4. WHEN CDK version upgrades occur, THE System SHALL validate existing infrastructure code for compatibility
+5. THE System SHALL maintain a compatibility matrix for CDK constructs and their supported parameters
+6. WHEN encryption at rest is required for ElastiCache, THE System SHALL use appropriate CDK constructs that support this feature
+7. THE System SHALL implement pre-deployment validation to catch CDK parameter incompatibilities before deployment attempts
