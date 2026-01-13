@@ -1,0 +1,21 @@
+{
+  "id": "20260112_201225",
+  "description": "Test snapshot for task 10.2",
+  "snapshot": {
+    "timestamp": "2026-01-12 20:12:25.467325",
+    "cdk_version": "2.1100.3",
+    "project_hash": "9333ce95b2c7aa68",
+    "compatibility_issues": [
+      {
+        "severity": "ValidationSeverity.ERROR",
+        "construct_type": "CfnCacheCluster",
+        "parameter": "at_rest_encryption_enabled",
+        "message": "Parameter 'at_rest_encryption_enabled' is not supported in CfnCacheCluster",
+        "suggestion": null,
+        "line_number": 82
+      }
+    ],
+    "deployment_success": true,
+    "performance_metrics": {}
+  }
+}
