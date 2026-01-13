@@ -449,7 +449,7 @@ jobs:
               fi
             fi
           fi
-        timeout-minutes: 15
+        timeout-minutes: 25
 
       - name: Deploy to staging with validation and retry
         working-directory: caseapp
@@ -658,7 +658,7 @@ jobs:
               fi
             fi
           fi
-        timeout-minutes: 20
+        timeout-minutes: 35
 
       - name: Deploy to production with enhanced reliability
         working-directory: caseapp
