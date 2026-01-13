@@ -218,7 +218,7 @@ deploy_cdk() {
     
     # Install Python dependencies
     log_info "Installing Python dependencies..."
-    pip install -r ../requirements.txt
+    pip install -r requirements.txt
     
     # Bootstrap CDK if needed
     log_info "Bootstrapping CDK..."
