@@ -84,3 +84,4 @@ mypy==1.7.1
 
 # Logging and monitoring
 structlog==23.2.0
+psutil==5.9.6
