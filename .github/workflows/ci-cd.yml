@@ -24,7 +24,7 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: court-case-management
-  DEPLOYMENT_TIMEOUT: 1800 # 30 minutes
+  DEPLOYMENT_TIMEOUT: 3600 # 60 minutes
   HEALTH_CHECK_TIMEOUT: 300 # 5 minutes
 
 jobs:
@@ -676,7 +676,7 @@ jobs:
           ./scripts/deploy-with-validation.sh
 
           echo "✅ Production deployment completed successfully"
-        timeout-minutes: 40
+        timeout-minutes: 60
 
       - name: Run comprehensive post-deployment validation
         run: |
