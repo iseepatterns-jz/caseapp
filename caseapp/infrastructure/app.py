@@ -310,20 +310,9 @@ class CourtCaseManagementStack(Stack):
                     json_field="password"
                 )
             ),
-            # Domain access policy - restrict to VPC only
-            access_policies=[
-                iam.PolicyStatement(
-                    effect=iam.Effect.ALLOW,
-                    principals=[iam.AnyPrincipal()],
-                    actions=["es:*"],
-                    resources=["*"],
-                    conditions={
-                        "IpAddress": {
-                            "aws:SourceIp": [self.vpc.vpc_cidr_block]
-                        }
-                    }
-                )
-            ],
+            # Domain access policy - use security groups for VPC access control
+            # Note: When using VPC, access control is handled by security groups
+            # IP-based policies are not compatible with VPC endpoints
             removal_policy=RemovalPolicy.DESTROY
         )
     
