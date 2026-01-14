@@ -124,6 +124,35 @@ check_docker_images() {
     return 0
 }
 
+# Check if deployment is currently in progress
+check_deployment_in_progress() {
+    log_info "Checking if deployment is currently in progress..."
+    
+    local stack_status
+    stack_status=$(aws cloudformation describe-stacks \
+        --stack-name "$STACK_NAME" \
+        --region "$REGION" \
+        --query 'Stacks[0].StackStatus' \
+        --output text 2>/dev/null || echo "STACK_NOT_FOUND")
+    
+    # Check for active deployment states
+    case "$stack_status" in
+        CREATE_IN_PROGRESS|UPDATE_IN_PROGRESS|ROLLBACK_IN_PROGRESS|UPDATE_ROLLBACK_IN_PROGRESS|UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)
+            log_error "Deployment is currently in progress with status: $stack_status"
+            log_error "Cannot run validation while deployment is active"
+            return 0  # Return 0 to indicate deployment IS in progress
+            ;;
+        STACK_NOT_FOUND)
+            log_success "No active deployment detected"
+            return 1  # Return 1 to indicate deployment is NOT in progress
+            ;;
+        *)
+            log_info "Stack exists with status: $stack_status (not actively deploying)"
+            return 1  # Return 1 to indicate deployment is NOT in progress
+            ;;
+    esac
+}
+
 # Check for existing CloudFormation stack
 check_existing_stack() {
     log_info "Checking for existing CloudFormation stack..."
@@ -162,6 +191,68 @@ check_rds_deletion_protection() {
         log_success "No RDS instances with deletion protection found"
         return 0
     fi
+}
+
+# Check for RDS instances that are currently deleting
+check_rds_deleting() {
+    log_info "Checking for RDS instances that are currently deleting..."
+    
+    local deleting_instances
+    deleting_instances=$(aws rds describe-db-instances \
+        --region "$REGION" \
+        --query 'DBInstances[?DBInstanceStatus==`deleting` && contains(DBInstanceIdentifier, `courtcase`)].DBInstanceIdentifier' \
+        --output text 2>/dev/null || echo "")
+    
+    if [ -n "$deleting_instances" ]; then
+        log_warning "Found RDS instances currently deleting:"
+        echo "$deleting_instances"
+        return 1
+    else
+        log_success "No RDS instances currently deleting"
+        return 0
+    fi
+}
+
+# Wait for RDS deletion to complete
+wait_for_rds_deletion() {
+    log_info "Waiting for RDS deletion to complete..."
+    
+    local deleting_instances
+    deleting_instances=$(aws rds describe-db-instances \
+        --region "$REGION" \
+        --query 'DBInstances[?DBInstanceStatus==`deleting` && contains(DBInstanceIdentifier, `courtcase`)].DBInstanceIdentifier' \
+        --output text 2>/dev/null || echo "")
+    
+    if [ -z "$deleting_instances" ]; then
+        log_success "No RDS instances to wait for"
+        return 0
+    fi
+    
+    log_info "Waiting for RDS instances to finish deleting: $deleting_instances"
+    log_info "This may take 10-15 minutes..."
+    
+    local max_wait=1200  # 20 minutes max wait
+    local elapsed=0
+    local check_interval=30
+    
+    while [ $elapsed -lt $max_wait ]; do
+        deleting_instances=$(aws rds describe-db-instances \
+            --region "$REGION" \
+            --query 'DBInstances[?DBInstanceStatus==`deleting` && contains(DBInstanceIdentifier, `courtcase`)].DBInstanceIdentifier' \
+            --output text 2>/dev/null || echo "")
+        
+        if [ -z "$deleting_instances" ]; then
+            log_success "All RDS instances have finished deleting"
+            return 0
+        fi
+        
+        log_info "Still waiting... (${elapsed}s elapsed)"
+        sleep $check_interval
+        elapsed=$((elapsed + check_interval))
+    done
+    
+    log_error "Timeout waiting for RDS deletion after ${max_wait}s"
+    return 1
 }
 
 # Check for resource conflicts
@@ -229,6 +320,14 @@ main() {
     log_info "Correlation ID: $CORRELATION_ID"
     echo
     
+    # CRITICAL: Check if deployment is already in progress FIRST
+    log_phase "Deployment State Check"
+    if check_deployment_in_progress; then
+        log_error "❌ Cannot proceed - deployment is already in progress"
+        log_error "Wait for the current deployment to complete before starting a new one"
+        exit 2
+    fi
+    
     log_phase "Basic Infrastructure Checks"
     # Basic checks
     if ! check_aws_cli; then
@@ -239,6 +338,27 @@ main() {
     if ! check_docker_images; then
         log_error "Docker image check failed"
         exit 2
+    fi
+    
+    echo
+    
+    # Check if RDS instances are currently deleting
+    log_phase "RDS Deletion Status Check"
+    if ! check_rds_deleting; then
+        log_warning "RDS instances are currently deleting"
+        
+        # In CI environment or if AUTO_RESOLVE is set, wait for deletion
+        if is_ci_environment || [ "${AUTO_RESOLVE:-false}" = "true" ]; then
+            log_info "Waiting for RDS deletion to complete before proceeding..."
+            if ! wait_for_rds_deletion; then
+                log_error "Failed to wait for RDS deletion"
+                exit 1
+            fi
+        else
+            log_error "RDS instances are deleting. Please wait for deletion to complete."
+            log_info "Run with AUTO_RESOLVE=true to wait automatically"
+            exit 1
+        fi
     fi
     
     echo
