@@ -483,8 +483,9 @@ class CourtCaseManagementStack(Stack):
         cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
         
         # Configure load balancer health check
+        # Use root endpoint / which is simple and doesn't require database
         self.backend_service.target_group.configure_health_check(
-            path="/health/ready",           # Use fast readiness endpoint
+            path="/",                       # Use root endpoint (simple, no DB required)
             healthy_threshold_count=2,      # Require 2 consecutive successful checks
             unhealthy_threshold_count=3,    # Allow 3 consecutive failures before marking unhealthy
             timeout=Duration.seconds(10),   # 10 second timeout per check
