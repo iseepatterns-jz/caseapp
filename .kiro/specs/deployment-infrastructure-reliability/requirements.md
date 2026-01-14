@@ -152,3 +152,17 @@ The Deployment Infrastructure Reliability system ensures robust, scalable, and m
 5. THE System SHALL maintain a compatibility matrix for CDK constructs and their supported parameters
 6. WHEN encryption at rest is required for ElastiCache, THE System SHALL use appropriate CDK constructs that support this feature
 7. THE System SHALL implement pre-deployment validation to catch CDK parameter incompatibilities before deployment attempts
+
+### Requirement 12: Validation Script Safety and Deployment Coordination
+
+**User Story:** As a DevOps engineer, I want validation scripts to never interfere with active deployments, so that deployments complete successfully without unexpected rollbacks.
+
+#### Acceptance Criteria
+
+1. WHEN validation scripts execute, THE System SHALL check for active CloudFormation operations (CREATE_IN_PROGRESS, UPDATE_IN_PROGRESS, ROLLBACK_IN_PROGRESS) before performing any cleanup
+2. WHEN RDS instances are being deleted, THE System SHALL wait for deletion to complete (up to 20 minutes) before proceeding with new deployments
+3. THE System SHALL never modify resources (disable deletion protection, delete resources) while a deployment is actively in progress
+4. WHEN resource conflicts are detected, THE System SHALL provide clear error messages and exit without attempting cleanup during active deployments
+5. THE System SHALL implement proper state detection to distinguish between orphaned resources and resources being actively managed by CloudFormation
+6. WHEN deployments fail and enter DELETE_FAILED state, THE System SHALL wait for all resource deletions to complete before attempting cleanup
+7. THE System SHALL maintain deployment correlation IDs and timestamps to track resource ownership and prevent race conditions
