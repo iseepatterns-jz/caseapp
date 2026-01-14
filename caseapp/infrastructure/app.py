@@ -412,7 +412,12 @@ class CourtCaseManagementStack(Stack):
                     "COGNITO_CLIENT_ID": self.user_pool_client.user_pool_client_id
                 },
                 secrets={
-                    "DATABASE_URL": ecs.Secret.from_secrets_manager(self.database.secret, "connectionString")
+                    # Use individual secret fields from RDS-generated secret
+                    "DB_HOST": ecs.Secret.from_secrets_manager(self.database.secret, "host"),
+                    "DB_USER": ecs.Secret.from_secrets_manager(self.database.secret, "username"),
+                    "DB_PASSWORD": ecs.Secret.from_secrets_manager(self.database.secret, "password"),
+                    "DB_PORT": ecs.Secret.from_secrets_manager(self.database.secret, "port"),
+                    "DB_NAME": ecs.Secret.from_secrets_manager(self.database.secret, "dbname")
                 },
                 log_driver=ecs.LogDrivers.aws_logs(
                     stream_prefix="backend",

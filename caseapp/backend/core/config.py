@@ -18,8 +18,18 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     ALLOWED_HOSTS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
-    # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost/courtcase_db"
+    # Database - Individual components for RDS secret compatibility
+    DB_HOST: str = "localhost"
+    DB_PORT: str = "5432"
+    DB_USER: str = "user"
+    DB_PASSWORD: str = "password"
+    DB_NAME: str = "courtcase_db"
+    
+    # Constructed DATABASE_URL from individual components
+    @property
+    def DATABASE_URL(self) -> str:
+        """Construct PostgreSQL connection URL from individual components"""
+        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

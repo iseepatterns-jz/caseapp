@@ -35,7 +35,13 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://courtcase_user:courtcase_password@postgres:5432/courtcase_db
+      # Database configuration (individual fields for RDS compatibility)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=courtcase_user
+      - DB_PASSWORD=courtcase_password
+      - DB_NAME=courtcase_db
+      # Other services
       - REDIS_URL=redis://redis:6379
       - AWS_REGION=us-east-1
       - S3_BUCKET_NAME=court-case-documents
