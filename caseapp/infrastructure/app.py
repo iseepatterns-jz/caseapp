@@ -409,7 +409,8 @@ class CourtCaseManagementStack(Stack):
                     "S3_MEDIA_BUCKET": self.media_bucket.bucket_name,
                     "OPENSEARCH_ENDPOINT": self.opensearch_domain.domain_endpoint,
                     "COGNITO_USER_POOL_ID": self.user_pool.user_pool_id,
-                    "COGNITO_CLIENT_ID": self.user_pool_client.user_pool_client_id
+                    "COGNITO_CLIENT_ID": self.user_pool_client.user_pool_client_id,
+                    "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379"
                 },
                 secrets={
                     # Use individual secret fields from RDS-generated secret
