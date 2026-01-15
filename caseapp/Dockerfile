@@ -36,6 +36,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy backend code to the app root (not in a subdirectory)
 COPY backend/ ./
 
+# Ensure __init__.py files exist in all packages (critical for Python imports)
+RUN touch ./services/__init__.py ./core/__init__.py || true
+
 # Create shared directory if it doesn't exist
 RUN mkdir -p ./shared
 
@@ -75,7 +78,8 @@ EXPOSE 80
 FROM python:3.11-slim AS media-processor
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
 # Install FFmpeg and media processing tools
 RUN apt-get update && apt-get install -y \
@@ -93,7 +97,13 @@ WORKDIR /app
 COPY requirements-media.txt .
 RUN pip install --no-cache-dir -r requirements-media.txt
 
-COPY backend/services/media_service.py ./
+# Copy required modules maintaining proper structure
+COPY backend/services/ ./services/
 COPY backend/core/ ./core/
+COPY backend/models/ ./models/
+COPY backend/schemas/ ./schemas/
+
+# Ensure __init__.py files exist in all packages
+RUN touch ./services/__init__.py ./core/__init__.py ./models/__init__.py ./schemas/__init__.py || true
 
 CMD ["python", "-m", "services.media_service"]

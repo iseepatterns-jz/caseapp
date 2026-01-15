@@ -30,11 +30,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r caseapp/requirements.txt
+          pip install -r ./caseapp/requirements.txt
           pip install pytest
 
       - name: Run tests
-        working-directory: caseapp/backend
+        working-directory: ./caseapp/backend
         run: python -m pytest tests/test_ci_basic.py -v
 
   build-and-push:
