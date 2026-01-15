@@ -108,7 +108,7 @@ class CourtCaseManagementStack(Stack):
                     ]
                 )
             ],
-            removal_policy=RemovalPolicy.RETAIN
+            removal_policy=RemovalPolicy.DESTROY  # CHANGED: Delete bucket when stack is deleted (for testing)
         )
         
         # Media bucket for audio/video evidence
@@ -141,7 +141,7 @@ class CourtCaseManagementStack(Stack):
                     ]
                 )
             ],
-            removal_policy=RemovalPolicy.RETAIN
+            removal_policy=RemovalPolicy.DESTROY  # CHANGED: Delete bucket when stack is deleted (for testing)
         )
     
     def create_database(self):
@@ -189,8 +189,8 @@ class CourtCaseManagementStack(Stack):
             allocated_storage=100,
             storage_encrypted=True,
             backup_retention=Duration.days(7),
-            deletion_protection=True,
-            removal_policy=RemovalPolicy.RETAIN,
+            deletion_protection=False,  # CHANGED: Allow deletion for testing/development
+            removal_policy=RemovalPolicy.DESTROY,  # CHANGED: Delete RDS when stack is deleted
             # Enhanced monitoring and performance insights
             monitoring_interval=Duration.seconds(60),
             enable_performance_insights=True,
