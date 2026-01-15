@@ -108,7 +108,7 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           pip install -r requirements.txt
-          cdk deploy --require-approval never --all --no-rollback
+          cdk deploy --require-approval never --all --method=direct
 
       - name: Verify deployment
         run: |
@@ -151,7 +151,7 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           pip install -r requirements.txt
-          cdk deploy --require-approval never --all --no-rollback
+          cdk deploy --require-approval never --all --method=direct
 
       - name: Verify deployment
         run: |
