@@ -415,7 +415,7 @@ jobs:
           chmod +x caseapp/scripts/slack-notifier.sh
 
           # Send deployment start notification
-          bash caseapp/scripts/slack-notifier.sh notify_deployment_start \
+          bash caseapp/scripts/slack-notifier.sh start \
             "$CORRELATION_ID" \
             "staging" \
             "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -436,7 +436,7 @@ jobs:
             echo "⚠️  Active deployment detected, checking if we should wait..."
             
             # Send concurrent deployment notification
-            bash caseapp/scripts/slack-notifier.sh notify_concurrent_deployment \
+            bash caseapp/scripts/slack-notifier.sh concurrent \
               "$CORRELATION_ID" \
               "staging" \
               "30"
@@ -665,13 +665,13 @@ jobs:
 
           # Send final deployment notification
           if [ "${{ job.status }}" = "success" ]; then
-            bash caseapp/scripts/slack-notifier.sh notify_deployment_complete \
+            bash caseapp/scripts/slack-notifier.sh complete \
               "$CORRELATION_ID" \
               "staging" \
               "30" \
               "http://staging-alb-dns.example.com"
           else
-            bash caseapp/scripts/slack-notifier.sh notify_deployment_failed \
+            bash caseapp/scripts/slack-notifier.sh failed \
               "$CORRELATION_ID" \
               "staging" \
               "Deployment failed - check workflow logs"
@@ -755,7 +755,7 @@ jobs:
           chmod +x caseapp/scripts/slack-notifier.sh
 
           # Send deployment start notification
-          bash caseapp/scripts/slack-notifier.sh notify_deployment_start \
+          bash caseapp/scripts/slack-notifier.sh start \
             "$CORRELATION_ID" \
             "production" \
             "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -776,7 +776,7 @@ jobs:
             echo "⚠️  Active deployment detected, checking if we should wait..."
             
             # Send concurrent deployment notification
-            bash caseapp/scripts/slack-notifier.sh notify_concurrent_deployment \
+            bash caseapp/scripts/slack-notifier.sh concurrent \
               "$CORRELATION_ID" \
               "production" \
               "60"
@@ -1078,13 +1078,13 @@ jobs:
 
           # Send final deployment notification
           if [ "${{ job.status }}" = "success" ]; then
-            bash caseapp/scripts/slack-notifier.sh notify_deployment_complete \
+            bash caseapp/scripts/slack-notifier.sh complete \
               "$CORRELATION_ID" \
               "production" \
               "90" \
               "http://production-alb-dns.example.com"
           else
-            bash caseapp/scripts/slack-notifier.sh notify_deployment_failed \
+            bash caseapp/scripts/slack-notifier.sh failed \
               "$CORRELATION_ID" \
               "production" \
               "Deployment failed - check workflow logs"
