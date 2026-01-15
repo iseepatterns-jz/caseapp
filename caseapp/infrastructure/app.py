@@ -64,8 +64,9 @@ class CourtCaseManagementStack(Stack):
         # Redis Cache
         self.create_redis_cache()
         
-        # OpenSearch
-        self.create_opensearch()
+        # OpenSearch - TEMPORARILY DISABLED for deployment testing
+        # Will be re-enabled after successful deployment
+        # self.create_opensearch()
         
         # Cognito
         self.create_cognito()
@@ -264,8 +265,15 @@ class CourtCaseManagementStack(Stack):
         )
     
     def create_opensearch(self):
-        """Create OpenSearch cluster for document search with enhanced security"""
+        """Create OpenSearch cluster for document search with enhanced security
         
+        TEMPORARILY DISABLED - OpenSearch adds 16+ minutes to deployment time.
+        This method is commented out to allow faster deployments during testing.
+        Will be re-enabled after successful deployment validation.
+        """
+        
+        # COMMENTED OUT - Uncomment to re-enable OpenSearch
+        """
         # OpenSearch security group with minimal required permissions
         self.opensearch_security_group = ec2.SecurityGroup(
             self, "OpenSearchSecurityGroup",
@@ -315,6 +323,8 @@ class CourtCaseManagementStack(Stack):
             # IP-based policies are not compatible with VPC endpoints
             removal_policy=RemovalPolicy.DESTROY
         )
+        """
+        pass
     
     def create_cognito(self):
         """Create Cognito User Pool for authentication"""
@@ -407,7 +417,7 @@ class CourtCaseManagementStack(Stack):
                     "AWS_REGION": self.region,
                     "S3_BUCKET_NAME": self.documents_bucket.bucket_name,
                     "S3_MEDIA_BUCKET": self.media_bucket.bucket_name,
-                    "OPENSEARCH_ENDPOINT": self.opensearch_domain.domain_endpoint,
+                    # "OPENSEARCH_ENDPOINT": self.opensearch_domain.domain_endpoint,  # TEMPORARILY DISABLED
                     "COGNITO_USER_POOL_ID": self.user_pool.user_pool_id,
                     "COGNITO_CLIENT_ID": self.user_pool_client.user_pool_client_id,
                     "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379"
@@ -468,12 +478,13 @@ class CourtCaseManagementStack(Stack):
             description="Allow Redis access from ECS tasks"
         )
         
-        # Configure OpenSearch access from ECS
-        self.opensearch_security_group.add_ingress_rule(
-            peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
-            connection=ec2.Port.tcp(443),
-            description="Allow HTTPS access to OpenSearch from ECS tasks"
-        )
+        # Configure OpenSearch access from ECS - TEMPORARILY DISABLED
+        # Uncomment when OpenSearch is re-enabled
+        # self.opensearch_security_group.add_ingress_rule(
+        #     peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
+        #     connection=ec2.Port.tcp(443),
+        #     description="Allow HTTPS access to OpenSearch from ECS tasks"
+        # )
         
         # Apply custom security group to ECS service
         cfn_service = self.backend_service.service.node.default_child
