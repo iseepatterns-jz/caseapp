@@ -1,11 +1,11 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+  # push:  # DISABLED: Prevent automatic deployments on push
+  #   branches: [main, develop]
+  # pull_request:  # DISABLED: Prevent automatic deployments on PR
+  #   branches: [main]
+  workflow_dispatch: # Only allow manual deployments
     inputs:
       environment:
         description: "Environment to deploy to"
@@ -189,7 +189,7 @@ jobs:
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # Prevent hanging builds
+    timeout-minutes: 45 # Allow time for RDS and OpenSearch creation
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
 
     outputs:
@@ -370,6 +370,14 @@ jobs:
         uses: actions/checkout@v4
         timeout-minutes: 2
 
+      - name: Generate deployment correlation ID
+        id: correlation
+        run: |
+          CORRELATION_ID="deploy-$(date +%Y%m%d-%H%M%S)-${{ github.run_id }}"
+          echo "correlation_id=$CORRELATION_ID" >> $GITHUB_OUTPUT
+          echo "🔗 Deployment Correlation ID: $CORRELATION_ID"
+        timeout-minutes: 1
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -392,6 +400,96 @@ jobs:
           echo "✅ AWS credentials and permissions verified"
         timeout-minutes: 2
 
+      - name: Check deployment coordination
+        id: coordination
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          ENVIRONMENT: staging
+          STACK_NAME: CourtCaseManagementStack-Staging
+        run: |
+          echo "🔍 Checking if deployment can proceed..."
+
+          # Make scripts executable
+          chmod +x scripts/deployment-coordinator.sh
+          chmod +x scripts/slack-notifier.sh
+
+          # Send deployment start notification
+          bash scripts/slack-notifier.sh notify_deployment_start \
+            "$CORRELATION_ID" \
+            "staging" \
+            "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Check if deployment can proceed
+          if bash scripts/deployment-coordinator.sh can_deploy staging "$STACK_NAME"; then
+            echo "✅ No active deployment detected, proceeding..."
+            
+            # Register this deployment
+            bash scripts/deployment-coordinator.sh register \
+              "$CORRELATION_ID" \
+              "$WORKFLOW_RUN_ID" \
+              staging \
+              "$STACK_NAME"
+            
+            echo "can_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Active deployment detected, checking if we should wait..."
+            
+            # Send concurrent deployment notification
+            bash scripts/slack-notifier.sh notify_concurrent_deployment \
+              "$CORRELATION_ID" \
+              "staging" \
+              "30"
+            
+            # Wait for active deployment to complete (max 30 minutes)
+            if bash scripts/deployment-coordinator.sh wait staging 30 "$STACK_NAME"; then
+              echo "✅ Previous deployment completed, proceeding..."
+              
+              # Register this deployment
+              bash scripts/deployment-coordinator.sh register \
+                "$CORRELATION_ID" \
+                "$WORKFLOW_RUN_ID" \
+                staging \
+                "$STACK_NAME"
+              
+              echo "can_proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Timeout waiting for previous deployment to complete"
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+        timeout-minutes: 35
+
+      - name: Start deployment monitoring
+        if: steps.coordination.outputs.can_proceed == 'true'
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          STACK_NAME: CourtCaseManagementStack-Staging
+        run: |
+          echo "🔍 Starting deployment monitoring in background..."
+
+          # Make monitor script executable
+          chmod +x scripts/deployment-monitor.sh
+
+          # Start monitoring in background
+          nohup bash scripts/deployment-monitor.sh \
+            "$CORRELATION_ID" \
+            "$STACK_NAME" \
+            "C0A9M9DPFUY" \
+            "deployment-monitor-staging.log" \
+            > monitor-output.log 2>&1 &
+
+          MONITOR_PID=$!
+          echo "monitor_pid=$MONITOR_PID" >> $GITHUB_OUTPUT
+          echo "✅ Deployment monitor started (PID: $MONITOR_PID)"
+
+          # Give monitor time to initialize
+          sleep 5
+        timeout-minutes: 2
+
       - name: Set up Python for CDK
         uses: actions/setup-python@v4
         with:
@@ -409,7 +507,10 @@ jobs:
         timeout-minutes: 3
 
       - name: Run enhanced pre-deployment validation with auto-resolution
+        if: steps.coordination.outputs.can_proceed == 'true'
         working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
         run: |
           echo "🔍 Running enhanced pre-deployment validation with automatic conflict resolution..."
 
@@ -422,6 +523,7 @@ jobs:
           export AUTO_RESOLVE=true
           export CI=true
           export GITHUB_ACTIONS=true
+          export CORRELATION_ID="$CORRELATION_ID"
 
           # Run enhanced validation with automatic resolution
           if ./scripts/enhanced-deployment-validation.sh; then
@@ -431,6 +533,10 @@ jobs:
             if [ $exit_code -eq 1 ]; then
               echo "⚠️  Deployment validation completed with warnings after auto-resolution"
               echo "🚀 Proceeding with deployment..."
+            elif [ $exit_code -eq 2 ]; then
+              echo "⚠️  Concurrent deployment detected by validation script"
+              echo "This should have been handled by coordination step"
+              echo "Proceeding as coordination already approved deployment..."
             else
               echo "❌ Enhanced deployment validation failed even after auto-resolution"
               
@@ -452,11 +558,13 @@ jobs:
         timeout-minutes: 25
 
       - name: Deploy to staging with validation and retry
+        if: steps.coordination.outputs.can_proceed == 'true'
         working-directory: caseapp
         env:
           ENVIRONMENT: staging
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           STACK_NAME: CourtCaseManagementStack-Staging
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
         run: |
           echo "🚀 Starting staging deployment with enhanced reliability..."
 
@@ -468,7 +576,7 @@ jobs:
 
           # Run deployment with validation and retry logic
           ./scripts/deploy-with-validation.sh
-        timeout-minutes: 30
+        timeout-minutes: 45
 
       - name: Run post-deployment validation
         working-directory: caseapp
@@ -539,6 +647,40 @@ jobs:
             echo "💡 Consider running with force_cleanup=true if there are resource conflicts"
           fi
 
+      - name: Cleanup deployment registry
+        if: always()
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🧹 Cleaning up deployment registry..."
+
+          # Make coordinator script executable
+          chmod +x scripts/deployment-coordinator.sh
+          chmod +x scripts/slack-notifier.sh
+
+          # Remove deployment from registry
+          if bash scripts/deployment-coordinator.sh cleanup "$CORRELATION_ID"; then
+            echo "✅ Deployment registry cleaned up successfully"
+          else
+            echo "⚠️  Failed to cleanup deployment registry (non-critical)"
+          fi
+
+          # Send final deployment notification
+          if [ "${{ job.status }}" = "success" ]; then
+            bash scripts/slack-notifier.sh notify_deployment_complete \
+              "$CORRELATION_ID" \
+              "staging" \
+              "30" \
+              "http://staging-alb-dns.example.com"
+          else
+            bash scripts/slack-notifier.sh notify_deployment_failed \
+              "$CORRELATION_ID" \
+              "staging" \
+              "Deployment failed - check workflow logs"
+          fi
+        timeout-minutes: 2
+
   deploy-production:
     needs: [test, build-and-push, security-scan]
     runs-on: ubuntu-latest
@@ -550,6 +692,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         timeout-minutes: 2
+
+      - name: Generate deployment correlation ID
+        id: correlation
+        run: |
+          CORRELATION_ID="deploy-$(date +%Y%m%d-%H%M%S)-${{ github.run_id }}"
+          echo "correlation_id=$CORRELATION_ID" >> $GITHUB_OUTPUT
+          echo "🔗 Deployment Correlation ID: $CORRELATION_ID"
+        timeout-minutes: 1
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -593,6 +743,96 @@ jobs:
           echo "✅ AWS credentials and permissions verified for production"
         timeout-minutes: 3
 
+      - name: Check deployment coordination
+        id: coordination
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          ENVIRONMENT: production
+          STACK_NAME: CourtCaseManagementStack
+        run: |
+          echo "🔍 Checking if production deployment can proceed..."
+
+          # Make scripts executable
+          chmod +x scripts/deployment-coordinator.sh
+          chmod +x scripts/slack-notifier.sh
+
+          # Send deployment start notification
+          bash scripts/slack-notifier.sh notify_deployment_start \
+            "$CORRELATION_ID" \
+            "production" \
+            "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Check if deployment can proceed
+          if bash scripts/deployment-coordinator.sh can_deploy production "$STACK_NAME"; then
+            echo "✅ No active deployment detected, proceeding..."
+            
+            # Register this deployment
+            bash scripts/deployment-coordinator.sh register \
+              "$CORRELATION_ID" \
+              "$WORKFLOW_RUN_ID" \
+              production \
+              "$STACK_NAME"
+            
+            echo "can_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Active deployment detected, checking if we should wait..."
+            
+            # Send concurrent deployment notification
+            bash scripts/slack-notifier.sh notify_concurrent_deployment \
+              "$CORRELATION_ID" \
+              "production" \
+              "60"
+            
+            # Wait for active deployment to complete (max 60 minutes for production)
+            if bash scripts/deployment-coordinator.sh wait production 60 "$STACK_NAME"; then
+              echo "✅ Previous deployment completed, proceeding..."
+              
+              # Register this deployment
+              bash scripts/deployment-coordinator.sh register \
+                "$CORRELATION_ID" \
+                "$WORKFLOW_RUN_ID" \
+                production \
+                "$STACK_NAME"
+              
+              echo "can_proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Timeout waiting for previous deployment to complete"
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+        timeout-minutes: 65
+
+      - name: Start deployment monitoring
+        if: steps.coordination.outputs.can_proceed == 'true'
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          STACK_NAME: CourtCaseManagementStack
+        run: |
+          echo "🔍 Starting deployment monitoring in background..."
+
+          # Make monitor script executable
+          chmod +x scripts/deployment-monitor.sh
+
+          # Start monitoring in background
+          nohup bash scripts/deployment-monitor.sh \
+            "$CORRELATION_ID" \
+            "$STACK_NAME" \
+            "C0A9M9DPFUY" \
+            "deployment-monitor-production.log" \
+            > monitor-output.log 2>&1 &
+
+          MONITOR_PID=$!
+          echo "monitor_pid=$MONITOR_PID" >> $GITHUB_OUTPUT
+          echo "✅ Deployment monitor started (PID: $MONITOR_PID)"
+
+          # Give monitor time to initialize
+          sleep 5
+        timeout-minutes: 2
+
       - name: Set up Python for CDK
         uses: actions/setup-python@v4
         with:
@@ -610,7 +850,10 @@ jobs:
         timeout-minutes: 3
 
       - name: Run comprehensive pre-deployment validation with auto-resolution
+        if: steps.coordination.outputs.can_proceed == 'true'
         working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
         run: |
           echo "🔍 Running comprehensive pre-deployment validation with automatic conflict resolution for production..."
 
@@ -624,6 +867,7 @@ jobs:
           export AUTO_RESOLVE=true
           export CI=true
           export GITHUB_ACTIONS=true
+          export CORRELATION_ID="$CORRELATION_ID"
 
           # Run enhanced validation with automatic resolution
           if ./scripts/enhanced-deployment-validation.sh; then
@@ -633,6 +877,10 @@ jobs:
             if [ $exit_code -eq 1 ]; then
               echo "⚠️  Deployment validation completed with warnings after auto-resolution"
               echo "🚀 Proceeding with production deployment..."
+            elif [ $exit_code -eq 2 ]; then
+              echo "⚠️  Concurrent deployment detected by validation script"
+              echo "This should have been handled by coordination step"
+              echo "Proceeding as coordination already approved deployment..."
             else
               echo "❌ Enhanced deployment validation failed"
               
@@ -661,10 +909,12 @@ jobs:
         timeout-minutes: 35
 
       - name: Deploy to production with enhanced reliability
+        if: steps.coordination.outputs.can_proceed == 'true'
         working-directory: caseapp
         env:
           ENVIRONMENT: production
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
         run: |
           echo "🚀 Starting production deployment with enhanced reliability..."
           echo "⚠️  Production deployment - proceeding with caution"
@@ -812,3 +1062,37 @@ jobs:
             echo "🚨 Production environment may be in an inconsistent state"
             echo "💡 Consider immediate rollback if necessary"
           fi
+
+      - name: Cleanup deployment registry
+        if: always()
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🧹 Cleaning up deployment registry..."
+
+          # Make coordinator script executable
+          chmod +x scripts/deployment-coordinator.sh
+          chmod +x scripts/slack-notifier.sh
+
+          # Remove deployment from registry
+          if bash scripts/deployment-coordinator.sh cleanup "$CORRELATION_ID"; then
+            echo "✅ Deployment registry cleaned up successfully"
+          else
+            echo "⚠️  Failed to cleanup deployment registry (non-critical)"
+          fi
+
+          # Send final deployment notification
+          if [ "${{ job.status }}" = "success" ]; then
+            bash scripts/slack-notifier.sh notify_deployment_complete \
+              "$CORRELATION_ID" \
+              "production" \
+              "90" \
+              "http://production-alb-dns.example.com"
+          else
+            bash scripts/slack-notifier.sh notify_deployment_failed \
+              "$CORRELATION_ID" \
+              "production" \
+              "Deployment failed - check workflow logs"
+          fi
+        timeout-minutes: 2
