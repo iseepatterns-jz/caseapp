@@ -124,12 +124,115 @@ check_docker_images() {
     return 0
 }
 
-# Check if deployment is currently in progress
+# Get detailed deployment status
+get_deployment_status() {
+    local stack_name="$1"
+    local region="${2:-$REGION}"
+    
+    # Get stack information
+    local stack_info
+    stack_info=$(AWS_PAGER="" aws cloudformation describe-stacks \
+        --stack-name "$stack_name" \
+        --region "$region" \
+        --query 'Stacks[0]' \
+        --output json 2>/dev/null || echo "{}")
+    
+    if [ "$stack_info" = "{}" ]; then
+        echo "STACK_NOT_FOUND"
+        return 1
+    fi
+    
+    # Extract key information
+    local status=$(echo "$stack_info" | jq -r '.StackStatus // "UNKNOWN"')
+    local creation_time=$(echo "$stack_info" | jq -r '.CreationTime // "UNKNOWN"')
+    local last_updated=$(echo "$stack_info" | jq -r '.LastUpdatedTime // .CreationTime // "UNKNOWN"')
+    
+    # Get recent stack events (last 5)
+    local recent_events
+    recent_events=$(AWS_PAGER="" aws cloudformation describe-stack-events \
+        --stack-name "$stack_name" \
+        --region "$region" \
+        --max-items 5 \
+        --query 'StackEvents[*].[Timestamp,ResourceType,ResourceStatus,ResourceStatusReason]' \
+        --output text 2>/dev/null || echo "")
+    
+    # Calculate elapsed time
+    local start_time="$creation_time"
+    if [ "$last_updated" != "UNKNOWN" ] && [ "$last_updated" != "$creation_time" ]; then
+        start_time="$last_updated"
+    fi
+    
+    local elapsed_minutes=0
+    if [ "$start_time" != "UNKNOWN" ]; then
+        # Parse ISO 8601 timestamp (works on both macOS and Linux)
+        local start_epoch=$(date -d "$start_time" "+%s" 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S%z" "$start_time" "+%s" 2>/dev/null || echo "0")
+        local now_epoch=$(date "+%s")
+        if [ "$start_epoch" != "0" ]; then
+            elapsed_minutes=$(( (now_epoch - start_epoch) / 60 ))
+        fi
+    fi
+    
+    # Return structured information
+    echo "STATUS:$status"
+    echo "STARTED:$start_time"
+    echo "ELAPSED_MINUTES:$elapsed_minutes"
+    echo "RECENT_EVENTS:$recent_events"
+}
+
+# Estimate deployment completion time
+estimate_completion_time() {
+    local stack_status="$1"
+    local elapsed_minutes="$2"
+    
+    # Historical averages (in minutes)
+    # These are based on typical deployment times
+    local avg_create_time=25
+    local avg_update_time=20
+    local avg_rollback_time=15
+    
+    local total_expected=0
+    case "$stack_status" in
+        CREATE_IN_PROGRESS)
+            total_expected=$avg_create_time
+            ;;
+        UPDATE_IN_PROGRESS)
+            total_expected=$avg_update_time
+            ;;
+        ROLLBACK_IN_PROGRESS|UPDATE_ROLLBACK_IN_PROGRESS)
+            total_expected=$avg_rollback_time
+            ;;
+        *)
+            echo "0"
+            return
+            ;;
+    esac
+    
+    # Calculate remaining time
+    local remaining=$((total_expected - elapsed_minutes))
+    if [ $remaining -lt 0 ]; then
+        remaining=5  # At least 5 minutes if we're over estimate
+    fi
+    
+    echo "$remaining"
+}
+
+# Generate AWS Console link
+get_console_link() {
+    local stack_name="$1"
+    local region="${2:-$REGION}"
+    
+    # URL encode the stack name
+    local encoded_stack_name=$(echo "$stack_name" | sed 's/ /%20/g')
+    
+    echo "https://console.aws.amazon.com/cloudformation/home?region=${region}#/stacks/stackinfo?stackId=${encoded_stack_name}"
+}
+
+# Check if deployment is currently in progress with detailed reporting
 check_deployment_in_progress() {
     log_info "Checking if deployment is currently in progress..."
     
     local stack_status
-    stack_status=$(aws cloudformation describe-stacks \
+    stack_status=$(AWS_PAGER="" aws cloudformation describe-stacks \
         --stack-name "$STACK_NAME" \
         --region "$REGION" \
         --query 'Stacks[0].StackStatus' \
@@ -139,7 +242,42 @@ check_deployment_in_progress() {
     case "$stack_status" in
         CREATE_IN_PROGRESS|UPDATE_IN_PROGRESS|ROLLBACK_IN_PROGRESS|UPDATE_ROLLBACK_IN_PROGRESS|UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)
             log_error "Deployment is currently in progress with status: $stack_status"
-            log_error "Cannot run validation while deployment is active"
+            echo
+            
+            # Get detailed status information
+            log_info "Fetching detailed deployment status..."
+            local status_info=$(get_deployment_status "$STACK_NAME" "$REGION")
+            
+            local started=$(echo "$status_info" | grep "^STARTED:" | cut -d: -f2-)
+            local elapsed=$(echo "$status_info" | grep "^ELAPSED_MINUTES:" | cut -d: -f2)
+            local estimated_remaining=$(estimate_completion_time "$stack_status" "$elapsed")
+            
+            log_info "Active Deployment Details:"
+            log_info "  Status: $stack_status"
+            log_info "  Started: $started"
+            log_info "  Elapsed Time: ${elapsed} minutes"
+            log_info "  Estimated Remaining: ${estimated_remaining} minutes"
+            echo
+            
+            # Show recent events
+            log_info "Recent Stack Events:"
+            local events=$(echo "$status_info" | grep "^RECENT_EVENTS:" | cut -d: -f2-)
+            if [ -n "$events" ]; then
+                echo "$events" | head -5 | while IFS=$'\t' read -r timestamp resource_type status reason; do
+                    log_info "  [$timestamp] $resource_type: $status"
+                done
+            fi
+            echo
+            
+            # Provide AWS Console link
+            local console_link=$(get_console_link "$STACK_NAME" "$REGION")
+            log_info "Monitor deployment in AWS Console:"
+            log_info "  $console_link"
+            echo
+            
+            log_error "❌ Cannot proceed - deployment is already in progress"
+            log_error "Wait for the current deployment to complete before starting a new one"
+            
             return 0  # Return 0 to indicate deployment IS in progress
             ;;
         STACK_NOT_FOUND)

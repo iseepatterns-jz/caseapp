@@ -1,0 +1,3554 @@
+{
+  "version": "tree-0.1",
+  "tree": {
+    "id": "App",
+    "path": "",
+    "children": {
+      "CourtCaseManagementStack": {
+        "id": "CourtCaseManagementStack",
+        "path": "CourtCaseManagementStack",
+        "children": {
+          "CourtCaseVPC": {
+            "id": "CourtCaseVPC",
+            "path": "CourtCaseManagementStack/CourtCaseVPC",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::VPC",
+                  "aws:cdk:cloudformation:props": {
+                    "cidrBlock": "10.0.0.0/16",
+                    "enableDnsHostnames": true,
+                    "enableDnsSupport": true,
+                    "instanceTenancy": "default",
+                    "tags": [
+                      {
+                        "key": "Name",
+                        "value": "CourtCaseManagementStack/CourtCaseVPC"
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnVPC",
+                  "version": "2.160.0"
+                }
+              },
+              "PublicSubnet1": {
+                "id": "PublicSubnet1",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1",
+                "children": {
+                  "Subnet": {
+                    "id": "Subnet",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/Subnet",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Subnet",
+                      "aws:cdk:cloudformation:props": {
+                        "availabilityZone": {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::GetAZs": ""
+                            }
+                          ]
+                        },
+                        "cidrBlock": "10.0.0.0/24",
+                        "mapPublicIpOnLaunch": true,
+                        "tags": [
+                          {
+                            "key": "aws-cdk:subnet-name",
+                            "value": "Public"
+                          },
+                          {
+                            "key": "aws-cdk:subnet-type",
+                            "value": "Public"
+                          },
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnet",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Acl": {
+                    "id": "Acl",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/Acl",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTable": {
+                    "id": "RouteTable",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/RouteTable",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::RouteTable",
+                      "aws:cdk:cloudformation:props": {
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRouteTable",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTableAssociation": {
+                    "id": "RouteTableAssociation",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/RouteTableAssociation",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SubnetRouteTableAssociation",
+                      "aws:cdk:cloudformation:props": {
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPublicSubnet1RouteTableACCF8CA3"
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCPublicSubnet1SubnetF86CA2C4"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnetRouteTableAssociation",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "DefaultRoute": {
+                    "id": "DefaultRoute",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/DefaultRoute",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Route",
+                      "aws:cdk:cloudformation:props": {
+                        "destinationCidrBlock": "0.0.0.0/0",
+                        "gatewayId": {
+                          "Ref": "CourtCaseVPCIGW56782950"
+                        },
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPublicSubnet1RouteTableACCF8CA3"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRoute",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "EIP": {
+                    "id": "EIP",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/EIP",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::EIP",
+                      "aws:cdk:cloudformation:props": {
+                        "domain": "vpc",
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1"
+                          }
+                        ]
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnEIP",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "NATGateway": {
+                    "id": "NATGateway",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/NATGateway",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::NatGateway",
+                      "aws:cdk:cloudformation:props": {
+                        "allocationId": {
+                          "Fn::GetAtt": [
+                            "CourtCaseVPCPublicSubnet1EIP469F7D66",
+                            "AllocationId"
+                          ]
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCPublicSubnet1SubnetF86CA2C4"
+                        },
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1"
+                          }
+                        ]
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnNatGateway",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.PublicSubnet",
+                  "version": "2.160.0"
+                }
+              },
+              "PublicSubnet2": {
+                "id": "PublicSubnet2",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2",
+                "children": {
+                  "Subnet": {
+                    "id": "Subnet",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/Subnet",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Subnet",
+                      "aws:cdk:cloudformation:props": {
+                        "availabilityZone": {
+                          "Fn::Select": [
+                            1,
+                            {
+                              "Fn::GetAZs": ""
+                            }
+                          ]
+                        },
+                        "cidrBlock": "10.0.1.0/24",
+                        "mapPublicIpOnLaunch": true,
+                        "tags": [
+                          {
+                            "key": "aws-cdk:subnet-name",
+                            "value": "Public"
+                          },
+                          {
+                            "key": "aws-cdk:subnet-type",
+                            "value": "Public"
+                          },
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnet",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Acl": {
+                    "id": "Acl",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/Acl",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTable": {
+                    "id": "RouteTable",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/RouteTable",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::RouteTable",
+                      "aws:cdk:cloudformation:props": {
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRouteTable",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTableAssociation": {
+                    "id": "RouteTableAssociation",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/RouteTableAssociation",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SubnetRouteTableAssociation",
+                      "aws:cdk:cloudformation:props": {
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPublicSubnet2RouteTableA5976657"
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCPublicSubnet2SubnetC7CA3BB0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnetRouteTableAssociation",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "DefaultRoute": {
+                    "id": "DefaultRoute",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/DefaultRoute",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Route",
+                      "aws:cdk:cloudformation:props": {
+                        "destinationCidrBlock": "0.0.0.0/0",
+                        "gatewayId": {
+                          "Ref": "CourtCaseVPCIGW56782950"
+                        },
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPublicSubnet2RouteTableA5976657"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRoute",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.PublicSubnet",
+                  "version": "2.160.0"
+                }
+              },
+              "PrivateSubnet1": {
+                "id": "PrivateSubnet1",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1",
+                "children": {
+                  "Subnet": {
+                    "id": "Subnet",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/Subnet",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Subnet",
+                      "aws:cdk:cloudformation:props": {
+                        "availabilityZone": {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::GetAZs": ""
+                            }
+                          ]
+                        },
+                        "cidrBlock": "10.0.2.0/24",
+                        "mapPublicIpOnLaunch": false,
+                        "tags": [
+                          {
+                            "key": "aws-cdk:subnet-name",
+                            "value": "Private"
+                          },
+                          {
+                            "key": "aws-cdk:subnet-type",
+                            "value": "Private"
+                          },
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnet",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Acl": {
+                    "id": "Acl",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/Acl",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTable": {
+                    "id": "RouteTable",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/RouteTable",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::RouteTable",
+                      "aws:cdk:cloudformation:props": {
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRouteTable",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTableAssociation": {
+                    "id": "RouteTableAssociation",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/RouteTableAssociation",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SubnetRouteTableAssociation",
+                      "aws:cdk:cloudformation:props": {
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPrivateSubnet1RouteTable94383683"
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCPrivateSubnet1Subnet5F9BD78B"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnetRouteTableAssociation",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "DefaultRoute": {
+                    "id": "DefaultRoute",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/DefaultRoute",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Route",
+                      "aws:cdk:cloudformation:props": {
+                        "destinationCidrBlock": "0.0.0.0/0",
+                        "natGatewayId": {
+                          "Ref": "CourtCaseVPCPublicSubnet1NATGateway5CFAC9F8"
+                        },
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPrivateSubnet1RouteTable94383683"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRoute",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.PrivateSubnet",
+                  "version": "2.160.0"
+                }
+              },
+              "PrivateSubnet2": {
+                "id": "PrivateSubnet2",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2",
+                "children": {
+                  "Subnet": {
+                    "id": "Subnet",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/Subnet",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Subnet",
+                      "aws:cdk:cloudformation:props": {
+                        "availabilityZone": {
+                          "Fn::Select": [
+                            1,
+                            {
+                              "Fn::GetAZs": ""
+                            }
+                          ]
+                        },
+                        "cidrBlock": "10.0.3.0/24",
+                        "mapPublicIpOnLaunch": false,
+                        "tags": [
+                          {
+                            "key": "aws-cdk:subnet-name",
+                            "value": "Private"
+                          },
+                          {
+                            "key": "aws-cdk:subnet-type",
+                            "value": "Private"
+                          },
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnet",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Acl": {
+                    "id": "Acl",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/Acl",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTable": {
+                    "id": "RouteTable",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/RouteTable",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::RouteTable",
+                      "aws:cdk:cloudformation:props": {
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRouteTable",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTableAssociation": {
+                    "id": "RouteTableAssociation",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/RouteTableAssociation",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SubnetRouteTableAssociation",
+                      "aws:cdk:cloudformation:props": {
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPrivateSubnet2RouteTableA304EDF3"
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCPrivateSubnet2Subnet37766881"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnetRouteTableAssociation",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "DefaultRoute": {
+                    "id": "DefaultRoute",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/DefaultRoute",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Route",
+                      "aws:cdk:cloudformation:props": {
+                        "destinationCidrBlock": "0.0.0.0/0",
+                        "natGatewayId": {
+                          "Ref": "CourtCaseVPCPublicSubnet1NATGateway5CFAC9F8"
+                        },
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCPrivateSubnet2RouteTableA304EDF3"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRoute",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.PrivateSubnet",
+                  "version": "2.160.0"
+                }
+              },
+              "DatabaseSubnet1": {
+                "id": "DatabaseSubnet1",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1",
+                "children": {
+                  "Subnet": {
+                    "id": "Subnet",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/Subnet",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Subnet",
+                      "aws:cdk:cloudformation:props": {
+                        "availabilityZone": {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::GetAZs": ""
+                            }
+                          ]
+                        },
+                        "cidrBlock": "10.0.4.0/24",
+                        "mapPublicIpOnLaunch": false,
+                        "tags": [
+                          {
+                            "key": "aws-cdk:subnet-name",
+                            "value": "Database"
+                          },
+                          {
+                            "key": "aws-cdk:subnet-type",
+                            "value": "Isolated"
+                          },
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnet",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Acl": {
+                    "id": "Acl",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/Acl",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTable": {
+                    "id": "RouteTable",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/RouteTable",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::RouteTable",
+                      "aws:cdk:cloudformation:props": {
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRouteTable",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTableAssociation": {
+                    "id": "RouteTableAssociation",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/RouteTableAssociation",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SubnetRouteTableAssociation",
+                      "aws:cdk:cloudformation:props": {
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCDatabaseSubnet1RouteTableEC928991"
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCDatabaseSubnet1SubnetB30771EA"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnetRouteTableAssociation",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.PrivateSubnet",
+                  "version": "2.160.0"
+                }
+              },
+              "DatabaseSubnet2": {
+                "id": "DatabaseSubnet2",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2",
+                "children": {
+                  "Subnet": {
+                    "id": "Subnet",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/Subnet",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::Subnet",
+                      "aws:cdk:cloudformation:props": {
+                        "availabilityZone": {
+                          "Fn::Select": [
+                            1,
+                            {
+                              "Fn::GetAZs": ""
+                            }
+                          ]
+                        },
+                        "cidrBlock": "10.0.5.0/24",
+                        "mapPublicIpOnLaunch": false,
+                        "tags": [
+                          {
+                            "key": "aws-cdk:subnet-name",
+                            "value": "Database"
+                          },
+                          {
+                            "key": "aws-cdk:subnet-type",
+                            "value": "Isolated"
+                          },
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnet",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Acl": {
+                    "id": "Acl",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/Acl",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTable": {
+                    "id": "RouteTable",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/RouteTable",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::RouteTable",
+                      "aws:cdk:cloudformation:props": {
+                        "tags": [
+                          {
+                            "key": "Name",
+                            "value": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnRouteTable",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "RouteTableAssociation": {
+                    "id": "RouteTableAssociation",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/RouteTableAssociation",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SubnetRouteTableAssociation",
+                      "aws:cdk:cloudformation:props": {
+                        "routeTableId": {
+                          "Ref": "CourtCaseVPCDatabaseSubnet2RouteTable7AC616CE"
+                        },
+                        "subnetId": {
+                          "Ref": "CourtCaseVPCDatabaseSubnet2Subnet9803B421"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSubnetRouteTableAssociation",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.PrivateSubnet",
+                  "version": "2.160.0"
+                }
+              },
+              "IGW": {
+                "id": "IGW",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/IGW",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::InternetGateway",
+                  "aws:cdk:cloudformation:props": {
+                    "tags": [
+                      {
+                        "key": "Name",
+                        "value": "CourtCaseManagementStack/CourtCaseVPC"
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnInternetGateway",
+                  "version": "2.160.0"
+                }
+              },
+              "VPCGW": {
+                "id": "VPCGW",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/VPCGW",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::VPCGatewayAttachment",
+                  "aws:cdk:cloudformation:props": {
+                    "internetGatewayId": {
+                      "Ref": "CourtCaseVPCIGW56782950"
+                    },
+                    "vpcId": {
+                      "Ref": "CourtCaseVPC4772DB51"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnVPCGatewayAttachment",
+                  "version": "2.160.0"
+                }
+              },
+              "RestrictDefaultSecurityGroupCustomResource": {
+                "id": "RestrictDefaultSecurityGroupCustomResource",
+                "path": "CourtCaseManagementStack/CourtCaseVPC/RestrictDefaultSecurityGroupCustomResource",
+                "children": {
+                  "Default": {
+                    "id": "Default",
+                    "path": "CourtCaseManagementStack/CourtCaseVPC/RestrictDefaultSecurityGroupCustomResource/Default",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.CfnResource",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CustomResource",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ec2.Vpc",
+              "version": "2.160.0"
+            }
+          },
+          "LatestNodeRuntimeMap": {
+            "id": "LatestNodeRuntimeMap",
+            "path": "CourtCaseManagementStack/LatestNodeRuntimeMap",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnMapping",
+              "version": "2.160.0"
+            }
+          },
+          "Custom::VpcRestrictDefaultSGCustomResourceProvider": {
+            "id": "Custom::VpcRestrictDefaultSGCustomResourceProvider",
+            "path": "CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider",
+            "children": {
+              "Staging": {
+                "id": "Staging",
+                "path": "CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Staging",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.AssetStaging",
+                  "version": "2.160.0"
+                }
+              },
+              "Role": {
+                "id": "Role",
+                "path": "CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Role",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnResource",
+                  "version": "2.160.0"
+                }
+              },
+              "Handler": {
+                "id": "Handler",
+                "path": "CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Handler",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnResource",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CustomResourceProviderBase",
+              "version": "2.160.0"
+            }
+          },
+          "DocumentsBucket": {
+            "id": "DocumentsBucket",
+            "path": "CourtCaseManagementStack/DocumentsBucket",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/DocumentsBucket/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::S3::Bucket",
+                  "aws:cdk:cloudformation:props": {
+                    "bucketEncryption": {
+                      "serverSideEncryptionConfiguration": [
+                        {
+                          "serverSideEncryptionByDefault": {
+                            "sseAlgorithm": "AES256"
+                          }
+                        }
+                      ]
+                    },
+                    "lifecycleConfiguration": {
+                      "rules": [
+                        {
+                          "id": "ArchiveOldDocuments",
+                          "status": "Enabled",
+                          "transitions": [
+                            {
+                              "storageClass": "STANDARD_IA",
+                              "transitionInDays": 30
+                            },
+                            {
+                              "storageClass": "GLACIER",
+                              "transitionInDays": 90
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "publicAccessBlockConfiguration": {
+                      "blockPublicAcls": true,
+                      "blockPublicPolicy": true,
+                      "ignorePublicAcls": true,
+                      "restrictPublicBuckets": true
+                    },
+                    "versioningConfiguration": {
+                      "status": "Enabled"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_s3.CfnBucket",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_s3.Bucket",
+              "version": "2.160.0"
+            }
+          },
+          "MediaBucket": {
+            "id": "MediaBucket",
+            "path": "CourtCaseManagementStack/MediaBucket",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/MediaBucket/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::S3::Bucket",
+                  "aws:cdk:cloudformation:props": {
+                    "bucketEncryption": {
+                      "serverSideEncryptionConfiguration": [
+                        {
+                          "serverSideEncryptionByDefault": {
+                            "sseAlgorithm": "AES256"
+                          }
+                        }
+                      ]
+                    },
+                    "corsConfiguration": {
+                      "corsRules": [
+                        {
+                          "maxAge": 3000,
+                          "allowedHeaders": [
+                            "*"
+                          ],
+                          "allowedMethods": [
+                            "GET",
+                            "POST"
+                          ],
+                          "allowedOrigins": [
+                            "*"
+                          ]
+                        }
+                      ]
+                    },
+                    "lifecycleConfiguration": {
+                      "rules": [
+                        {
+                          "id": "MediaArchiving",
+                          "status": "Enabled",
+                          "transitions": [
+                            {
+                              "storageClass": "STANDARD_IA",
+                              "transitionInDays": 60
+                            },
+                            {
+                              "storageClass": "DEEP_ARCHIVE",
+                              "transitionInDays": 365
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "publicAccessBlockConfiguration": {
+                      "blockPublicAcls": true,
+                      "blockPublicPolicy": true,
+                      "ignorePublicAcls": true,
+                      "restrictPublicBuckets": true
+                    },
+                    "versioningConfiguration": {
+                      "status": "Enabled"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_s3.CfnBucket",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_s3.Bucket",
+              "version": "2.160.0"
+            }
+          },
+          "DatabaseSubnetGroup": {
+            "id": "DatabaseSubnetGroup",
+            "path": "CourtCaseManagementStack/DatabaseSubnetGroup",
+            "children": {
+              "Default": {
+                "id": "Default",
+                "path": "CourtCaseManagementStack/DatabaseSubnetGroup/Default",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::RDS::DBSubnetGroup",
+                  "aws:cdk:cloudformation:props": {
+                    "dbSubnetGroupDescription": "Subnet group for court case database",
+                    "subnetIds": [
+                      {
+                        "Ref": "CourtCaseVPCDatabaseSubnet1SubnetB30771EA"
+                      },
+                      {
+                        "Ref": "CourtCaseVPCDatabaseSubnet2Subnet9803B421"
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_rds.CfnDBSubnetGroup",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_rds.SubnetGroup",
+              "version": "2.160.0"
+            }
+          },
+          "DatabaseSecurityGroup": {
+            "id": "DatabaseSecurityGroup",
+            "path": "CourtCaseManagementStack/DatabaseSecurityGroup",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/DatabaseSecurityGroup/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                  "aws:cdk:cloudformation:props": {
+                    "groupDescription": "Security group for court case database - minimal required access",
+                    "securityGroupEgress": [
+                      {
+                        "cidrIp": "255.255.255.255/32",
+                        "description": "Disallow all traffic",
+                        "ipProtocol": "icmp",
+                        "fromPort": 252,
+                        "toPort": 86
+                      }
+                    ],
+                    "securityGroupIngress": [
+                      {
+                        "sourceSecurityGroupId": {
+                          "Fn::GetAtt": [
+                            "ECSServiceSecurityGroupEB507764",
+                            "GroupId"
+                          ]
+                        },
+                        "ipProtocol": "tcp",
+                        "fromPort": 5432,
+                        "toPort": 5432,
+                        "description": "Allow PostgreSQL access from ECS tasks"
+                      }
+                    ],
+                    "vpcId": {
+                      "Ref": "CourtCaseVPC4772DB51"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+              "version": "2.160.0"
+            }
+          },
+          "CourtCaseDatabase": {
+            "id": "CourtCaseDatabase",
+            "path": "CourtCaseManagementStack/CourtCaseDatabase",
+            "children": {
+              "MonitoringRole": {
+                "id": "MonitoringRole",
+                "path": "CourtCaseManagementStack/CourtCaseDatabase/MonitoringRole",
+                "children": {
+                  "ImportMonitoringRole": {
+                    "id": "ImportMonitoringRole",
+                    "path": "CourtCaseManagementStack/CourtCaseDatabase/MonitoringRole/ImportMonitoringRole",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/CourtCaseDatabase/MonitoringRole/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                      "aws:cdk:cloudformation:props": {
+                        "assumeRolePolicyDocument": {
+                          "Statement": [
+                            {
+                              "Action": "sts:AssumeRole",
+                              "Effect": "Allow",
+                              "Principal": {
+                                "Service": "monitoring.rds.amazonaws.com"
+                              }
+                            }
+                          ],
+                          "Version": "2012-10-17"
+                        },
+                        "managedPolicyArns": [
+                          {
+                            "Fn::Join": [
+                              "",
+                              [
+                                "arn:",
+                                {
+                                  "Ref": "AWS::Partition"
+                                },
+                                ":iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.Role",
+                  "version": "2.160.0"
+                }
+              },
+              "Secret": {
+                "id": "Secret",
+                "path": "CourtCaseManagementStack/CourtCaseDatabase/Secret",
+                "children": {
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/CourtCaseDatabase/Secret/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::SecretsManager::Secret",
+                      "aws:cdk:cloudformation:props": {
+                        "description": {
+                          "Fn::Join": [
+                            "",
+                            [
+                              "Generated by the CDK for stack: ",
+                              {
+                                "Ref": "AWS::StackName"
+                              }
+                            ]
+                          ]
+                        },
+                        "generateSecretString": {
+                          "passwordLength": 30,
+                          "secretStringTemplate": "{\"username\":\"courtcase_admin\"}",
+                          "generateStringKey": "password",
+                          "excludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\"
+                        },
+                        "name": "court-case-db-credentials"
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_secretsmanager.CfnSecret",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Attachment": {
+                    "id": "Attachment",
+                    "path": "CourtCaseManagementStack/CourtCaseDatabase/Secret/Attachment",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/CourtCaseDatabase/Secret/Attachment/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::SecretsManager::SecretTargetAttachment",
+                          "aws:cdk:cloudformation:props": {
+                            "secretId": {
+                              "Ref": "CourtCaseManagementStackCourtCaseDatabaseSecret9E7645473fdaad7efa858a3daf9490cf0a702aeb"
+                            },
+                            "targetId": {
+                              "Ref": "CourtCaseDatabaseF7BBE8D0"
+                            },
+                            "targetType": "AWS::RDS::DBInstance"
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_secretsmanager.CfnSecretTargetAttachment",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_secretsmanager.SecretTargetAttachment",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_rds.DatabaseSecret",
+                  "version": "2.160.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/CourtCaseDatabase/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::RDS::DBInstance",
+                  "aws:cdk:cloudformation:props": {
+                    "allocatedStorage": "100",
+                    "backupRetentionPeriod": 7,
+                    "copyTagsToSnapshot": true,
+                    "dbInstanceClass": "db.t3.medium",
+                    "dbName": "courtcase_db",
+                    "dbSubnetGroupName": {
+                      "Ref": "DatabaseSubnetGroup"
+                    },
+                    "deletionProtection": true,
+                    "enablePerformanceInsights": true,
+                    "engine": "postgres",
+                    "engineVersion": "15",
+                    "masterUsername": "courtcase_admin",
+                    "masterUserPassword": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "{{resolve:secretsmanager:",
+                          {
+                            "Ref": "CourtCaseManagementStackCourtCaseDatabaseSecret9E7645473fdaad7efa858a3daf9490cf0a702aeb"
+                          },
+                          ":SecretString:password::}}"
+                        ]
+                      ]
+                    },
+                    "monitoringInterval": 60,
+                    "monitoringRoleArn": {
+                      "Fn::GetAtt": [
+                        "CourtCaseDatabaseMonitoringRole0BC69027",
+                        "Arn"
+                      ]
+                    },
+                    "multiAz": true,
+                    "performanceInsightsRetentionPeriod": 7,
+                    "preferredBackupWindow": "03:00-04:00",
+                    "preferredMaintenanceWindow": "sun:04:00-sun:05:00",
+                    "storageEncrypted": true,
+                    "storageType": "gp2",
+                    "vpcSecurityGroups": [
+                      {
+                        "Fn::GetAtt": [
+                          "DatabaseSecurityGroup7319C0F6",
+                          "GroupId"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_rds.CfnDBInstance",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_rds.DatabaseInstance",
+              "version": "2.160.0"
+            }
+          },
+          "RedisSubnetGroup": {
+            "id": "RedisSubnetGroup",
+            "path": "CourtCaseManagementStack/RedisSubnetGroup",
+            "attributes": {
+              "aws:cdk:cloudformation:type": "AWS::ElastiCache::SubnetGroup",
+              "aws:cdk:cloudformation:props": {
+                "description": "Subnet group for Redis cache",
+                "subnetIds": [
+                  {
+                    "Ref": "CourtCaseVPCPrivateSubnet1Subnet5F9BD78B"
+                  },
+                  {
+                    "Ref": "CourtCaseVPCPrivateSubnet2Subnet37766881"
+                  }
+                ]
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_elasticache.CfnSubnetGroup",
+              "version": "2.160.0"
+            }
+          },
+          "RedisSecurityGroup": {
+            "id": "RedisSecurityGroup",
+            "path": "CourtCaseManagementStack/RedisSecurityGroup",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/RedisSecurityGroup/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                  "aws:cdk:cloudformation:props": {
+                    "groupDescription": "Security group for Redis cache - minimal required access",
+                    "securityGroupEgress": [
+                      {
+                        "cidrIp": "255.255.255.255/32",
+                        "description": "Disallow all traffic",
+                        "ipProtocol": "icmp",
+                        "fromPort": 252,
+                        "toPort": 86
+                      }
+                    ],
+                    "securityGroupIngress": [
+                      {
+                        "sourceSecurityGroupId": {
+                          "Fn::GetAtt": [
+                            "ECSServiceSecurityGroupEB507764",
+                            "GroupId"
+                          ]
+                        },
+                        "ipProtocol": "tcp",
+                        "fromPort": 6379,
+                        "toPort": 6379,
+                        "description": "Allow Redis access from ECS tasks"
+                      }
+                    ],
+                    "vpcId": {
+                      "Ref": "CourtCaseVPC4772DB51"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+              "version": "2.160.0"
+            }
+          },
+          "RedisCluster": {
+            "id": "RedisCluster",
+            "path": "CourtCaseManagementStack/RedisCluster",
+            "attributes": {
+              "aws:cdk:cloudformation:type": "AWS::ElastiCache::CacheCluster",
+              "aws:cdk:cloudformation:props": {
+                "cacheNodeType": "cache.t3.micro",
+                "cacheSubnetGroupName": {
+                  "Ref": "RedisSubnetGroup"
+                },
+                "engine": "redis",
+                "engineVersion": "7.0",
+                "numCacheNodes": 1,
+                "port": 6379,
+                "vpcSecurityGroupIds": [
+                  {
+                    "Fn::GetAtt": [
+                      "RedisSecurityGroupB05951F6",
+                      "GroupId"
+                    ]
+                  }
+                ]
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_elasticache.CfnCacheCluster",
+              "version": "2.160.0"
+            }
+          },
+          "OpenSearchSecurityGroup": {
+            "id": "OpenSearchSecurityGroup",
+            "path": "CourtCaseManagementStack/OpenSearchSecurityGroup",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/OpenSearchSecurityGroup/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                  "aws:cdk:cloudformation:props": {
+                    "groupDescription": "Security group for OpenSearch - minimal required access",
+                    "securityGroupEgress": [
+                      {
+                        "cidrIp": "255.255.255.255/32",
+                        "description": "Disallow all traffic",
+                        "ipProtocol": "icmp",
+                        "fromPort": 252,
+                        "toPort": 86
+                      }
+                    ],
+                    "securityGroupIngress": [
+                      {
+                        "sourceSecurityGroupId": {
+                          "Fn::GetAtt": [
+                            "ECSServiceSecurityGroupEB507764",
+                            "GroupId"
+                          ]
+                        },
+                        "ipProtocol": "tcp",
+                        "fromPort": 443,
+                        "toPort": 443,
+                        "description": "Allow HTTPS access to OpenSearch from ECS tasks"
+                      }
+                    ],
+                    "vpcId": {
+                      "Ref": "CourtCaseVPC4772DB51"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+              "version": "2.160.0"
+            }
+          },
+          "CourtCaseSearch": {
+            "id": "CourtCaseSearch",
+            "path": "CourtCaseManagementStack/CourtCaseSearch",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/CourtCaseSearch/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::OpenSearchService::Domain",
+                  "aws:cdk:cloudformation:props": {
+                    "advancedSecurityOptions": {
+                      "enabled": true,
+                      "internalUserDatabaseEnabled": true,
+                      "masterUserOptions": {
+                        "masterUserName": "admin",
+                        "masterUserPassword": "{{resolve:secretsmanager:opensearch-master-password:SecretString:password::}}"
+                      }
+                    },
+                    "clusterConfig": {
+                      "dedicatedMasterEnabled": true,
+                      "dedicatedMasterCount": 3,
+                      "dedicatedMasterType": "t3.small.search",
+                      "instanceCount": 2,
+                      "instanceType": "t3.small.search",
+                      "zoneAwarenessEnabled": true,
+                      "zoneAwarenessConfig": {
+                        "availabilityZoneCount": 2
+                      }
+                    },
+                    "domainEndpointOptions": {
+                      "enforceHttps": true,
+                      "tlsSecurityPolicy": "Policy-Min-TLS-1-0-2019-07"
+                    },
+                    "ebsOptions": {
+                      "ebsEnabled": true,
+                      "volumeSize": 20,
+                      "volumeType": "gp3"
+                    },
+                    "encryptionAtRestOptions": {
+                      "enabled": true
+                    },
+                    "engineVersion": "OpenSearch_2.3",
+                    "logPublishingOptions": {},
+                    "nodeToNodeEncryptionOptions": {
+                      "enabled": true
+                    },
+                    "vpcOptions": {
+                      "securityGroupIds": [
+                        {
+                          "Fn::GetAtt": [
+                            "OpenSearchSecurityGroup5212DDD0",
+                            "GroupId"
+                          ]
+                        }
+                      ],
+                      "subnetIds": [
+                        {
+                          "Ref": "CourtCaseVPCPrivateSubnet1Subnet5F9BD78B"
+                        },
+                        {
+                          "Ref": "CourtCaseVPCPrivateSubnet2Subnet37766881"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_opensearchservice.CfnDomain",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_opensearchservice.Domain",
+              "version": "2.160.0"
+            }
+          },
+          "CourtCaseUserPool": {
+            "id": "CourtCaseUserPool",
+            "path": "CourtCaseManagementStack/CourtCaseUserPool",
+            "children": {
+              "smsRole": {
+                "id": "smsRole",
+                "path": "CourtCaseManagementStack/CourtCaseUserPool/smsRole",
+                "children": {
+                  "ImportsmsRole": {
+                    "id": "ImportsmsRole",
+                    "path": "CourtCaseManagementStack/CourtCaseUserPool/smsRole/ImportsmsRole",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/CourtCaseUserPool/smsRole/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                      "aws:cdk:cloudformation:props": {
+                        "assumeRolePolicyDocument": {
+                          "Statement": [
+                            {
+                              "Action": "sts:AssumeRole",
+                              "Condition": {
+                                "StringEquals": {
+                                  "sts:ExternalId": "CourtCaseManagementStackCourtCaseUserPool9295AA11"
+                                }
+                              },
+                              "Effect": "Allow",
+                              "Principal": {
+                                "Service": "cognito-idp.amazonaws.com"
+                              }
+                            }
+                          ],
+                          "Version": "2012-10-17"
+                        },
+                        "policies": [
+                          {
+                            "policyName": "sns-publish",
+                            "policyDocument": {
+                              "Statement": [
+                                {
+                                  "Action": "sns:Publish",
+                                  "Effect": "Allow",
+                                  "Resource": "*"
+                                }
+                              ],
+                              "Version": "2012-10-17"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.Role",
+                  "version": "2.160.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/CourtCaseUserPool/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::Cognito::UserPool",
+                  "aws:cdk:cloudformation:props": {
+                    "accountRecoverySetting": {
+                      "recoveryMechanisms": [
+                        {
+                          "name": "verified_email",
+                          "priority": 1
+                        }
+                      ]
+                    },
+                    "adminCreateUserConfig": {
+                      "allowAdminCreateUserOnly": true
+                    },
+                    "autoVerifiedAttributes": [
+                      "email"
+                    ],
+                    "emailVerificationMessage": "The verification code to your new account is {####}",
+                    "emailVerificationSubject": "Verify your new account",
+                    "enabledMfas": [
+                      "SMS_MFA",
+                      "SOFTWARE_TOKEN_MFA"
+                    ],
+                    "mfaConfiguration": "ON",
+                    "policies": {
+                      "passwordPolicy": {
+                        "minimumLength": 12,
+                        "requireLowercase": true,
+                        "requireUppercase": true,
+                        "requireNumbers": true,
+                        "requireSymbols": true
+                      }
+                    },
+                    "smsConfiguration": {
+                      "externalId": "CourtCaseManagementStackCourtCaseUserPool9295AA11",
+                      "snsCallerArn": {
+                        "Fn::GetAtt": [
+                          "CourtCaseUserPoolsmsRole88A59CAB",
+                          "Arn"
+                        ]
+                      }
+                    },
+                    "smsVerificationMessage": "The verification code to your new account is {####}",
+                    "usernameAttributes": [
+                      "email"
+                    ],
+                    "userPoolName": "court-case-users",
+                    "verificationMessageTemplate": {
+                      "defaultEmailOption": "CONFIRM_WITH_CODE",
+                      "emailMessage": "The verification code to your new account is {####}",
+                      "emailSubject": "Verify your new account",
+                      "smsMessage": "The verification code to your new account is {####}"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cognito.CfnUserPool",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cognito.UserPool",
+              "version": "2.160.0"
+            }
+          },
+          "CourtCaseUserPoolClient": {
+            "id": "CourtCaseUserPoolClient",
+            "path": "CourtCaseManagementStack/CourtCaseUserPoolClient",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/CourtCaseUserPoolClient/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::Cognito::UserPoolClient",
+                  "aws:cdk:cloudformation:props": {
+                    "allowedOAuthFlows": [
+                      "code"
+                    ],
+                    "allowedOAuthFlowsUserPoolClient": true,
+                    "allowedOAuthScopes": [
+                      "openid",
+                      "email",
+                      "profile"
+                    ],
+                    "callbackUrLs": [
+                      "https://example.com"
+                    ],
+                    "explicitAuthFlows": [
+                      "ALLOW_USER_PASSWORD_AUTH",
+                      "ALLOW_USER_SRP_AUTH",
+                      "ALLOW_REFRESH_TOKEN_AUTH"
+                    ],
+                    "generateSecret": true,
+                    "supportedIdentityProviders": [
+                      "COGNITO"
+                    ],
+                    "userPoolId": {
+                      "Ref": "CourtCaseUserPoolFE991906"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cognito.CfnUserPoolClient",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cognito.UserPoolClient",
+              "version": "2.160.0"
+            }
+          },
+          "CourtCaseCluster": {
+            "id": "CourtCaseCluster",
+            "path": "CourtCaseManagementStack/CourtCaseCluster",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/CourtCaseCluster/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::ECS::Cluster",
+                  "aws:cdk:cloudformation:props": {
+                    "clusterSettings": [
+                      {
+                        "name": "containerInsights",
+                        "value": "enabled"
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ecs.CfnCluster",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ecs.Cluster",
+              "version": "2.160.0"
+            }
+          },
+          "TaskExecutionRole": {
+            "id": "TaskExecutionRole",
+            "path": "CourtCaseManagementStack/TaskExecutionRole",
+            "children": {
+              "ImportTaskExecutionRole": {
+                "id": "ImportTaskExecutionRole",
+                "path": "CourtCaseManagementStack/TaskExecutionRole/ImportTaskExecutionRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.160.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/TaskExecutionRole/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                  "aws:cdk:cloudformation:props": {
+                    "assumeRolePolicyDocument": {
+                      "Statement": [
+                        {
+                          "Action": "sts:AssumeRole",
+                          "Effect": "Allow",
+                          "Principal": {
+                            "Service": "ecs-tasks.amazonaws.com"
+                          }
+                        }
+                      ],
+                      "Version": "2012-10-17"
+                    },
+                    "managedPolicyArns": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+                          ]
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                  "version": "2.160.0"
+                }
+              },
+              "DefaultPolicy": {
+                "id": "DefaultPolicy",
+                "path": "CourtCaseManagementStack/TaskExecutionRole/DefaultPolicy",
+                "children": {
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/TaskExecutionRole/DefaultPolicy/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::IAM::Policy",
+                      "aws:cdk:cloudformation:props": {
+                        "policyDocument": {
+                          "Statement": [
+                            {
+                              "Action": [
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                              ],
+                              "Effect": "Allow",
+                              "Resource": {
+                                "Fn::GetAtt": [
+                                  "BackendServiceTaskDefwebLogGroup614D1BFF",
+                                  "Arn"
+                                ]
+                              }
+                            },
+                            {
+                              "Action": [
+                                "secretsmanager:DescribeSecret",
+                                "secretsmanager:GetSecretValue"
+                              ],
+                              "Effect": "Allow",
+                              "Resource": {
+                                "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                              }
+                            }
+                          ],
+                          "Version": "2012-10-17"
+                        },
+                        "policyName": "TaskExecutionRoleDefaultPolicyA84DD1B0",
+                        "roles": [
+                          {
+                            "Ref": "TaskExecutionRole250D2532"
+                          }
+                        ]
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.CfnPolicy",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.Policy",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_iam.Role",
+              "version": "2.160.0"
+            }
+          },
+          "TaskRole": {
+            "id": "TaskRole",
+            "path": "CourtCaseManagementStack/TaskRole",
+            "children": {
+              "ImportTaskRole": {
+                "id": "ImportTaskRole",
+                "path": "CourtCaseManagementStack/TaskRole/ImportTaskRole",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.Resource",
+                  "version": "2.160.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/TaskRole/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                  "aws:cdk:cloudformation:props": {
+                    "assumeRolePolicyDocument": {
+                      "Statement": [
+                        {
+                          "Action": "sts:AssumeRole",
+                          "Effect": "Allow",
+                          "Principal": {
+                            "Service": "ecs-tasks.amazonaws.com"
+                          }
+                        }
+                      ],
+                      "Version": "2012-10-17"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                  "version": "2.160.0"
+                }
+              },
+              "DefaultPolicy": {
+                "id": "DefaultPolicy",
+                "path": "CourtCaseManagementStack/TaskRole/DefaultPolicy",
+                "children": {
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/TaskRole/DefaultPolicy/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::IAM::Policy",
+                      "aws:cdk:cloudformation:props": {
+                        "policyDocument": {
+                          "Statement": [
+                            {
+                              "Action": [
+                                "s3:Abort*",
+                                "s3:DeleteObject*",
+                                "s3:GetBucket*",
+                                "s3:GetObject*",
+                                "s3:List*",
+                                "s3:PutObject",
+                                "s3:PutObjectLegalHold",
+                                "s3:PutObjectRetention",
+                                "s3:PutObjectTagging",
+                                "s3:PutObjectVersionTagging"
+                              ],
+                              "Effect": "Allow",
+                              "Resource": [
+                                {
+                                  "Fn::GetAtt": [
+                                    "DocumentsBucket9EC9DEB9",
+                                    "Arn"
+                                  ]
+                                },
+                                {
+                                  "Fn::GetAtt": [
+                                    "MediaBucketBCBB02BA",
+                                    "Arn"
+                                  ]
+                                },
+                                {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Fn::GetAtt": [
+                                          "DocumentsBucket9EC9DEB9",
+                                          "Arn"
+                                        ]
+                                      },
+                                      "/*"
+                                    ]
+                                  ]
+                                },
+                                {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Fn::GetAtt": [
+                                          "MediaBucketBCBB02BA",
+                                          "Arn"
+                                        ]
+                                      },
+                                      "/*"
+                                    ]
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "Action": [
+                                "secretsmanager:DescribeSecret",
+                                "secretsmanager:GetSecretValue"
+                              ],
+                              "Effect": "Allow",
+                              "Resource": {
+                                "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                              }
+                            },
+                            {
+                              "Action": [
+                                "bedrock:InvokeModel",
+                                "bedrock:InvokeModelWithResponseStream",
+                                "comprehend:ClassifyDocument",
+                                "comprehend:DetectEntities",
+                                "comprehend:DetectKeyPhrases",
+                                "comprehend:DetectSentiment",
+                                "textract:GetDocumentAnalysis",
+                                "textract:GetDocumentTextDetection",
+                                "textract:StartDocumentAnalysis",
+                                "textract:StartDocumentTextDetection",
+                                "transcribe:GetTranscriptionJob",
+                                "transcribe:ListTranscriptionJobs",
+                                "transcribe:StartTranscriptionJob"
+                              ],
+                              "Effect": "Allow",
+                              "Resource": "*"
+                            }
+                          ],
+                          "Version": "2012-10-17"
+                        },
+                        "policyName": "TaskRoleDefaultPolicy07FC53DE",
+                        "roles": [
+                          {
+                            "Ref": "TaskRole30FC0FBB"
+                          }
+                        ]
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.CfnPolicy",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.Policy",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_iam.Role",
+              "version": "2.160.0"
+            }
+          },
+          "BackendService": {
+            "id": "BackendService",
+            "path": "CourtCaseManagementStack/BackendService",
+            "children": {
+              "LB": {
+                "id": "LB",
+                "path": "CourtCaseManagementStack/BackendService/LB",
+                "children": {
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/BackendService/LB/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+                      "aws:cdk:cloudformation:props": {
+                        "loadBalancerAttributes": [
+                          {
+                            "key": "deletion_protection.enabled",
+                            "value": "false"
+                          }
+                        ],
+                        "scheme": "internet-facing",
+                        "securityGroups": [
+                          {
+                            "Fn::GetAtt": [
+                              "BackendServiceLBSecurityGroup2B9BA648",
+                              "GroupId"
+                            ]
+                          }
+                        ],
+                        "subnets": [
+                          {
+                            "Ref": "CourtCaseVPCPublicSubnet1SubnetF86CA2C4"
+                          },
+                          {
+                            "Ref": "CourtCaseVPCPublicSubnet2SubnetC7CA3BB0"
+                          }
+                        ],
+                        "type": "application"
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_elasticloadbalancingv2.CfnLoadBalancer",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "SecurityGroup": {
+                    "id": "SecurityGroup",
+                    "path": "CourtCaseManagementStack/BackendService/LB/SecurityGroup",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/BackendService/LB/SecurityGroup/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                          "aws:cdk:cloudformation:props": {
+                            "groupDescription": "Automatically created Security Group for ELB CourtCaseManagementStackBackendServiceLB8276BDF5",
+                            "securityGroupIngress": [
+                              {
+                                "cidrIp": "0.0.0.0/0",
+                                "ipProtocol": "tcp",
+                                "fromPort": 80,
+                                "toPort": 80,
+                                "description": "Allow from anyone on port 80"
+                              }
+                            ],
+                            "vpcId": {
+                              "Ref": "CourtCaseVPC4772DB51"
+                            }
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                          "version": "2.160.0"
+                        }
+                      },
+                      "to CourtCaseManagementStackBackendServiceSecurityGroupE4D2C868:8000": {
+                        "id": "to CourtCaseManagementStackBackendServiceSecurityGroupE4D2C868:8000",
+                        "path": "CourtCaseManagementStack/BackendService/LB/SecurityGroup/to CourtCaseManagementStackBackendServiceSecurityGroupE4D2C868:8000",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroupEgress",
+                          "aws:cdk:cloudformation:props": {
+                            "description": "Load balancer to target",
+                            "destinationSecurityGroupId": {
+                              "Fn::GetAtt": [
+                                "BackendServiceSecurityGroup7599F85E",
+                                "GroupId"
+                              ]
+                            },
+                            "fromPort": 8000,
+                            "groupId": {
+                              "Fn::GetAtt": [
+                                "BackendServiceLBSecurityGroup2B9BA648",
+                                "GroupId"
+                              ]
+                            },
+                            "ipProtocol": "tcp",
+                            "toPort": 8000
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroupEgress",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "PublicListener": {
+                    "id": "PublicListener",
+                    "path": "CourtCaseManagementStack/BackendService/LB/PublicListener",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/BackendService/LB/PublicListener/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::ElasticLoadBalancingV2::Listener",
+                          "aws:cdk:cloudformation:props": {
+                            "defaultActions": [
+                              {
+                                "type": "forward",
+                                "targetGroupArn": {
+                                  "Ref": "BackendServiceLBPublicListenerECSGroupD43CD2AB"
+                                }
+                              }
+                            ],
+                            "loadBalancerArn": {
+                              "Ref": "BackendServiceLB09608E98"
+                            },
+                            "port": 80,
+                            "protocol": "HTTP"
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_elasticloadbalancingv2.CfnListener",
+                          "version": "2.160.0"
+                        }
+                      },
+                      "ECSGroup": {
+                        "id": "ECSGroup",
+                        "path": "CourtCaseManagementStack/BackendService/LB/PublicListener/ECSGroup",
+                        "children": {
+                          "Resource": {
+                            "id": "Resource",
+                            "path": "CourtCaseManagementStack/BackendService/LB/PublicListener/ECSGroup/Resource",
+                            "attributes": {
+                              "aws:cdk:cloudformation:type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+                              "aws:cdk:cloudformation:props": {
+                                "healthCheckIntervalSeconds": 30,
+                                "healthCheckPath": "/",
+                                "healthCheckPort": "8000",
+                                "healthCheckTimeoutSeconds": 10,
+                                "healthyThresholdCount": 2,
+                                "port": 80,
+                                "protocol": "HTTP",
+                                "targetGroupAttributes": [
+                                  {
+                                    "key": "stickiness.enabled",
+                                    "value": "false"
+                                  }
+                                ],
+                                "targetType": "ip",
+                                "unhealthyThresholdCount": 3,
+                                "vpcId": {
+                                  "Ref": "CourtCaseVPC4772DB51"
+                                }
+                              }
+                            },
+                            "constructInfo": {
+                              "fqn": "aws-cdk-lib.aws_elasticloadbalancingv2.CfnTargetGroup",
+                              "version": "2.160.0"
+                            }
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_elasticloadbalancingv2.ApplicationTargetGroup",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_elasticloadbalancingv2.ApplicationListener",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_elasticloadbalancingv2.ApplicationLoadBalancer",
+                  "version": "2.160.0"
+                }
+              },
+              "LoadBalancerDNS": {
+                "id": "LoadBalancerDNS",
+                "path": "CourtCaseManagementStack/BackendService/LoadBalancerDNS",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnOutput",
+                  "version": "2.160.0"
+                }
+              },
+              "ServiceURL": {
+                "id": "ServiceURL",
+                "path": "CourtCaseManagementStack/BackendService/ServiceURL",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnOutput",
+                  "version": "2.160.0"
+                }
+              },
+              "TaskDef": {
+                "id": "TaskDef",
+                "path": "CourtCaseManagementStack/BackendService/TaskDef",
+                "children": {
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/BackendService/TaskDef/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::ECS::TaskDefinition",
+                      "aws:cdk:cloudformation:props": {
+                        "containerDefinitions": [
+                          {
+                            "essential": true,
+                            "image": "iseepatterns/court-case-backend:latest",
+                            "name": "web",
+                            "portMappings": [
+                              {
+                                "containerPort": 8000,
+                                "protocol": "tcp"
+                              }
+                            ],
+                            "logConfiguration": {
+                              "logDriver": "awslogs",
+                              "options": {
+                                "awslogs-group": {
+                                  "Ref": "BackendServiceTaskDefwebLogGroup614D1BFF"
+                                },
+                                "awslogs-stream-prefix": "backend",
+                                "awslogs-region": {
+                                  "Ref": "AWS::Region"
+                                }
+                              }
+                            },
+                            "environment": [
+                              {
+                                "name": "AWS_REGION",
+                                "value": {
+                                  "Ref": "AWS::Region"
+                                }
+                              },
+                              {
+                                "name": "S3_BUCKET_NAME",
+                                "value": {
+                                  "Ref": "DocumentsBucket9EC9DEB9"
+                                }
+                              },
+                              {
+                                "name": "S3_MEDIA_BUCKET",
+                                "value": {
+                                  "Ref": "MediaBucketBCBB02BA"
+                                }
+                              },
+                              {
+                                "name": "OPENSEARCH_ENDPOINT",
+                                "value": {
+                                  "Fn::GetAtt": [
+                                    "CourtCaseSearch8B10EA61",
+                                    "DomainEndpoint"
+                                  ]
+                                }
+                              },
+                              {
+                                "name": "COGNITO_USER_POOL_ID",
+                                "value": {
+                                  "Ref": "CourtCaseUserPoolFE991906"
+                                }
+                              },
+                              {
+                                "name": "COGNITO_CLIENT_ID",
+                                "value": {
+                                  "Ref": "CourtCaseUserPoolClient59E86EC7"
+                                }
+                              },
+                              {
+                                "name": "REDIS_URL",
+                                "value": {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      "redis://",
+                                      {
+                                        "Fn::GetAtt": [
+                                          "RedisCluster",
+                                          "RedisEndpoint.Address"
+                                        ]
+                                      },
+                                      ":6379"
+                                    ]
+                                  ]
+                                }
+                              }
+                            ],
+                            "secrets": [
+                              {
+                                "name": "DB_HOST",
+                                "valueFrom": {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                                      },
+                                      ":host::"
+                                    ]
+                                  ]
+                                }
+                              },
+                              {
+                                "name": "DB_USER",
+                                "valueFrom": {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                                      },
+                                      ":username::"
+                                    ]
+                                  ]
+                                }
+                              },
+                              {
+                                "name": "DB_PASSWORD",
+                                "valueFrom": {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                                      },
+                                      ":password::"
+                                    ]
+                                  ]
+                                }
+                              },
+                              {
+                                "name": "DB_PORT",
+                                "valueFrom": {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                                      },
+                                      ":port::"
+                                    ]
+                                  ]
+                                }
+                              },
+                              {
+                                "name": "DB_NAME",
+                                "valueFrom": {
+                                  "Fn::Join": [
+                                    "",
+                                    [
+                                      {
+                                        "Ref": "CourtCaseDatabaseSecretAttachment8E01E407"
+                                      },
+                                      ":dbname::"
+                                    ]
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "cpu": "2048",
+                        "executionRoleArn": {
+                          "Fn::GetAtt": [
+                            "TaskExecutionRole250D2532",
+                            "Arn"
+                          ]
+                        },
+                        "family": "CourtCaseManagementStackBackendServiceTaskDef2C4FC482",
+                        "memory": "4096",
+                        "networkMode": "awsvpc",
+                        "requiresCompatibilities": [
+                          "FARGATE"
+                        ],
+                        "taskRoleArn": {
+                          "Fn::GetAtt": [
+                            "TaskRole30FC0FBB",
+                            "Arn"
+                          ]
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ecs.CfnTaskDefinition",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "web": {
+                    "id": "web",
+                    "path": "CourtCaseManagementStack/BackendService/TaskDef/web",
+                    "children": {
+                      "LogGroup": {
+                        "id": "LogGroup",
+                        "path": "CourtCaseManagementStack/BackendService/TaskDef/web/LogGroup",
+                        "children": {
+                          "Resource": {
+                            "id": "Resource",
+                            "path": "CourtCaseManagementStack/BackendService/TaskDef/web/LogGroup/Resource",
+                            "attributes": {
+                              "aws:cdk:cloudformation:type": "AWS::Logs::LogGroup",
+                              "aws:cdk:cloudformation:props": {
+                                "retentionInDays": 7
+                              }
+                            },
+                            "constructInfo": {
+                              "fqn": "aws-cdk-lib.aws_logs.CfnLogGroup",
+                              "version": "2.160.0"
+                            }
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_logs.LogGroup",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ecs.ContainerDefinition",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ecs.FargateTaskDefinition",
+                  "version": "2.160.0"
+                }
+              },
+              "Service": {
+                "id": "Service",
+                "path": "CourtCaseManagementStack/BackendService/Service",
+                "children": {
+                  "Service": {
+                    "id": "Service",
+                    "path": "CourtCaseManagementStack/BackendService/Service/Service",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::ECS::Service",
+                      "aws:cdk:cloudformation:props": {
+                        "cluster": {
+                          "Ref": "CourtCaseCluster9415FFD8"
+                        },
+                        "deploymentConfiguration": {
+                          "maximumPercent": 200,
+                          "minimumHealthyPercent": 50,
+                          "alarms": {
+                            "alarmNames": [],
+                            "enable": false,
+                            "rollback": false
+                          }
+                        },
+                        "desiredCount": 2,
+                        "enableEcsManagedTags": false,
+                        "healthCheckGracePeriodSeconds": 300,
+                        "launchType": "FARGATE",
+                        "loadBalancers": [
+                          {
+                            "targetGroupArn": {
+                              "Ref": "BackendServiceLBPublicListenerECSGroupD43CD2AB"
+                            },
+                            "containerName": "web",
+                            "containerPort": 8000
+                          }
+                        ],
+                        "networkConfiguration": {
+                          "awsvpcConfiguration": {
+                            "assignPublicIp": "DISABLED",
+                            "subnets": [
+                              {
+                                "Ref": "CourtCaseVPCPrivateSubnet1Subnet5F9BD78B"
+                              },
+                              {
+                                "Ref": "CourtCaseVPCPrivateSubnet2Subnet37766881"
+                              }
+                            ],
+                            "securityGroups": [
+                              {
+                                "Fn::GetAtt": [
+                                  "BackendServiceSecurityGroup7599F85E",
+                                  "GroupId"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "taskDefinition": {
+                          "Ref": "BackendServiceTaskDef9F97F56B"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ecs.CfnService",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "SecurityGroup": {
+                    "id": "SecurityGroup",
+                    "path": "CourtCaseManagementStack/BackendService/Service/SecurityGroup",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/BackendService/Service/SecurityGroup/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                          "aws:cdk:cloudformation:props": {
+                            "groupDescription": "CourtCaseManagementStack/BackendService/Service/SecurityGroup",
+                            "securityGroupEgress": [
+                              {
+                                "cidrIp": "0.0.0.0/0",
+                                "description": "Allow all outbound traffic by default",
+                                "ipProtocol": "-1"
+                              }
+                            ],
+                            "vpcId": {
+                              "Ref": "CourtCaseVPC4772DB51"
+                            }
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                          "version": "2.160.0"
+                        }
+                      },
+                      "from CourtCaseManagementStackBackendServiceLBSecurityGroup2C119C28:8000": {
+                        "id": "from CourtCaseManagementStackBackendServiceLBSecurityGroup2C119C28:8000",
+                        "path": "CourtCaseManagementStack/BackendService/Service/SecurityGroup/from CourtCaseManagementStackBackendServiceLBSecurityGroup2C119C28:8000",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroupIngress",
+                          "aws:cdk:cloudformation:props": {
+                            "description": "Load balancer to target",
+                            "fromPort": 8000,
+                            "groupId": {
+                              "Fn::GetAtt": [
+                                "BackendServiceSecurityGroup7599F85E",
+                                "GroupId"
+                              ]
+                            },
+                            "ipProtocol": "tcp",
+                            "sourceSecurityGroupId": {
+                              "Fn::GetAtt": [
+                                "BackendServiceLBSecurityGroup2B9BA648",
+                                "GroupId"
+                              ]
+                            },
+                            "toPort": 8000
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroupIngress",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ecs.FargateService",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ecs_patterns.ApplicationLoadBalancedFargateService",
+              "version": "2.160.0"
+            }
+          },
+          "ECSServiceSecurityGroup": {
+            "id": "ECSServiceSecurityGroup",
+            "path": "CourtCaseManagementStack/ECSServiceSecurityGroup",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/ECSServiceSecurityGroup/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                  "aws:cdk:cloudformation:props": {
+                    "groupDescription": "Security group for ECS service - minimal required access",
+                    "securityGroupEgress": [
+                      {
+                        "cidrIp": "0.0.0.0/0",
+                        "description": "Allow all outbound traffic by default",
+                        "ipProtocol": "-1"
+                      }
+                    ],
+                    "securityGroupIngress": [
+                      {
+                        "sourceSecurityGroupId": {
+                          "Fn::GetAtt": [
+                            "BackendServiceLBSecurityGroup2B9BA648",
+                            "GroupId"
+                          ]
+                        },
+                        "ipProtocol": "tcp",
+                        "fromPort": 8000,
+                        "toPort": 8000,
+                        "description": "Allow HTTP traffic from ALB"
+                      }
+                    ],
+                    "vpcId": {
+                      "Ref": "CourtCaseVPC4772DB51"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+              "version": "2.160.0"
+            }
+          },
+          "DeploymentAlerts": {
+            "id": "DeploymentAlerts",
+            "path": "CourtCaseManagementStack/DeploymentAlerts",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/DeploymentAlerts/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::SNS::Topic",
+                  "aws:cdk:cloudformation:props": {
+                    "displayName": "Court Case Deployment Alerts",
+                    "topicName": "court-case-deployment-alerts"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_sns.CfnTopic",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_sns.Topic",
+              "version": "2.160.0"
+            }
+          },
+          "DeploymentMonitoringDashboard": {
+            "id": "DeploymentMonitoringDashboard",
+            "path": "CourtCaseManagementStack/DeploymentMonitoringDashboard",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/DeploymentMonitoringDashboard/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::CloudWatch::Dashboard",
+                  "aws:cdk:cloudformation:props": {
+                    "dashboardBody": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "{\"widgets\":[{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"ECS Service Metrics\",\"region\":\"",
+                          {
+                            "Ref": "AWS::Region"
+                          },
+                          "\",\"metrics\":[[\"AWS/ECS\",\"CPUUtilization\",\"ClusterName\",\"",
+                          {
+                            "Ref": "CourtCaseCluster9415FFD8"
+                          },
+                          "\",\"ServiceName\",\"",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "\"],[\"AWS/ECS\",\"MemoryUtilization\",\"ClusterName\",\"",
+                          {
+                            "Ref": "CourtCaseCluster9415FFD8"
+                          },
+                          "\",\"ServiceName\",\"",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "\"],[\"AWS/ECS\",\"RunningTaskCount\",\"ClusterName\",\"",
+                          {
+                            "Ref": "CourtCaseCluster9415FFD8"
+                          },
+                          "\",\"ServiceName\",\"",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "\",{\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Load Balancer Metrics\",\"region\":\"",
+                          {
+                            "Ref": "AWS::Region"
+                          },
+                          "\",\"metrics\":[[\"AWS/ApplicationELB\",\"RequestCount\",\"LoadBalancer\",\"",
+                          {
+                            "Ref": "BackendServiceLB09608E98"
+                          },
+                          "\",{\"stat\":\"Sum\"}],[\"AWS/ApplicationELB\",\"HTTPCode_ELB_5XX_Count\",\"LoadBalancer\",\"",
+                          {
+                            "Ref": "BackendServiceLB09608E98"
+                          },
+                          "\",{\"stat\":\"Sum\"}],[\"AWS/ApplicationELB\",\"TargetResponseTime\",\"LoadBalancer\",\"",
+                          {
+                            "Ref": "BackendServiceLB09608E98"
+                          },
+                          "\",{\"yAxis\":\"right\"}],[\"AWS/ApplicationELB\",\"HealthyHostCount\",\"LoadBalancer\",\"",
+                          {
+                            "Ref": "BackendServiceLB09608E98"
+                          },
+                          "\",{\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Database Metrics\",\"region\":\"",
+                          {
+                            "Ref": "AWS::Region"
+                          },
+                          "\",\"metrics\":[[\"AWS/RDS\",\"CPUUtilization\",\"DBInstanceIdentifier\",\"",
+                          {
+                            "Ref": "CourtCaseDatabaseF7BBE8D0"
+                          },
+                          "\"],[\"AWS/RDS\",\"DatabaseConnections\",\"DBInstanceIdentifier\",\"",
+                          {
+                            "Ref": "CourtCaseDatabaseF7BBE8D0"
+                          },
+                          "\"],[\"AWS/RDS\",\"ReadLatency\",\"DBInstanceIdentifier\",\"",
+                          {
+                            "Ref": "CourtCaseDatabaseF7BBE8D0"
+                          },
+                          "\",{\"yAxis\":\"right\"}],[\"AWS/RDS\",\"WriteLatency\",\"DBInstanceIdentifier\",\"",
+                          {
+                            "Ref": "CourtCaseDatabaseF7BBE8D0"
+                          },
+                          "\",{\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"log\",\"width\":12,\"height\":6,\"x\":12,\"y\":6,\"properties\":{\"view\":\"table\",\"title\":\"Recent Application Errors\",\"region\":\"",
+                          {
+                            "Ref": "AWS::Region"
+                          },
+                          "\",\"query\":\"SOURCE '/ecs/",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "' | fields @timestamp, @message\\n| filter @message like /ERROR/\\n| sort @timestamp desc\\n| limit 100\"}}]}"
+                        ]
+                      ]
+                    },
+                    "dashboardName": "CourtCase-Deployment-Monitoring"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cloudwatch.CfnDashboard",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cloudwatch.Dashboard",
+              "version": "2.160.0"
+            }
+          },
+          "ECSHighCPUAlarm": {
+            "id": "ECSHighCPUAlarm",
+            "path": "CourtCaseManagementStack/ECSHighCPUAlarm",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/ECSHighCPUAlarm/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::CloudWatch::Alarm",
+                  "aws:cdk:cloudformation:props": {
+                    "alarmActions": [
+                      {
+                        "Ref": "DeploymentAlerts030E79C4"
+                      }
+                    ],
+                    "alarmDescription": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "High CPU utilization for ",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          }
+                        ]
+                      ]
+                    },
+                    "alarmName": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "-HighCPU"
+                        ]
+                      ]
+                    },
+                    "comparisonOperator": "GreaterThanThreshold",
+                    "dimensions": [
+                      {
+                        "name": "ClusterName",
+                        "value": {
+                          "Ref": "CourtCaseCluster9415FFD8"
+                        }
+                      },
+                      {
+                        "name": "ServiceName",
+                        "value": {
+                          "Fn::GetAtt": [
+                            "BackendService2147DAF9",
+                            "Name"
+                          ]
+                        }
+                      }
+                    ],
+                    "evaluationPeriods": 2,
+                    "metricName": "CPUUtilization",
+                    "namespace": "AWS/ECS",
+                    "period": 300,
+                    "statistic": "Average",
+                    "threshold": 80
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cloudwatch.CfnAlarm",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cloudwatch.Alarm",
+              "version": "2.160.0"
+            }
+          },
+          "ECSHighMemoryAlarm": {
+            "id": "ECSHighMemoryAlarm",
+            "path": "CourtCaseManagementStack/ECSHighMemoryAlarm",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/ECSHighMemoryAlarm/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::CloudWatch::Alarm",
+                  "aws:cdk:cloudformation:props": {
+                    "alarmActions": [
+                      {
+                        "Ref": "DeploymentAlerts030E79C4"
+                      }
+                    ],
+                    "alarmDescription": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "High memory utilization for ",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          }
+                        ]
+                      ]
+                    },
+                    "alarmName": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "-HighMemory"
+                        ]
+                      ]
+                    },
+                    "comparisonOperator": "GreaterThanThreshold",
+                    "dimensions": [
+                      {
+                        "name": "ClusterName",
+                        "value": {
+                          "Ref": "CourtCaseCluster9415FFD8"
+                        }
+                      },
+                      {
+                        "name": "ServiceName",
+                        "value": {
+                          "Fn::GetAtt": [
+                            "BackendService2147DAF9",
+                            "Name"
+                          ]
+                        }
+                      }
+                    ],
+                    "evaluationPeriods": 2,
+                    "metricName": "MemoryUtilization",
+                    "namespace": "AWS/ECS",
+                    "period": 300,
+                    "statistic": "Average",
+                    "threshold": 85
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cloudwatch.CfnAlarm",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cloudwatch.Alarm",
+              "version": "2.160.0"
+            }
+          },
+          "ALBHigh5XXAlarm": {
+            "id": "ALBHigh5XXAlarm",
+            "path": "CourtCaseManagementStack/ALBHigh5XXAlarm",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/ALBHigh5XXAlarm/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::CloudWatch::Alarm",
+                  "aws:cdk:cloudformation:props": {
+                    "alarmActions": [
+                      {
+                        "Ref": "DeploymentAlerts030E79C4"
+                      }
+                    ],
+                    "alarmDescription": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "High 5XX error rate for ",
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          }
+                        ]
+                      ]
+                    },
+                    "alarmName": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::GetAtt": [
+                              "BackendService2147DAF9",
+                              "Name"
+                            ]
+                          },
+                          "-ALB-High5XX"
+                        ]
+                      ]
+                    },
+                    "comparisonOperator": "GreaterThanThreshold",
+                    "dimensions": [
+                      {
+                        "name": "LoadBalancer",
+                        "value": {
+                          "Ref": "BackendServiceLB09608E98"
+                        }
+                      }
+                    ],
+                    "evaluationPeriods": 2,
+                    "metricName": "HTTPCode_ELB_5XX_Count",
+                    "namespace": "AWS/ApplicationELB",
+                    "period": 300,
+                    "statistic": "Sum",
+                    "threshold": 10,
+                    "treatMissingData": "notBreaching"
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cloudwatch.CfnAlarm",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cloudwatch.Alarm",
+              "version": "2.160.0"
+            }
+          },
+          "RDSHighCPUAlarm": {
+            "id": "RDSHighCPUAlarm",
+            "path": "CourtCaseManagementStack/RDSHighCPUAlarm",
+            "children": {
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/RDSHighCPUAlarm/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::CloudWatch::Alarm",
+                  "aws:cdk:cloudformation:props": {
+                    "alarmActions": [
+                      {
+                        "Ref": "DeploymentAlerts030E79C4"
+                      }
+                    ],
+                    "alarmDescription": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "High CPU utilization for database ",
+                          {
+                            "Ref": "CourtCaseDatabaseF7BBE8D0"
+                          }
+                        ]
+                      ]
+                    },
+                    "alarmName": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Ref": "CourtCaseDatabaseF7BBE8D0"
+                          },
+                          "-HighCPU"
+                        ]
+                      ]
+                    },
+                    "comparisonOperator": "GreaterThanThreshold",
+                    "dimensions": [
+                      {
+                        "name": "DBInstanceIdentifier",
+                        "value": {
+                          "Ref": "CourtCaseDatabaseF7BBE8D0"
+                        }
+                      }
+                    ],
+                    "evaluationPeriods": 2,
+                    "metricName": "CPUUtilization",
+                    "namespace": "AWS/RDS",
+                    "period": 300,
+                    "statistic": "Average",
+                    "threshold": 75
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_cloudwatch.CfnAlarm",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_cloudwatch.Alarm",
+              "version": "2.160.0"
+            }
+          },
+          "MonitoringDashboardURL": {
+            "id": "MonitoringDashboardURL",
+            "path": "CourtCaseManagementStack/MonitoringDashboardURL",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.160.0"
+            }
+          },
+          "AlertsTopicARN": {
+            "id": "AlertsTopicARN",
+            "path": "CourtCaseManagementStack/AlertsTopicARN",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnOutput",
+              "version": "2.160.0"
+            }
+          },
+          "MediaProcessingTask": {
+            "id": "MediaProcessingTask",
+            "path": "CourtCaseManagementStack/MediaProcessingTask",
+            "children": {
+              "TaskRole": {
+                "id": "TaskRole",
+                "path": "CourtCaseManagementStack/MediaProcessingTask/TaskRole",
+                "children": {
+                  "ImportTaskRole": {
+                    "id": "ImportTaskRole",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/TaskRole/ImportTaskRole",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/TaskRole/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                      "aws:cdk:cloudformation:props": {
+                        "assumeRolePolicyDocument": {
+                          "Statement": [
+                            {
+                              "Action": "sts:AssumeRole",
+                              "Effect": "Allow",
+                              "Principal": {
+                                "Service": "ecs-tasks.amazonaws.com"
+                              }
+                            }
+                          ],
+                          "Version": "2012-10-17"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "DefaultPolicy": {
+                    "id": "DefaultPolicy",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/TaskRole/DefaultPolicy",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/MediaProcessingTask/TaskRole/DefaultPolicy/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::IAM::Policy",
+                          "aws:cdk:cloudformation:props": {
+                            "policyDocument": {
+                              "Statement": [
+                                {
+                                  "Action": [
+                                    "s3:Abort*",
+                                    "s3:DeleteObject*",
+                                    "s3:GetBucket*",
+                                    "s3:GetObject*",
+                                    "s3:List*",
+                                    "s3:PutObject",
+                                    "s3:PutObjectLegalHold",
+                                    "s3:PutObjectRetention",
+                                    "s3:PutObjectTagging",
+                                    "s3:PutObjectVersionTagging"
+                                  ],
+                                  "Effect": "Allow",
+                                  "Resource": [
+                                    {
+                                      "Fn::GetAtt": [
+                                        "MediaBucketBCBB02BA",
+                                        "Arn"
+                                      ]
+                                    },
+                                    {
+                                      "Fn::Join": [
+                                        "",
+                                        [
+                                          {
+                                            "Fn::GetAtt": [
+                                              "MediaBucketBCBB02BA",
+                                              "Arn"
+                                            ]
+                                          },
+                                          "/*"
+                                        ]
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ],
+                              "Version": "2012-10-17"
+                            },
+                            "policyName": "MediaProcessingTaskTaskRoleDefaultPolicy38712BD6",
+                            "roles": [
+                              {
+                                "Ref": "MediaProcessingTaskTaskRole740C2B77"
+                              }
+                            ]
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_iam.CfnPolicy",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.Policy",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.Role",
+                  "version": "2.160.0"
+                }
+              },
+              "Resource": {
+                "id": "Resource",
+                "path": "CourtCaseManagementStack/MediaProcessingTask/Resource",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::ECS::TaskDefinition",
+                  "aws:cdk:cloudformation:props": {
+                    "containerDefinitions": [
+                      {
+                        "essential": true,
+                        "image": "iseepatterns/court-case-media:latest",
+                        "name": "MediaProcessor",
+                        "logConfiguration": {
+                          "logDriver": "awslogs",
+                          "options": {
+                            "awslogs-group": {
+                              "Ref": "MediaProcessingTaskMediaProcessorLogGroupD82BF0F4"
+                            },
+                            "awslogs-stream-prefix": "media-processor",
+                            "awslogs-region": {
+                              "Ref": "AWS::Region"
+                            }
+                          }
+                        },
+                        "environment": [
+                          {
+                            "name": "AWS_REGION",
+                            "value": {
+                              "Ref": "AWS::Region"
+                            }
+                          },
+                          {
+                            "name": "S3_BUCKET_NAME",
+                            "value": {
+                              "Ref": "MediaBucketBCBB02BA"
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "cpu": "2048",
+                    "executionRoleArn": {
+                      "Fn::GetAtt": [
+                        "MediaProcessingTaskExecutionRole48AB4E26",
+                        "Arn"
+                      ]
+                    },
+                    "family": "CourtCaseManagementStackMediaProcessingTaskA1A0BBD7",
+                    "memory": "4096",
+                    "networkMode": "awsvpc",
+                    "requiresCompatibilities": [
+                      "FARGATE"
+                    ],
+                    "taskRoleArn": {
+                      "Fn::GetAtt": [
+                        "MediaProcessingTaskTaskRole740C2B77",
+                        "Arn"
+                      ]
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ecs.CfnTaskDefinition",
+                  "version": "2.160.0"
+                }
+              },
+              "MediaProcessor": {
+                "id": "MediaProcessor",
+                "path": "CourtCaseManagementStack/MediaProcessingTask/MediaProcessor",
+                "children": {
+                  "LogGroup": {
+                    "id": "LogGroup",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/MediaProcessor/LogGroup",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/MediaProcessingTask/MediaProcessor/LogGroup/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::Logs::LogGroup",
+                          "aws:cdk:cloudformation:props": {
+                            "retentionInDays": 7
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_logs.CfnLogGroup",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_logs.LogGroup",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ecs.ContainerDefinition",
+                  "version": "2.160.0"
+                }
+              },
+              "ExecutionRole": {
+                "id": "ExecutionRole",
+                "path": "CourtCaseManagementStack/MediaProcessingTask/ExecutionRole",
+                "children": {
+                  "ImportExecutionRole": {
+                    "id": "ImportExecutionRole",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/ExecutionRole/ImportExecutionRole",
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.Resource",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/ExecutionRole/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::IAM::Role",
+                      "aws:cdk:cloudformation:props": {
+                        "assumeRolePolicyDocument": {
+                          "Statement": [
+                            {
+                              "Action": "sts:AssumeRole",
+                              "Effect": "Allow",
+                              "Principal": {
+                                "Service": "ecs-tasks.amazonaws.com"
+                              }
+                            }
+                          ],
+                          "Version": "2012-10-17"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.CfnRole",
+                      "version": "2.160.0"
+                    }
+                  },
+                  "DefaultPolicy": {
+                    "id": "DefaultPolicy",
+                    "path": "CourtCaseManagementStack/MediaProcessingTask/ExecutionRole/DefaultPolicy",
+                    "children": {
+                      "Resource": {
+                        "id": "Resource",
+                        "path": "CourtCaseManagementStack/MediaProcessingTask/ExecutionRole/DefaultPolicy/Resource",
+                        "attributes": {
+                          "aws:cdk:cloudformation:type": "AWS::IAM::Policy",
+                          "aws:cdk:cloudformation:props": {
+                            "policyDocument": {
+                              "Statement": [
+                                {
+                                  "Action": [
+                                    "logs:CreateLogStream",
+                                    "logs:PutLogEvents"
+                                  ],
+                                  "Effect": "Allow",
+                                  "Resource": {
+                                    "Fn::GetAtt": [
+                                      "MediaProcessingTaskMediaProcessorLogGroupD82BF0F4",
+                                      "Arn"
+                                    ]
+                                  }
+                                }
+                              ],
+                              "Version": "2012-10-17"
+                            },
+                            "policyName": "MediaProcessingTaskExecutionRoleDefaultPolicyD7DE1D24",
+                            "roles": [
+                              {
+                                "Ref": "MediaProcessingTaskExecutionRole48AB4E26"
+                              }
+                            ]
+                          }
+                        },
+                        "constructInfo": {
+                          "fqn": "aws-cdk-lib.aws_iam.CfnPolicy",
+                          "version": "2.160.0"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_iam.Policy",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_iam.Role",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ecs.FargateTaskDefinition",
+              "version": "2.160.0"
+            }
+          },
+          "MediaProcessingService": {
+            "id": "MediaProcessingService",
+            "path": "CourtCaseManagementStack/MediaProcessingService",
+            "children": {
+              "Service": {
+                "id": "Service",
+                "path": "CourtCaseManagementStack/MediaProcessingService/Service",
+                "attributes": {
+                  "aws:cdk:cloudformation:type": "AWS::ECS::Service",
+                  "aws:cdk:cloudformation:props": {
+                    "cluster": {
+                      "Ref": "CourtCaseCluster9415FFD8"
+                    },
+                    "deploymentConfiguration": {
+                      "maximumPercent": 200,
+                      "minimumHealthyPercent": 50,
+                      "alarms": {
+                        "alarmNames": [],
+                        "enable": false,
+                        "rollback": false
+                      }
+                    },
+                    "desiredCount": 1,
+                    "enableEcsManagedTags": false,
+                    "launchType": "FARGATE",
+                    "networkConfiguration": {
+                      "awsvpcConfiguration": {
+                        "assignPublicIp": "DISABLED",
+                        "subnets": [
+                          {
+                            "Ref": "CourtCaseVPCPrivateSubnet1Subnet5F9BD78B"
+                          },
+                          {
+                            "Ref": "CourtCaseVPCPrivateSubnet2Subnet37766881"
+                          }
+                        ],
+                        "securityGroups": [
+                          {
+                            "Fn::GetAtt": [
+                              "MediaProcessingServiceSecurityGroup8237F2C2",
+                              "GroupId"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "taskDefinition": {
+                      "Ref": "MediaProcessingTask1B611195"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ecs.CfnService",
+                  "version": "2.160.0"
+                }
+              },
+              "SecurityGroup": {
+                "id": "SecurityGroup",
+                "path": "CourtCaseManagementStack/MediaProcessingService/SecurityGroup",
+                "children": {
+                  "Resource": {
+                    "id": "Resource",
+                    "path": "CourtCaseManagementStack/MediaProcessingService/SecurityGroup/Resource",
+                    "attributes": {
+                      "aws:cdk:cloudformation:type": "AWS::EC2::SecurityGroup",
+                      "aws:cdk:cloudformation:props": {
+                        "groupDescription": "CourtCaseManagementStack/MediaProcessingService/SecurityGroup",
+                        "securityGroupEgress": [
+                          {
+                            "cidrIp": "0.0.0.0/0",
+                            "description": "Allow all outbound traffic by default",
+                            "ipProtocol": "-1"
+                          }
+                        ],
+                        "vpcId": {
+                          "Ref": "CourtCaseVPC4772DB51"
+                        }
+                      }
+                    },
+                    "constructInfo": {
+                      "fqn": "aws-cdk-lib.aws_ec2.CfnSecurityGroup",
+                      "version": "2.160.0"
+                    }
+                  }
+                },
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.aws_ec2.SecurityGroup",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.aws_ecs.FargateService",
+              "version": "2.160.0"
+            }
+          },
+          "CDKMetadata": {
+            "id": "CDKMetadata",
+            "path": "CourtCaseManagementStack/CDKMetadata",
+            "children": {
+              "Default": {
+                "id": "Default",
+                "path": "CourtCaseManagementStack/CDKMetadata/Default",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnResource",
+                  "version": "2.160.0"
+                }
+              },
+              "Condition": {
+                "id": "Condition",
+                "path": "CourtCaseManagementStack/CDKMetadata/Condition",
+                "constructInfo": {
+                  "fqn": "aws-cdk-lib.CfnCondition",
+                  "version": "2.160.0"
+                }
+              }
+            },
+            "constructInfo": {
+              "fqn": "constructs.Construct",
+              "version": "10.4.4"
+            }
+          },
+          "BootstrapVersion": {
+            "id": "BootstrapVersion",
+            "path": "CourtCaseManagementStack/BootstrapVersion",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnParameter",
+              "version": "2.160.0"
+            }
+          },
+          "CheckBootstrapVersion": {
+            "id": "CheckBootstrapVersion",
+            "path": "CourtCaseManagementStack/CheckBootstrapVersion",
+            "constructInfo": {
+              "fqn": "aws-cdk-lib.CfnRule",
+              "version": "2.160.0"
+            }
+          }
+        },
+        "constructInfo": {
+          "fqn": "aws-cdk-lib.Stack",
+          "version": "2.160.0"
+        }
+      },
+      "Tree": {
+        "id": "Tree",
+        "path": "Tree",
+        "constructInfo": {
+          "fqn": "constructs.Construct",
+          "version": "10.4.4"
+        }
+      }
+    },
+    "constructInfo": {
+      "fqn": "aws-cdk-lib.App",
+      "version": "2.160.0"
+    }
+  }
+}

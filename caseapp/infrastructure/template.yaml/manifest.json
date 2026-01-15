@@ -1,0 +1,564 @@
+{
+  "version": "38.0.1",
+  "artifacts": {
+    "CourtCaseManagementStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "CourtCaseManagementStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "CourtCaseManagementStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "CourtCaseManagementStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "notificationArns": [],
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/d4aaddf5d1e97440c9bc6bf7ba7984548ff4c6c17bc2306ea03b42de0580260a.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "CourtCaseManagementStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "CourtCaseManagementStack.assets"
+      ],
+      "metadata": {
+        "/CourtCaseManagementStack/CourtCaseVPC/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPC4772DB51"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet1SubnetF86CA2C4"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet1RouteTableACCF8CA3"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet1RouteTableAssociation23050FE0"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet1DefaultRoute8887835A"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/EIP": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet1EIP469F7D66"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet1/NATGateway": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet1NATGateway5CFAC9F8"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet2SubnetC7CA3BB0"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet2RouteTableA5976657"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet2RouteTableAssociation6044B2E0"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PublicSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPublicSubnet2DefaultRoute647EA299"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet1Subnet5F9BD78B"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet1RouteTable94383683"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet1RouteTableAssociation1148A646"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet1DefaultRoute3CE8FF8E"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet2Subnet37766881"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet2RouteTableA304EDF3"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet2RouteTableAssociationA83AD612"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/PrivateSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCPrivateSubnet2DefaultRoute89E61FB8"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCDatabaseSubnet1SubnetB30771EA"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCDatabaseSubnet1RouteTableEC928991"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCDatabaseSubnet1RouteTableAssociation72F3D238"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCDatabaseSubnet2Subnet9803B421"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCDatabaseSubnet2RouteTable7AC616CE"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/DatabaseSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCDatabaseSubnet2RouteTableAssociation978CA74F"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/IGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCIGW56782950"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/VPCGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCVPCGW471EFF96"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseVPC/RestrictDefaultSecurityGroupCustomResource/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseVPCRestrictDefaultSecurityGroupCustomResourceD48AC733"
+          }
+        ],
+        "/CourtCaseManagementStack/LatestNodeRuntimeMap": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "LatestNodeRuntimeMap"
+          }
+        ],
+        "/CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider": [
+          {
+            "type": "aws:cdk:is-custom-resource-handler-customResourceProvider",
+            "data": true
+          }
+        ],
+        "/CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Role": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0"
+          }
+        ],
+        "/CourtCaseManagementStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Handler": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomVpcRestrictDefaultSGCustomResourceProviderHandlerDC833E5E"
+          }
+        ],
+        "/CourtCaseManagementStack/DocumentsBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucket9EC9DEB9"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaBucketBCBB02BA"
+          }
+        ],
+        "/CourtCaseManagementStack/DatabaseSubnetGroup/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSubnetGroup"
+          }
+        ],
+        "/CourtCaseManagementStack/DatabaseSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatabaseSecurityGroup7319C0F6"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseDatabase/MonitoringRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseDatabaseMonitoringRole0BC69027"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseDatabase/Secret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseManagementStackCourtCaseDatabaseSecret9E7645473fdaad7efa858a3daf9490cf0a702aeb"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseDatabase/Secret/Attachment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseDatabaseSecretAttachment8E01E407"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseDatabase/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseDatabaseF7BBE8D0"
+          }
+        ],
+        "/CourtCaseManagementStack/RedisSubnetGroup": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisSubnetGroup"
+          }
+        ],
+        "/CourtCaseManagementStack/RedisSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisSecurityGroupB05951F6"
+          }
+        ],
+        "/CourtCaseManagementStack/RedisCluster": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RedisCluster"
+          }
+        ],
+        "/CourtCaseManagementStack/OpenSearchSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "OpenSearchSecurityGroup5212DDD0"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseSearch/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseSearch8B10EA61"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseUserPool/smsRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseUserPoolsmsRole88A59CAB"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseUserPool/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseUserPoolFE991906"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseUserPoolClient/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseUserPoolClient59E86EC7"
+          }
+        ],
+        "/CourtCaseManagementStack/CourtCaseCluster/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CourtCaseCluster9415FFD8"
+          }
+        ],
+        "/CourtCaseManagementStack/TaskExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TaskExecutionRole250D2532"
+          }
+        ],
+        "/CourtCaseManagementStack/TaskExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TaskExecutionRoleDefaultPolicyA84DD1B0"
+          }
+        ],
+        "/CourtCaseManagementStack/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TaskRole30FC0FBB"
+          }
+        ],
+        "/CourtCaseManagementStack/TaskRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TaskRoleDefaultPolicy07FC53DE"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/LB/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceLB09608E98"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/LB/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceLBSecurityGroup2B9BA648"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/LB/SecurityGroup/to CourtCaseManagementStackBackendServiceSecurityGroupE4D2C868:8000": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceLBSecurityGrouptoCourtCaseManagementStackBackendServiceSecurityGroupE4D2C868800070135CFA"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/LB/PublicListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceLBPublicListener2FA7FC98"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/LB/PublicListener/ECSGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceLBPublicListenerECSGroupD43CD2AB"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/LoadBalancerDNS": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceLoadBalancerDNSE742582D"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/ServiceURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceServiceURLB1770053"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/TaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceTaskDef9F97F56B"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/TaskDef/web/LogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceTaskDefwebLogGroup614D1BFF"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/Service/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendService2147DAF9"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/Service/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceSecurityGroup7599F85E"
+          }
+        ],
+        "/CourtCaseManagementStack/BackendService/Service/SecurityGroup/from CourtCaseManagementStackBackendServiceLBSecurityGroup2C119C28:8000": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BackendServiceSecurityGroupfromCourtCaseManagementStackBackendServiceLBSecurityGroup2C119C288000EFCD49C4"
+          }
+        ],
+        "/CourtCaseManagementStack/ECSServiceSecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSServiceSecurityGroupEB507764"
+          }
+        ],
+        "/CourtCaseManagementStack/DeploymentAlerts/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DeploymentAlerts030E79C4"
+          }
+        ],
+        "/CourtCaseManagementStack/DeploymentMonitoringDashboard/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DeploymentMonitoringDashboard3350D218"
+          }
+        ],
+        "/CourtCaseManagementStack/ECSHighCPUAlarm/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSHighCPUAlarmCB41AED5"
+          }
+        ],
+        "/CourtCaseManagementStack/ECSHighMemoryAlarm/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSHighMemoryAlarm99460184"
+          }
+        ],
+        "/CourtCaseManagementStack/ALBHigh5XXAlarm/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ALBHigh5XXAlarm7274C2F1"
+          }
+        ],
+        "/CourtCaseManagementStack/RDSHighCPUAlarm/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RDSHighCPUAlarm45A06151"
+          }
+        ],
+        "/CourtCaseManagementStack/MonitoringDashboardURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MonitoringDashboardURL"
+          }
+        ],
+        "/CourtCaseManagementStack/AlertsTopicARN": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AlertsTopicARN"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingTask/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingTaskTaskRole740C2B77"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingTask/TaskRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingTaskTaskRoleDefaultPolicy38712BD6"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingTask/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingTask1B611195"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingTask/MediaProcessor/LogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingTaskMediaProcessorLogGroupD82BF0F4"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingTask/ExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingTaskExecutionRole48AB4E26"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingTask/ExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingTaskExecutionRoleDefaultPolicyD7DE1D24"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingService/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingServiceFA6C8891"
+          }
+        ],
+        "/CourtCaseManagementStack/MediaProcessingService/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MediaProcessingServiceSecurityGroup8237F2C2"
+          }
+        ],
+        "/CourtCaseManagementStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/CourtCaseManagementStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/CourtCaseManagementStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/CourtCaseManagementStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "CourtCaseManagementStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}

@@ -109,3 +109,9 @@ media/
 # Backup files
 *.bak
 *.backup
+
+# Deployment registry (runtime state, not version controlled)
+.deployment-registry/
+**/deployment-registry/
+deployment-monitor*.log
+monitor-output.log

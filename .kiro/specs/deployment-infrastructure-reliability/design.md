@@ -1,345 +1,418 @@
-# Design Document
+# Design Document: Deployment Infrastructure Reliability
 
 ## Overview
 
-The Deployment Infrastructure Reliability system is designed to solve critical AWS ECS deployment failures through systematic configuration management, automated recovery procedures, and comprehensive monitoring. The design addresses the specific issues identified in the court case management system deployment, including ECS service timeout failures, CloudFormation stack recovery, and container startup problems.
-
-The system follows a layered approach with deployment validation, infrastructure management, container orchestration, and monitoring components. Key design decisions include implementing robust health checks, automated resource scaling, and comprehensive error recovery mechanisms to ensure reliable deployments.
+This design enhances the deployment infrastructure to provide better concurrent deployment handling, improved visibility, and automated recovery mechanisms. The solution focuses on making the CI/CD pipeline more resilient and user-friendly while maintaining safety guarantees against concurrent deployments.
 
 ## Architecture
 
 ### High-Level Architecture
 
-```mermaid
-graph TB
-    subgraph "CI/CD Pipeline"
-        GHA[GitHub Actions]
-        BUILD[Docker Build]
-        PUSH[Image Push]
-        DEPLOY[CDK Deploy]
-    end
-
-    subgraph "Deployment Validation"
-        PRECHECK[Pre-deployment Checks]
-        VALIDATE[Configuration Validation]
-        RESOURCE[Resource Verification]
-    end
-
-    subgraph "Infrastructure Management"
-        CDK[AWS CDK]
-        CFN[CloudFormation]
-        RECOVERY[Stack Recovery]
-    end
-
-    subgraph "Container Orchestration"
-        ECS[ECS Service]
-        ALB[Application Load Balancer]
-        HEALTH[Health Checks]
-        SCALING[Auto Scaling]
-    end
-
-    subgraph "Monitoring & Logging"
-        CW[CloudWatch]
-        LOGS[Log Aggregation]
-        ALERTS[Alert Manager]
-        METRICS[Metrics Dashboard]
-    end
-
-    subgraph "AWS Services"
-        RDS[(Database)]
-        S3[(Storage)]
-        SECRETS[Secrets Manager]
-        VPC[VPC/Networking]
-    end
-
-    GHA --> BUILD
-    BUILD --> PUSH
-    PUSH --> PRECHECK
-    PRECHECK --> VALIDATE
-    VALIDATE --> RESOURCE
-    RESOURCE --> DEPLOY
-
-    DEPLOY --> CDK
-    CDK --> CFN
-    CFN --> ECS
-    ECS --> ALB
-    ALB --> HEALTH
-
-    ECS --> SCALING
-    HEALTH --> CW
-    SCALING --> CW
-
-    CFN -.-> RECOVERY
-    RECOVERY -.-> CFN
-
-    ECS --> RDS
-    ECS --> S3
-    ECS --> SECRETS
-    ECS --> VPC
-
-    CW --> LOGS
-    CW --> ALERTS
-    CW --> METRICS
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     GitHub Actions Workflow                      │
+│  ┌────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │   Build    │→ │  Validation  │→ │  Deployment Monitor    │  │
+│  │   & Test   │  │   Gateway    │  │  (Background Process)  │  │
+│  └────────────┘  └──────────────┘  └────────────────────────┘  │
+│                          ↓                      ↓                │
+│                  ┌───────────────┐      ┌──────────────┐        │
+│                  │  Deployment   │      │    Slack     │        │
+│                  │  Coordinator  │      │  Notifier    │        │
+│                  └───────────────┘      └──────────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓                      ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                      AWS Infrastructure                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ CloudFormation│  │  DynamoDB    │  │   CloudWatch Logs   │  │
+│  │     Stack     │  │  Registry    │  │  (Correlation IDs)  │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Architecture
+### Component Interactions
 
-The system is organized into four main layers:
-
-- **Deployment Pipeline**: GitHub Actions, Docker build/push, CDK deployment
-- **Validation Layer**: Pre-deployment checks, configuration validation, resource verification
-- **Infrastructure Layer**: CloudFormation stack management, ECS service configuration, networking
-- **Monitoring Layer**: Health checks, logging, metrics, alerting
+1. **Validation Gateway**: First line of defense, checks for active deployments
+2. **Deployment Coordinator**: Manages deployment state and queuing
+3. **Deployment Monitor**: Background process that tracks deployment progress
+4. **Slack Notifier**: Sends real-time updates to Slack channels
+5. **Deployment Registry**: DynamoDB table tracking active deployments
 
 ## Components and Interfaces
 
-### Deployment Pipeline Components
+### 1. Enhanced Validation Script
 
-**GitHub Actions Workflow**
+**File**: `caseapp/scripts/enhanced-deployment-validation.sh`
 
-- Multi-stage deployment with validation gates
-- Parallel Docker image building for backend and media services
-- Automated rollback on deployment failure
-- Deployment artifact preservation
+**Enhancements**:
 
-**CDK Infrastructure Management**
+- Add detailed deployment status reporting
+- Include stack event history in error messages
+- Provide estimated completion time for active deployments
+- Add AWS Console links for monitoring
 
-- Declarative infrastructure definition with TypeScript
-- Environment-specific configuration management
-- Resource dependency management and ordering
-- Stack update and rollback capabilities
+**New Functions**:
 
-### Container Configuration Components
+```bash
+# Get detailed deployment status
+get_deployment_status() {
+    local stack_name="$1"
+    local status=$(aws cloudformation describe-stacks ...)
+    local events=$(aws cloudformation describe-stack-events ...)
+    local start_time=$(...)
+    local elapsed=$(...)
 
-**ECS Service Configuration**
-
-```typescript
-interface ECSServiceConfig {
-  serviceName: string;
-  taskDefinition: TaskDefinitionConfig;
-  desiredCount: number;
-  healthCheckGracePeriod: number;
-  deploymentConfiguration: DeploymentConfig;
-  networkConfiguration: NetworkConfig;
+    # Return structured status information
+    echo "Status: $status"
+    echo "Started: $start_time"
+    echo "Elapsed: $elapsed"
+    echo "Recent Events: $events"
 }
 
-interface TaskDefinitionConfig {
-  cpu: number;
-  memory: number;
-  containerDefinitions: ContainerDefinition[];
-  executionRole: string;
-  taskRole: string;
+# Estimate deployment completion time
+estimate_completion_time() {
+    local stack_name="$1"
+    local current_status="$2"
+
+    # Based on historical data and current progress
+    # Return estimated minutes remaining
 }
 
-interface ContainerDefinition {
-  name: string;
-  image: string;
-  portMappings: PortMapping[];
-  environment: EnvironmentVariable[];
-  healthCheck: HealthCheckConfig;
-  logging: LoggingConfig;
+# Generate AWS Console link
+get_console_link() {
+    local stack_name="$1"
+    local region="$2"
+    echo "https://console.aws.amazon.com/cloudformation/home?region=$region#/stacks/stackinfo?stackId=$stack_name"
 }
 ```
 
-**Health Check Configuration**
+### 2. Deployment Coordinator
 
-```typescript
-interface HealthCheckConfig {
-  command: string[];
-  interval: number;
-  timeout: number;
-  retries: number;
-  startPeriod: number;
+**File**: `caseapp/scripts/deployment-coordinator.sh`
+
+**Purpose**: Manages deployment queuing and coordination
+
+**Functions**:
+
+```bash
+# Register a deployment attempt
+register_deployment() {
+    local correlation_id="$1"
+    local workflow_run_id="$2"
+    local environment="$3"
+
+    # Store in DynamoDB or local state file
+    # Include: timestamp, correlation_id, workflow_run_id, status
 }
 
-interface LoadBalancerHealthCheck {
-  path: string;
-  port: number;
-  protocol: string;
-  healthyThreshold: number;
-  unhealthyThreshold: number;
-  timeout: number;
-  interval: number;
-}
-```
+# Check if deployment can proceed
+can_deploy() {
+    local environment="$1"
 
-### Infrastructure Management Components
-
-**CloudFormation Stack Recovery**
-
-```typescript
-class StackRecoveryManager {
-  async detectFailedStacks(): Promise<FailedStack[]>;
-  async analyzeFailureReason(stackName: string): Promise<FailureAnalysis>;
-  async cleanupFailedResources(stackName: string): Promise<CleanupResult>;
-  async retryDeployment(
-    stackName: string,
-    config: DeploymentConfig
-  ): Promise<DeploymentResult>;
+    # Check CloudFormation stack status
+    # Check deployment registry
+    # Return: true/false with reason
 }
 
-interface FailureAnalysis {
-  failedResources: ResourceFailure[];
-  rootCause: string;
-  recommendedActions: string[];
-  canAutoRecover: boolean;
-}
-```
+# Wait for active deployment to complete
+wait_for_deployment() {
+    local max_wait_minutes="$1"
+    local check_interval_seconds="$2"
 
-**Resource Allocation Manager**
-
-```typescript
-class ResourceAllocationManager {
-  async calculateOptimalResources(
-    appMetrics: ApplicationMetrics
-  ): Promise<ResourceAllocation>;
-  async validateResourceAvailability(
-    allocation: ResourceAllocation
-  ): Promise<ValidationResult>;
-  async scaleResources(
-    serviceName: string,
-    newAllocation: ResourceAllocation
-  ): Promise<ScalingResult>;
+    # Poll stack status
+    # Send periodic updates
+    # Return when deployment completes or timeout
 }
 
-interface ResourceAllocation {
-  cpu: number;
-  memory: number;
-  networkBandwidth: number;
-  storageIOPS: number;
+# Clean up deployment registration
+cleanup_deployment() {
+    local correlation_id="$1"
+    # Remove from registry
 }
 ```
 
-### Monitoring and Diagnostics Components
+### 3. Deployment Monitor
 
-**Deployment Monitor**
+**File**: `caseapp/scripts/deployment-monitor.sh`
 
-```typescript
-class DeploymentMonitor {
-  async trackDeploymentProgress(
-    deploymentId: string
-  ): Promise<DeploymentStatus>;
-  async validateServiceHealth(serviceName: string): Promise<HealthStatus>;
-  async generateDiagnosticReport(
-    serviceName: string
-  ): Promise<DiagnosticReport>;
+**Purpose**: Background process that monitors active deployments
+
+**Features**:
+
+- Runs as background process during deployment
+- Monitors CloudFormation stack events
+- Detects stalled deployments
+- Sends Slack notifications
+- Logs all events with correlation IDs
+
+**Implementation**:
+
+```bash
+#!/bin/bash
+# Deployment Monitor - runs in background
+
+CORRELATION_ID="$1"
+STACK_NAME="$2"
+SLACK_CHANNEL="$3"
+LOG_FILE="$4"
+
+monitor_deployment() {
+    local last_event_time=""
+    local stall_threshold=600  # 10 minutes
+
+    while true; do
+        # Get current stack status
+        status=$(aws cloudformation describe-stacks ...)
+
+        # Check if deployment is complete
+        if [[ "$status" =~ (CREATE_COMPLETE|UPDATE_COMPLETE|ROLLBACK_COMPLETE) ]]; then
+            send_slack_notification "✅ Deployment complete: $status"
+            break
+        fi
+
+        # Check if deployment failed
+        if [[ "$status" =~ (CREATE_FAILED|UPDATE_FAILED|ROLLBACK_FAILED) ]]; then
+            send_slack_notification "❌ Deployment failed: $status"
+            break
+        fi
+
+        # Get recent events
+        events=$(aws cloudformation describe-stack-events ...)
+
+        # Check for stalled deployment
+        if [ -n "$last_event_time" ]; then
+            time_since_last_event=$(calculate_elapsed "$last_event_time")
+            if [ $time_since_last_event -gt $stall_threshold ]; then
+                send_slack_notification "⚠️ Deployment may be stalled - no events for ${time_since_last_event}s"
+            fi
+        fi
+
+        # Log events
+        echo "[$CORRELATION_ID] Status: $status" >> "$LOG_FILE"
+
+        # Wait before next check
+        sleep 30
+    done
 }
 
-interface DeploymentStatus {
-  phase: DeploymentPhase;
-  progress: number;
-  estimatedCompletion: Date;
-  issues: DeploymentIssue[];
+monitor_deployment
+```
+
+### 4. Slack Notifier
+
+**File**: `caseapp/scripts/slack-notifier.sh`
+
+**Purpose**: Centralized Slack notification handling
+
+**Functions**:
+
+```bash
+# Send deployment start notification
+notify_deployment_start() {
+    local correlation_id="$1"
+    local environment="$2"
+    local workflow_run_id="$3"
+
+    mcp_slack_conversations_add_message \
+      --channel_id="#kiro-updates" \
+      --payload="🚀 Deployment Started
+Environment: $environment
+Correlation ID: $correlation_id
+Workflow: https://github.com/owner/repo/actions/runs/$workflow_run_id"
 }
 
-interface HealthStatus {
-  overall: HealthState;
-  containers: ContainerHealth[];
-  loadBalancer: LoadBalancerHealth;
-  dependencies: DependencyHealth[];
+# Send concurrent deployment detected notification
+notify_concurrent_deployment() {
+    local active_correlation_id="$1"
+    local active_start_time="$2"
+    local estimated_completion="$3"
+
+    mcp_slack_conversations_add_message \
+      --channel_id="#kiro-updates" \
+      --payload="⏸️ Deployment Queued
+An active deployment is in progress:
+- Correlation ID: $active_correlation_id
+- Started: $active_start_time
+- Estimated completion: $estimated_completion minutes
+Your deployment will proceed when the active deployment completes."
+}
+
+# Send deployment progress update
+notify_deployment_progress() {
+    local correlation_id="$1"
+    local progress_message="$2"
+
+    mcp_slack_conversations_add_message \
+      --channel_id="#kiro-updates" \
+      --payload="⏳ Deployment Progress [$correlation_id]
+$progress_message"
+}
+
+# Send deployment complete notification
+notify_deployment_complete() {
+    local correlation_id="$1"
+    local environment="$2"
+    local duration="$3"
+    local alb_dns="$4"
+
+    mcp_slack_conversations_add_message \
+      --channel_id="#kiro-updates" \
+      --payload="✅ Deployment Complete
+Environment: $environment
+Correlation ID: $correlation_id
+Duration: $duration minutes
+Application URL: http://$alb_dns"
+}
+
+# Send deployment failed notification
+notify_deployment_failed() {
+    local correlation_id="$1"
+    local environment="$2"
+    local error_message="$3"
+    local console_link="$4"
+
+    mcp_slack_conversations_add_message \
+      --channel_id="#kiro-updates" \
+      --payload="❌ Deployment Failed
+Environment: $environment
+Correlation ID: $correlation_id
+Error: $error_message
+AWS Console: $console_link"
 }
 ```
 
-**Log Aggregation Service**
+### 5. GitHub Actions Workflow Updates
 
-```typescript
-class LogAggregationService {
-  async collectDeploymentLogs(deploymentId: string): Promise<LogCollection>;
-  async analyzeErrorPatterns(logs: LogCollection): Promise<ErrorAnalysis>;
-  async generateTroubleshootingGuide(
-    errorAnalysis: ErrorAnalysis
-  ): Promise<TroubleshootingGuide>;
-}
+**File**: `.github/workflows/ci-cd.yml`
+
+**Changes to deploy-production job**:
+
+```yaml
+- name: Run comprehensive pre-deployment validation with coordination
+  working-directory: caseapp
+  run: |
+    echo "🔍 Running pre-deployment validation with coordination..."
+
+    # Generate correlation ID
+    export CORRELATION_ID="$(date +%Y%m%d-%H%M%S)-$(openssl rand -hex 4)"
+    export WORKFLOW_RUN_ID="${{ github.run_id }}"
+    export ENVIRONMENT="production"
+
+    # Make scripts executable
+    chmod +x scripts/enhanced-deployment-validation.sh
+    chmod +x scripts/deployment-coordinator.sh
+    chmod +x scripts/slack-notifier.sh
+
+    # Send deployment start notification
+    ./scripts/slack-notifier.sh start "$CORRELATION_ID" "$ENVIRONMENT" "$WORKFLOW_RUN_ID"
+
+    # Check if deployment can proceed
+    if ./scripts/deployment-coordinator.sh can_deploy "$ENVIRONMENT"; then
+      echo "✅ No active deployment detected - proceeding"
+      
+      # Register this deployment
+      ./scripts/deployment-coordinator.sh register "$CORRELATION_ID" "$WORKFLOW_RUN_ID" "$ENVIRONMENT"
+      
+      # Run validation
+      ./scripts/enhanced-deployment-validation.sh
+    else
+      echo "⏸️ Active deployment detected - checking coordination options"
+      
+      # Get active deployment details
+      active_deployment=$(./scripts/deployment-coordinator.sh get_active "$ENVIRONMENT")
+      
+      # Send notification about concurrent deployment
+      ./scripts/slack-notifier.sh concurrent "$active_deployment"
+      
+      # Wait for active deployment with timeout
+      if ./scripts/deployment-coordinator.sh wait "$ENVIRONMENT" 30; then
+        echo "✅ Active deployment completed - proceeding"
+        ./scripts/deployment-coordinator.sh register "$CORRELATION_ID" "$WORKFLOW_RUN_ID" "$ENVIRONMENT"
+        ./scripts/enhanced-deployment-validation.sh
+      else
+        echo "❌ Timeout waiting for active deployment"
+        ./scripts/slack-notifier.sh timeout "$CORRELATION_ID"
+        exit 1
+      fi
+    fi
+  timeout-minutes: 40
+
+- name: Deploy with monitoring
+  working-directory: caseapp
+  run: |
+    echo "🚀 Starting deployment with active monitoring..."
+
+    # Start deployment monitor in background
+    ./scripts/deployment-monitor.sh \
+      "$CORRELATION_ID" \
+      "CourtCaseManagementStack" \
+      "#kiro-updates" \
+      "deployment-monitor.log" &
+
+    MONITOR_PID=$!
+
+    # Run deployment
+    ./scripts/deploy-with-validation.sh
+
+    # Wait for monitor to complete
+    wait $MONITOR_PID
+
+    # Cleanup deployment registration
+    ./scripts/deployment-coordinator.sh cleanup "$CORRELATION_ID"
+  timeout-minutes: 90
 ```
 
 ## Data Models
 
-### Deployment Configuration Models
+### Deployment Registry Entry
 
-**Deployment Specification**
+**Storage**: DynamoDB table or local state file
 
-```typescript
-interface DeploymentSpec {
-  id: string;
-  applicationName: string;
-  environment: Environment;
-  version: string;
-  infrastructure: InfrastructureConfig;
-  containers: ContainerConfig[];
-  networking: NetworkConfig;
-  monitoring: MonitoringConfig;
-  createdAt: Date;
-  createdBy: string;
-}
-
-interface InfrastructureConfig {
-  region: string;
-  availabilityZones: string[];
-  vpcConfig: VPCConfig;
-  databaseConfig: DatabaseConfig;
-  storageConfig: StorageConfig;
-}
-
-interface ContainerConfig {
-  name: string;
-  image: string;
-  tag: string;
-  resources: ResourceRequirements;
-  environment: EnvironmentConfig;
-  healthCheck: HealthCheckConfig;
-  scaling: ScalingConfig;
+```json
+{
+  "correlation_id": "20260114-215432-375a1384",
+  "workflow_run_id": "21010944613",
+  "environment": "production",
+  "stack_name": "CourtCaseManagementStack",
+  "status": "IN_PROGRESS",
+  "started_at": "2026-01-14T21:54:32Z",
+  "updated_at": "2026-01-14T22:04:18Z",
+  "github_run_url": "https://github.com/owner/repo/actions/runs/21010944613",
+  "aws_console_url": "https://console.aws.amazon.com/cloudformation/...",
+  "events": [
+    {
+      "timestamp": "2026-01-14T21:54:32Z",
+      "event": "DEPLOYMENT_STARTED",
+      "details": "Validation passed, starting deployment"
+    },
+    {
+      "timestamp": "2026-01-14T21:58:00Z",
+      "event": "ECS_SERVICE_CREATED",
+      "details": "ECS service created successfully"
+    }
+  ]
 }
 ```
 
-### Monitoring and Metrics Models
+### Deployment Status Response
 
-**Deployment Metrics**
-
-```typescript
-interface DeploymentMetrics {
-  deploymentId: string;
-  startTime: Date;
-  endTime?: Date;
-  duration?: number;
-  status: DeploymentStatus;
-  phases: DeploymentPhase[];
-  resourceUtilization: ResourceMetrics;
-  errorCount: number;
-  warningCount: number;
-}
-
-interface ResourceMetrics {
-  cpuUtilization: number;
-  memoryUtilization: number;
-  networkIO: NetworkMetrics;
-  diskIO: DiskMetrics;
-  databaseConnections: number;
-}
-```
-
-### Error and Recovery Models
-
-**Failure Analysis**
-
-```typescript
-interface FailureRecord {
-  id: string;
-  deploymentId: string;
-  timestamp: Date;
-  component: string;
-  errorType: ErrorType;
-  errorMessage: string;
-  stackTrace?: string;
-  context: FailureContext;
-  resolution?: ResolutionAction;
-}
-
-interface ResolutionAction {
-  action: string;
-  parameters: Record<string, any>;
-  automatable: boolean;
-  estimatedTime: number;
-  successProbability: number;
+```json
+{
+  "can_deploy": false,
+  "reason": "ACTIVE_DEPLOYMENT_IN_PROGRESS",
+  "active_deployment": {
+    "correlation_id": "20260114-215432-375a1384",
+    "started_at": "2026-01-14T21:54:32Z",
+    "elapsed_minutes": 10,
+    "estimated_remaining_minutes": 15,
+    "current_status": "CREATE_IN_PROGRESS",
+    "recent_events": [
+      "ElastiCache cluster: CREATE_COMPLETE",
+      "ECS Service: CREATE_COMPLETE",
+      "RDS Instance: CREATE_IN_PROGRESS"
+    ]
+  }
 }
 ```
 
@@ -347,177 +420,201 @@ interface ResolutionAction {
 
 _A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
-### Property 1: ECS Service Startup Reliability
+### Property 1: Deployment Exclusivity
 
-_For any_ ECS service deployment with valid configuration, the service should start successfully within the specified timeout period and pass all health checks.
-**Validates: Requirements 1.1, 1.3**
+_For any_ environment (staging or production), at most one deployment can be in an active state (CREATE_IN_PROGRESS, UPDATE_IN_PROGRESS, ROLLBACK_IN_PROGRESS) at any given time.
 
-### Property 2: Container Resource Allocation
+**Validates: Requirements 1.1, 1.4**
 
-_For any_ container deployment, if the allocated resources meet the minimum requirements, the container should start successfully and maintain stable operation.
-**Validates: Requirements 2.1, 4.1**
+### Property 2: Correlation ID Uniqueness
 
-### Property 3: Health Check Validation
+_For any_ deployment attempt, the generated correlation ID must be unique across all deployments in the system.
 
-_For any_ deployed service with configured health checks, the health check endpoint should return successful responses when the service is operational.
-**Validates: Requirements 1.3, 2.3, 6.1**
+**Validates: Requirements 8.1**
 
-### Property 4: CloudFormation Stack Recovery
+### Property 3: Notification Completeness
 
-_For any_ CloudFormation stack in ROLLBACK_FAILED state, the automated recovery process should successfully clean up resources and enable retry deployment.
-**Validates: Requirements 3.1, 3.2, 3.4**
+_For any_ deployment lifecycle (start, progress, complete/fail), all corresponding Slack notifications must be sent to the appropriate channels.
 
-### Property 5: Deployment Retry Resilience
+**Validates: Requirements 5.1, 5.3, 5.4**
 
-_For any_ deployment failure due to transient issues, the retry mechanism should successfully complete the deployment with exponential backoff.
-**Validates: Requirements 5.1, 5.4**
+### Property 4: Deployment State Consistency
 
-### Property 6: Database Connectivity Validation
+_For any_ deployment registration, the recorded state in the deployment registry must match the actual CloudFormation stack status.
 
-_For any_ application requiring database access, the deployment should verify database connectivity before marking the service as healthy.
-**Validates: Requirements 7.1, 7.4**
+**Validates: Requirements 3.1, 8.4**
 
-### Property 7: Security Group Configuration
+### Property 5: Monitor Process Lifecycle
 
-_For any_ deployed service, the security groups should allow required traffic while blocking unauthorized access.
-**Validates: Requirements 8.1, 8.4**
+_For any_ deployment, the monitoring background process must start when deployment begins and terminate when deployment completes or fails.
 
-### Property 8: Resource Optimization
+**Validates: Requirements 6.1, 6.3**
 
-_For any_ service deployment, the allocated resources should be sufficient for stable operation without significant over-provisioning.
-**Validates: Requirements 4.2, 4.3**
+### Property 6: Validation Ordering
 
-### Property 9: Deployment Validation
+_For any_ deployment validation run, the check for active deployments must execute before all other validation checks.
 
-_For any_ completed deployment, the validation tests should confirm that all critical functionality is working correctly.
-**Validates: Requirements 9.1, 9.2, 9.4**
+**Validates: Requirements 1.5, 7.1**
 
-### Property 10: Log Aggregation Completeness
+### Property 7: Wait Timeout Bounds
 
-_For any_ deployment process, all relevant logs should be collected and made available for troubleshooting.
-**Validates: Requirements 10.1, 10.3**
+_For any_ deployment wait operation, the actual wait time must not exceed the configured maximum wait timeout.
 
-### Property 11: CDK Parameter Compatibility
+**Validates: Requirements 3.2**
 
-_For any_ CDK infrastructure code, all parameters used in constructs should be compatible with the target CDK version and not cause deployment failures.
-**Validates: Requirements 11.1, 11.2, 11.3**
+### Property 8: Cleanup Idempotence
+
+_For any_ deployment cleanup operation, executing cleanup multiple times with the same correlation ID must produce the same result as executing it once.
+
+**Validates: Requirements 4.4**
 
 ## Error Handling
 
-### Error Classification
+### Concurrent Deployment Detected
 
-**Infrastructure Errors**
+**Error Code**: EXIT_CODE_2
+**Message**: "Deployment already in progress"
+**Action**:
 
-- CloudFormation stack failures and resource conflicts
-- ECS service startup timeouts and container crashes
-- Network connectivity and security group misconfigurations
-- Resource allocation and capacity constraints
+1. Get active deployment details
+2. Send Slack notification with status
+3. Offer to wait for completion
+4. If wait timeout, fail gracefully
 
-**Application Errors**
+### Deployment Monitor Failure
 
-- Container startup failures and health check failures
-- Database connection errors and migration failures
-- Configuration errors and missing environment variables
-- Application binding and port configuration issues
+**Error**: Monitor process crashes or becomes unresponsive
+**Action**:
 
-**Pipeline Errors**
+1. Detect monitor failure via process check
+2. Restart monitor process
+3. Send Slack alert about monitoring gap
+4. Continue deployment (don't fail deployment due to monitor issues)
 
-- Docker image build and push failures
-- GitHub Actions workflow timeouts and failures
-- CDK synthesis and deployment errors
-- Credential and permission issues
+### Slack Notification Failure
 
-### Error Recovery Strategies
+**Error**: Slack API unavailable or rate limited
+**Action**:
 
-**Automated Recovery**
+1. Log notification failure
+2. Continue deployment (don't block on Slack)
+3. Queue notifications for retry
+4. Send summary notification when Slack recovers
 
-- Exponential backoff retry for transient failures
-- Automatic resource scaling for capacity issues
-- Stack cleanup and retry for CloudFormation failures
-- Container restart for application crashes
+### Deployment Registry Unavailable
 
-**Manual Intervention Required**
+**Error**: Cannot read/write deployment registry
+**Action**:
 
-- Configuration errors requiring code changes
-- Credential and permission issues
-- Network architecture changes
-- Database schema conflicts
-
-**Escalation Procedures**
-
-- Alert generation for critical failures
-- Diagnostic report generation
-- Rollback to previous working version
-- Emergency contact notification
+1. Fall back to CloudFormation stack status only
+2. Log registry unavailability
+3. Continue with reduced coordination features
+4. Warn about potential concurrent deployment risks
 
 ## Testing Strategy
 
-### Infrastructure Testing
+### Unit Tests
 
-**Pre-deployment Validation**
+**Test Concurrent Deployment Detection**:
 
-- Configuration syntax and semantic validation
-- Resource availability and quota checks
-- Network connectivity and security validation
-- Credential and permission verification
+- Create mock CloudFormation stack in CREATE_IN_PROGRESS
+- Run validation script
+- Verify exit code 2 and error message
 
-**Deployment Testing**
+**Test Correlation ID Generation**:
 
-- Smoke tests for basic service functionality
-- Health check validation across all endpoints
-- Database connectivity and query testing
-- Integration testing with external services
+- Generate 1000 correlation IDs
+- Verify all are unique
+- Verify format matches expected pattern
 
-### Property-Based Testing
+**Test Slack Notification Formatting**:
 
-**Testing Framework**: AWS CDK Testing Framework with Jest
-**Test Configuration**: Minimum 50 iterations per property test
-**Test Tagging**: Each property test must reference its design document property using the format:
-`# Feature: deployment-infrastructure-reliability, Property {number}: {property_text}`
+- Generate notifications for each deployment state
+- Verify message format and content
+- Verify correct channel routing
 
-**Example Property Test Structure**:
+### Integration Tests
 
-```typescript
-describe("ECS Service Startup Reliability", () => {
-  test("Feature: deployment-infrastructure-reliability, Property 1: ECS Service Startup Reliability", async () => {
-    const serviceConfig = generateValidServiceConfig();
-    const deployment = await deployECSService(serviceConfig);
+**Test Full Deployment Coordination**:
 
-    expect(deployment.status).toBe("STABLE");
-    expect(deployment.healthChecksPassing).toBe(true);
-    expect(deployment.startupTime).toBeLessThan(600000); // 10 minutes
-  });
-});
-```
+- Start first deployment
+- Attempt second deployment while first is active
+- Verify second deployment waits
+- Verify second deployment proceeds after first completes
 
-### Monitoring and Validation
+**Test Deployment Monitor**:
 
-**Continuous Monitoring**
+- Start deployment with monitor
+- Verify monitor sends periodic updates
+- Verify monitor detects completion
+- Verify monitor terminates properly
 
-- Real-time deployment status tracking
-- Resource utilization monitoring
-- Error rate and performance metrics
-- Availability and uptime tracking
+### Property-Based Tests
 
-**Automated Validation**
+**Property Test: Deployment Exclusivity** (Property 1):
 
-- Post-deployment smoke tests
-- API endpoint validation
-- Database connectivity verification
-- Security configuration auditing
+- Generate random deployment attempts
+- Verify only one can be active at a time
+- Verify proper queuing and coordination
 
-### Test Environment Management
+**Property Test: Correlation ID Uniqueness** (Property 2):
 
-**Isolated Testing**
+- Generate large number of correlation IDs
+- Verify no collisions
+- Verify format consistency
 
-- Separate AWS accounts for testing
-- Isolated VPCs and networking
-- Test-specific resource allocation
-- Automated cleanup procedures
+**Property Test: Notification Completeness** (Property 3):
 
-**Synthetic Data**
+- Simulate various deployment scenarios
+- Verify all expected notifications are sent
+- Verify notification ordering
 
-- Realistic deployment configurations
-- Various failure scenarios
-- Performance and load testing data
-- Security testing scenarios
+**Property Test: Monitor Lifecycle** (Property 5):
+
+- Start deployments with monitors
+- Verify monitors start and stop correctly
+- Verify no orphaned monitor processes
+
+## Deployment Plan
+
+### Phase 1: Enhanced Validation (Week 1)
+
+- Update enhanced-deployment-validation.sh with detailed status reporting
+- Add AWS Console link generation
+- Add deployment time estimation
+- Test with existing deployments
+
+### Phase 2: Deployment Coordinator (Week 2)
+
+- Implement deployment-coordinator.sh
+- Add deployment registry (file-based initially)
+- Implement wait and queue logic
+- Test coordination between multiple workflow runs
+
+### Phase 3: Deployment Monitor (Week 3)
+
+- Implement deployment-monitor.sh
+- Add background process management
+- Implement stall detection
+- Test monitoring during actual deployments
+
+### Phase 4: Slack Integration (Week 4)
+
+- Implement slack-notifier.sh
+- Add all notification types
+- Test notification delivery
+- Add error handling for Slack failures
+
+### Phase 5: GitHub Actions Integration (Week 5)
+
+- Update CI/CD workflow
+- Add coordination steps
+- Add monitoring integration
+- Test end-to-end workflow
+
+### Phase 6: Testing and Refinement (Week 6)
+
+- Run comprehensive integration tests
+- Test failure scenarios
+- Refine error messages
+- Update documentation
