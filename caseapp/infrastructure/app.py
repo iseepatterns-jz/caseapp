@@ -192,7 +192,7 @@ class CourtCaseManagementStack(Stack):
             deletion_protection=False,  # CHANGED: Allow deletion for testing/development
             removal_policy=RemovalPolicy.DESTROY,  # CHANGED: Delete RDS when stack is deleted
             # Enhanced monitoring and performance insights
-            monitoring_interval=Duration.seconds(60),
+            monitoring_interval=Duration.seconds(0),  # FIXED: Disabled enhanced monitoring (missing IAM role causing failures)
             enable_performance_insights=True,
             performance_insight_retention=rds.PerformanceInsightRetention.DEFAULT,
             # Multi-AZ for high availability
