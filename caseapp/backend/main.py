@@ -251,27 +251,34 @@ async def root():
         "status": "healthy"
     }
 
+@app.get("/health")
+async def health_check():
+    """
+    Simple health check endpoint for container health checks
+    Returns HTTP 200 immediately without database dependency
+    Use /health/ready for comprehensive checks including database
+    """
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "backend",
+        "version": "1.0.0"
+    }
+
 @app.get("/health/ready")
 async def readiness_check():
     """
-    Readiness check optimized for ECS health checks
-    Fast check that returns 200 when service is ready to accept traffic
+    Comprehensive readiness check for ALB health checks
+    Includes database connectivity validation
     """
     try:
         from core.database import validate_database_connection
+        from services.health_service import HealthService
         
-        # Quick database connectivity check with enhanced validation
+        # Database connectivity check
         db_valid = await validate_database_connection()
         
-        if db_valid:
-            return {
-                "status": "ready",
-                "timestamp": datetime.utcnow().isoformat(),
-                "message": "Service ready for traffic",
-                "database": "connected",
-                "validation_method": "enhanced_pooled_connection"
-            }
-        else:
+        if not db_valid:
             raise HTTPException(
                 status_code=503,
                 detail={
@@ -281,6 +288,32 @@ async def readiness_check():
                     "database": "disconnected"
                 }
             )
+        
+        # Quick Redis check
+        health_service = HealthService()
+        redis_result = await health_service._check_redis()
+        redis_status = "connected" if redis_result.status == "healthy" else "error"
+        
+        # Check migration status
+        from core.database_migration import get_migration_status
+        migration_status = await get_migration_status()
+        
+        return {
+            "status": "ready",
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": "Service ready for traffic",
+            "database": "connected",
+            "redis": redis_status,
+            "migrations": {
+                "current_version": migration_status.get("current_version"),
+                "pending_count": migration_status.get("pending_count", 0),
+                "schema_status": migration_status.get("schema_status", "unknown")
+            },
+            "version": "1.0.0"
+        }
+            
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Readiness check failed", error=str(e))
         raise HTTPException(
@@ -289,23 +322,22 @@ async def readiness_check():
                 "status": "not_ready",
                 "timestamp": datetime.utcnow().isoformat(),
                 "error": str(e),
-                "message": "Service not ready for traffic",
-                "database": "error"
+                "message": "Service not ready for traffic"
             }
         )
 
-@app.get("/health")
-async def health_check():
+@app.get("/health/detailed")
+async def detailed_health_check():
     """
-    Comprehensive health check endpoint for ECS and load balancer
-    Returns HTTP 200 when service is ready to accept traffic
+    Detailed health check endpoint for monitoring and debugging
+    Returns comprehensive status of all services and dependencies
     """
     from services.health_service import HealthService
     
     try:
         health_service = HealthService()
         
-        # Quick health check for basic endpoint (faster for load balancer)
+        # Comprehensive health check
         db_result = await health_service._check_database()
         redis_result = await health_service._check_redis()
         
@@ -331,26 +363,25 @@ async def health_check():
                 "pending_count": migration_status.get("pending_count", 0),
                 "schema_status": migration_status.get("schema_status", "unknown")
             },
-            "version": "1.0.0",
-            "message": "Use /api/v1/health/detailed for comprehensive health check"
+            "version": "1.0.0"
         }
         
         # Return HTTP 200 only if core services are healthy
         if is_healthy:
             return response
         else:
-            # Return HTTP 503 Service Unavailable if core services are down
             raise HTTPException(
                 status_code=503,
                 detail={
                     **response,
-                    "error": "Core services unavailable - service not ready for traffic"
+                    "error": "Core services unavailable"
                 }
             )
             
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Health check failed", error=str(e))
-        # Return HTTP 503 for any health check failures
+        logger.error("Detailed health check failed", error=str(e))
         raise HTTPException(
             status_code=503,
             detail={
@@ -360,8 +391,7 @@ async def health_check():
                 "redis": "error",
                 "aws_services": "unknown",
                 "migrations": {"status": "unknown"},
-                "error": str(e),
-                "message": "Service not ready for traffic"
+                "error": str(e)
             }
         )
 
