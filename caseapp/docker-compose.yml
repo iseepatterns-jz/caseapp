@@ -67,14 +67,25 @@ services:
       context: .
       target: media-processor
     environment:
+      # Database configuration (same as backend)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=courtcase_user
+      - DB_PASSWORD=courtcase_password
+      - DB_NAME=courtcase_db
+      # Other services
       - AWS_REGION=us-east-1
       - S3_BUCKET_NAME=court-case-media
       - REDIS_URL=redis://redis:6379
     volumes:
       - media_storage:/app/media
     depends_on:
-      - redis
-      - backend
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_healthy
 
   # Frontend Service
   frontend:

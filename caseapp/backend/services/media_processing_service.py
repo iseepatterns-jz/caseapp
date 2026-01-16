@@ -16,6 +16,7 @@ import hashlib
 from models.media import MediaEvidence, MediaProcessingJob, ProcessingStatus, MediaType
 from core.database import get_db
 from core.exceptions import CaseManagementException
+from sqlalchemy import select
 
 logger = structlog.get_logger()
 
@@ -380,35 +381,67 @@ class MediaProcessingService:
             return 0
 
 async def run_media_processor():
-    """Background task to process media jobs"""
+    """Background task to process media jobs with retry logic"""
     
     logger.info("Media processor starting...")
     
-    while True:
-        async for db in get_db():
-            try:
-                processor = MediaProcessingService(db)
-                
-                # Process pending jobs
-                processed = await processor.process_pending_jobs(limit=10)
-                
-                # Retry failed jobs occasionally
-                if processed == 0:  # Only retry when no pending jobs
-                    await processor.retry_failed_jobs(limit=3)
-                    
-            except Exception as e:
-                logger.error("Media processor error", error=str(e))
-            finally:
+    # Wait for database to be ready
+    max_retries = 30
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            # Test database connection
+            async for db in get_db():
+                await db.execute(select(1))
                 await db.close()
+                logger.info("Database connection successful")
+                break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Database not ready (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s: {str(e)}")
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"Failed to connect to database after {max_retries} attempts")
+                raise
+    
+    # Main processing loop
+    while True:
+        try:
+            async for db in get_db():
+                try:
+                    processor = MediaProcessingService(db)
+                    
+                    # Process pending jobs
+                    processed = await processor.process_pending_jobs(limit=10)
+                    
+                    # Retry failed jobs occasionally
+                    if processed == 0:  # Only retry when no pending jobs
+                        await processor.retry_failed_jobs(limit=3)
+                        
+                except Exception as e:
+                    logger.error("Media processor error", error=str(e))
+                finally:
+                    await db.close()
+                
+                # Wait before next processing cycle
+                await asyncio.sleep(30)  # Process every 30 seconds
+                break  # Exit the async for loop after one iteration
             
-            # Wait before next processing cycle
-            await asyncio.sleep(30)  # Process every 30 seconds
-            break  # Exit the async for loop after one iteration
-        
-        # Small delay between cycles
-        await asyncio.sleep(1)
+            # Small delay between cycles
+            await asyncio.sleep(1)
+            
+        except Exception as e:
+            logger.error("Fatal media processor error", error=str(e))
+            await asyncio.sleep(5)  # Wait before retrying
 
 if __name__ == "__main__":
     """Entry point when run as a module"""
     logger.info("Starting media processing service...")
-    asyncio.run(run_media_processor())
+    try:
+        asyncio.run(run_media_processor())
+    except KeyboardInterrupt:
+        logger.info("Media processor stopped by user")
+    except Exception as e:
+        logger.error("Media processor failed to start", error=str(e))
+        raise
