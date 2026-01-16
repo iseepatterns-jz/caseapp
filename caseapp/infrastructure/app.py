@@ -21,6 +21,7 @@ from aws_cdk import (
     aws_cloudwatch as cloudwatch,
     aws_cloudwatch_actions as cw_actions,
     aws_sns as sns,
+    aws_secretsmanager as secretsmanager,
     Duration,
     RemovalPolicy
 )
@@ -373,6 +374,12 @@ class CourtCaseManagementStack(Stack):
         # Get Docker username from environment or use default
         docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
         
+        # Import Docker Hub credentials from Secrets Manager
+        dockerhub_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "DockerHubCredentials",
+            secret_name="dockerhub-credentials"
+        )
+        
         # ECS Cluster
         self.cluster = ecs.Cluster(
             self, "CourtCaseCluster",
@@ -388,6 +395,9 @@ class CourtCaseManagementStack(Stack):
                 iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonECSTaskExecutionRolePolicy")
             ]
         )
+        
+        # Grant execution role permission to read Docker Hub credentials
+        dockerhub_secret.grant_read(execution_role)
         
         # Task role with minimal required permissions for AWS services
         task_role = iam.Role(
@@ -493,6 +503,15 @@ class CourtCaseManagementStack(Stack):
         
         # Configure ECS service health check settings
         cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
+        
+        # Add Docker Hub credentials to backend task definition
+        cfn_task_def = self.backend_service.task_definition.node.default_child
+        cfn_task_def.add_property_override(
+            "ContainerDefinitions.0.RepositoryCredentials",
+            {
+                "CredentialsParameter": dockerhub_secret.secret_arn
+            }
+        )
         
         # Configure load balancer health check
         # Use root endpoint / which is simple and doesn't require database
@@ -815,12 +834,21 @@ class CourtCaseManagementStack(Stack):
         # Get Docker username from environment or use default
         docker_username = self.node.try_get_context("docker_username") or "iseepatterns"
         
+        # Import Docker Hub credentials from Secrets Manager
+        dockerhub_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "DockerHubCredentialsMedia",
+            secret_name="dockerhub-credentials"
+        )
+        
         # Media processing task definition
         media_task_def = ecs.FargateTaskDefinition(
             self, "MediaProcessingTask",
             memory_limit_mib=4096,  # Increased for media processing workloads
             cpu=2048                # Increased for better media processing performance
         )
+        
+        # Grant execution role permission to read Docker Hub credentials
+        dockerhub_secret.grant_read(media_task_def.execution_role)
         
         # Grant permissions
         self.media_bucket.grant_read_write(media_task_def.task_role)
@@ -837,6 +865,15 @@ class CourtCaseManagementStack(Stack):
                 stream_prefix="media-processor",
                 log_retention=logs.RetentionDays.ONE_WEEK
             )
+        )
+        
+        # Add Docker Hub credentials to media container
+        cfn_task_def = media_task_def.node.default_child
+        cfn_task_def.add_property_override(
+            "ContainerDefinitions.0.RepositoryCredentials",
+            {
+                "CredentialsParameter": dockerhub_secret.secret_arn
+            }
         )
         
         # Media processing service
