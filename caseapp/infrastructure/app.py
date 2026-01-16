@@ -840,15 +840,25 @@ class CourtCaseManagementStack(Stack):
             secret_name="dockerhub-credentials"
         )
         
+        # Create execution role for media task
+        media_execution_role = iam.Role(
+            self, "MediaTaskExecutionRole",
+            assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AmazonECSTaskExecutionRolePolicy")
+            ]
+        )
+        
+        # Grant execution role permission to read Docker Hub credentials
+        dockerhub_secret.grant_read(media_execution_role)
+        
         # Media processing task definition
         media_task_def = ecs.FargateTaskDefinition(
             self, "MediaProcessingTask",
             memory_limit_mib=4096,  # Increased for media processing workloads
-            cpu=2048                # Increased for better media processing performance
+            cpu=2048,               # Increased for better media processing performance
+            execution_role=media_execution_role
         )
-        
-        # Grant execution role permission to read Docker Hub credentials
-        dockerhub_secret.grant_read(media_task_def.execution_role)
         
         # Grant permissions
         self.media_bucket.grant_read_write(media_task_def.task_role)
