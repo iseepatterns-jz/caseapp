@@ -912,6 +912,11 @@ class CourtCaseManagementStack(Stack):
                 enable=True  # Explicitly enable circuit breaker for automatic rollback
             )
         )
+        
+        # Apply same security group as backend service to allow database and Redis access
+        cfn_media_service = self.media_service.node.default_child
+        cfn_media_service.add_property_override("NetworkConfiguration.AwsvpcConfiguration.SecurityGroups",
+                                                [self.ecs_security_group.security_group_id])
     
     def setup_ai_services(self):
         """Setup AI services permissions and configurations"""
