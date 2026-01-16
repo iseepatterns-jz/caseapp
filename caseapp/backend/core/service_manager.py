@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from core.database import engine, Base
 from core.redis import redis_service
-from services.aws_service import aws_service
+from core.aws_service import aws_service
 from services.health_service import HealthService
 
 logger = structlog.get_logger()
