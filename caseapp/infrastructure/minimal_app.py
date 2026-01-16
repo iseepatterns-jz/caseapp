@@ -56,7 +56,7 @@ class MinimalBackendStack(Stack):
         database = rds.DatabaseInstance(
             self, "MinimalDatabase",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15_7
+                version=rds.PostgresEngineVersion.of("15", "15.15")  # Latest PostgreSQL 15 version available in RDS
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
