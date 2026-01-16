@@ -12,7 +12,7 @@ from sqlalchemy import text
 
 from core.database import get_db
 from core.redis import redis_service
-from services.aws_service import aws_service
+from core.aws_service import aws_service
 from services.case_service import CaseService
 from services.document_service import DocumentService
 from services.timeline_service import TimelineService

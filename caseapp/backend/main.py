@@ -22,7 +22,7 @@ from core.exceptions import (
     http_exception_handler
 )
 from api.v1.api import api_router
-from services.aws_service import aws_service
+from core.aws_service import aws_service
 
 # Configure structured logging
 structlog.configure(
