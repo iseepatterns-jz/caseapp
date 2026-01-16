@@ -173,7 +173,7 @@ class CourtCaseManagementStack(Stack):
         self.database = rds.DatabaseInstance(
             self, "CourtCaseDatabase",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15
+                version=rds.PostgresEngineVersion.of("15", "15.15")  # Latest PostgreSQL 15 version available in RDS
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
@@ -418,6 +418,10 @@ class CourtCaseManagementStack(Stack):
             cpu=2048,               # Increased from 1024 to 2048 (2 vCPU) for better performance
             desired_count=2,
             health_check_grace_period=Duration.seconds(300),  # 5 minute grace period for startup
+            circuit_breaker=ecs.DeploymentCircuitBreaker(
+                rollback=True,
+                enable=True  # Explicitly enable circuit breaker for automatic rollback
+            ),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-backend:latest"),
                 container_port=8000,
@@ -862,6 +866,7 @@ class CourtCaseManagementStack(Stack):
         
         # Grant permissions
         self.media_bucket.grant_read_write(media_task_def.task_role)
+        self.database.secret.grant_read(media_task_def.task_role)
         
         # Media processing container
         media_container = media_task_def.add_container(
@@ -869,7 +874,17 @@ class CourtCaseManagementStack(Stack):
             image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-media:latest"),
             environment={
                 "AWS_REGION": self.region,
-                "S3_BUCKET_NAME": self.media_bucket.bucket_name
+                "S3_BUCKET_NAME": self.media_bucket.bucket_name,
+                "S3_MEDIA_BUCKET": self.media_bucket.bucket_name,
+                "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379"
+            },
+            secrets={
+                # Use individual secret fields from RDS-generated secret
+                "DB_HOST": ecs.Secret.from_secrets_manager(self.database.secret, "host"),
+                "DB_USER": ecs.Secret.from_secrets_manager(self.database.secret, "username"),
+                "DB_PASSWORD": ecs.Secret.from_secrets_manager(self.database.secret, "password"),
+                "DB_PORT": ecs.Secret.from_secrets_manager(self.database.secret, "port"),
+                "DB_NAME": ecs.Secret.from_secrets_manager(self.database.secret, "dbname")
             },
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix="media-processor",
@@ -891,7 +906,11 @@ class CourtCaseManagementStack(Stack):
             self, "MediaProcessingService",
             cluster=self.cluster,
             task_definition=media_task_def,
-            desired_count=1
+            desired_count=1,
+            circuit_breaker=ecs.DeploymentCircuitBreaker(
+                rollback=True,
+                enable=True  # Explicitly enable circuit breaker for automatic rollback
+            )
         )
     
     def setup_ai_services(self):
