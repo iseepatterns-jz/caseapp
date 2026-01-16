@@ -61,6 +61,7 @@ jobs:
           target: backend-base
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest
+          no-cache: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -72,6 +73,7 @@ jobs:
           target: media-processor
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/court-case-media:latest
+          no-cache: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
