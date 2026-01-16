@@ -382,21 +382,33 @@ class MediaProcessingService:
 async def run_media_processor():
     """Background task to process media jobs"""
     
-    async for db in get_db():
-        try:
-            processor = MediaProcessingService(db)
-            
-            # Process pending jobs
-            processed = await processor.process_pending_jobs(limit=10)
-            
-            # Retry failed jobs occasionally
-            if processed == 0:  # Only retry when no pending jobs
-                await processor.retry_failed_jobs(limit=3)
+    logger.info("Media processor starting...")
+    
+    while True:
+        async for db in get_db():
+            try:
+                processor = MediaProcessingService(db)
                 
-        except Exception as e:
-            logger.error("Media processor error", error=str(e))
-        finally:
-            await db.close()
+                # Process pending jobs
+                processed = await processor.process_pending_jobs(limit=10)
+                
+                # Retry failed jobs occasionally
+                if processed == 0:  # Only retry when no pending jobs
+                    await processor.retry_failed_jobs(limit=3)
+                    
+            except Exception as e:
+                logger.error("Media processor error", error=str(e))
+            finally:
+                await db.close()
+            
+            # Wait before next processing cycle
+            await asyncio.sleep(30)  # Process every 30 seconds
+            break  # Exit the async for loop after one iteration
         
-        # Wait before next processing cycle
-        await asyncio.sleep(30)  # Process every 30 seconds
+        # Small delay between cycles
+        await asyncio.sleep(1)
+
+if __name__ == "__main__":
+    """Entry point when run as a module"""
+    logger.info("Starting media processing service...")
+    asyncio.run(run_media_processor())

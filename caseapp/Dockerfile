@@ -114,4 +114,4 @@ COPY backend/schemas/ ./schemas/
 # Ensure __init__.py files exist in all packages
 RUN touch ./services/__init__.py ./core/__init__.py ./models/__init__.py ./schemas/__init__.py || true
 
-CMD ["python", "-m", "services.media_service"]
+CMD ["python", "-m", "services.media_processing_service"]

@@ -1,0 +1,1092 @@
+name: CI/CD Pipeline
+
+on:
+  # push:  # DISABLED: Prevent automatic deployments on push
+  #   branches: [main, develop]
+  # pull_request:  # DISABLED: Prevent automatic deployments on PR
+  #   branches: [main]
+  workflow_dispatch: # Only allow manual deployments
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      force_cleanup:
+        description: "Force cleanup of existing resources"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: court-case-management
+  DEPLOYMENT_TIMEOUT: 3600 # 60 minutes
+  HEALTH_CHECK_TIMEOUT: 300 # 5 minutes
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # Prevent hanging tests
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_db"
+          --health-interval 3s
+          --health-timeout 15s
+          --health-retries 20
+          --health-start-period 60s
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 15s
+          --health-retries 20
+          --health-start-period 30s
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+        timeout-minutes: 3
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+        timeout-minutes: 2
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r caseapp/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+        timeout-minutes: 5
+
+      - name: Wait for services to be ready
+        run: |
+          echo "🔍 Waiting for services to be ready with Docker exec commands..."
+
+          # Function for exponential backoff retry with Docker exec
+          retry_with_backoff() {
+            local max_attempts=20
+            local delay=3
+            local attempt=1
+            local command="$1"
+            local service_name="$2"
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "⏳ Attempt $attempt/$max_attempts: Checking $service_name..."
+              
+              if eval "$command"; then
+                echo "✅ $service_name is ready!"
+                return 0
+              fi
+              
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ $service_name failed to become ready after $max_attempts attempts"
+                echo "🔍 Debugging $service_name status..."
+                
+                # Show Docker containers
+                echo "Docker containers:"
+                docker ps -a || true
+                
+                # Additional debugging for PostgreSQL
+                if [ "$service_name" = "PostgreSQL" ]; then
+                  echo "PostgreSQL container logs:"
+                  POSTGRES_CONTAINER=$(docker ps -q --filter ancestor=postgres:15)
+                  if [ -n "$POSTGRES_CONTAINER" ]; then
+                    docker logs "$POSTGRES_CONTAINER" 2>/dev/null | tail -30 || true
+                    echo "Testing PostgreSQL connection via Docker exec:"
+                    docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d test_db || true
+                  else
+                    echo "PostgreSQL container not found"
+                  fi
+                fi
+                
+                # Additional debugging for Redis
+                if [ "$service_name" = "Redis" ]; then
+                  echo "Redis container logs:"
+                  REDIS_CONTAINER=$(docker ps -q --filter ancestor=redis:7-alpine)
+                  if [ -n "$REDIS_CONTAINER" ]; then
+                    docker logs "$REDIS_CONTAINER" 2>/dev/null | tail -30 || true
+                    echo "Testing Redis connection via Docker exec:"
+                    docker exec "$REDIS_CONTAINER" redis-cli ping || true
+                  else
+                    echo "Redis container not found"
+                  fi
+                fi
+                
+                return 1
+              fi
+              
+              echo "⏳ $service_name not ready, waiting ${delay}s before retry..."
+              sleep $delay
+              
+              # Exponential backoff with max delay of 15 seconds
+              if [ $delay -lt 15 ]; then
+                delay=$((delay + 2))
+              fi
+              
+              attempt=$((attempt + 1))
+            done
+          }
+
+          # Wait for PostgreSQL with Docker exec
+          echo "🐘 Waiting for PostgreSQL to be ready..."
+          retry_with_backoff "docker exec \$(docker ps -q --filter ancestor=postgres:15) pg_isready -U postgres -d test_db > /dev/null 2>&1" "PostgreSQL"
+
+          # Wait for Redis with Docker exec
+          echo "🔴 Waiting for Redis to be ready..."
+          retry_with_backoff "docker exec \$(docker ps -q --filter ancestor=redis:7-alpine) redis-cli ping > /dev/null 2>&1" "Redis"
+
+          echo "🎉 All services are ready and healthy!"
+        timeout-minutes: 6
+
+      - name: Run backend tests
+        working-directory: caseapp/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          SECRET_KEY: test-secret-key-for-ci
+          ENABLE_AI_FEATURES: false
+        run: |
+          python -m pytest tests/test_ci_basic.py -v --cov=. --cov-report=xml --cov-report=term-missing --tb=short
+        timeout-minutes: 10
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: caseapp/backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+        timeout-minutes: 2
+        continue-on-error: true # Don't fail build if coverage upload fails
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # Allow time for RDS and OpenSearch creation
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    outputs:
+      backend-image: ${{ steps.meta.outputs.tags }}
+      backend-digest: ${{ steps.build-backend.outputs.digest }}
+      media-image: ${{ steps.meta-media.outputs.tags }}
+      media-digest: ${{ steps.build-media.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        timeout-minutes: 2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        timeout-minutes: 2
+
+      - name: Verify Docker Hub credentials
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "❌ Docker Hub credentials not configured"
+            echo "Please add DOCKER_USERNAME and DOCKER_PASSWORD to repository secrets"
+            exit 1
+          fi
+          echo "✅ Docker Hub credentials verified"
+
+      - name: Extract backend metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/court-case-backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract media processor metadata
+        id: meta-media
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/court-case-media
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        id: build-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./caseapp
+          file: ./caseapp/Dockerfile
+          target: backend-base
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+        timeout-minutes: 20
+
+      - name: Build and push media processor image
+        id: build-media
+        uses: docker/build-push-action@v5
+        with:
+          context: ./caseapp
+          file: ./caseapp/Dockerfile
+          target: media-processor
+          push: true
+          tags: ${{ steps.meta-media.outputs.tags }}
+          labels: ${{ steps.meta-media.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+        timeout-minutes: 15
+
+      - name: Verify image accessibility with validation gates
+        run: |
+          echo "🔍 Running Docker image validation gates..."
+
+          # Set environment variables for the validation script
+          export DOCKER_USERNAME="${{ secrets.DOCKER_USERNAME }}"
+          export AWS_REGION="${{ env.AWS_REGION }}"
+
+          # Change to caseapp directory and run validation
+          cd caseapp
+          chmod +x scripts/deployment-validation-gates.sh
+
+          # Run only Docker image validation (Gate 1)
+          echo "Validating Docker image accessibility..."
+          if docker manifest inspect ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest > /dev/null 2>&1; then
+            echo "✅ Backend image accessible: ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest"
+          else
+            echo "❌ Backend image not accessible"
+            exit 1
+          fi
+
+          if docker manifest inspect ${{ secrets.DOCKER_USERNAME }}/court-case-media:latest > /dev/null 2>&1; then
+            echo "✅ Media image accessible: ${{ secrets.DOCKER_USERNAME }}/court-case-media:latest"
+          else
+            echo "❌ Media image not accessible"
+            exit 1
+          fi
+
+          echo "🎉 All Docker images are accessible and ready for deployment"
+        timeout-minutes: 2
+
+  security-scan:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    continue-on-error: true # Don't fail deployment if security scan fails
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Run Trivy vulnerability scanner on backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest
+          format: "sarif"
+          output: "trivy-backend-results.sarif"
+        timeout-minutes: 10
+        continue-on-error: true
+
+      - name: Run Trivy vulnerability scanner on media processor
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/court-case-media:latest
+          format: "sarif"
+          output: "trivy-media-results.sarif"
+        timeout-minutes: 10
+        continue-on-error: true
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-backend-results.sarif"
+        continue-on-error: true
+        timeout-minutes: 2
+
+      - name: Upload Media Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-media-results.sarif"
+        continue-on-error: true
+        timeout-minutes: 2
+
+      - name: Security scan summary
+        run: |
+          echo "🔒 Security scan completed for both backend and media processor images"
+          echo "📊 Check the Security tab for detailed vulnerability reports"
+          echo "ℹ️  Note: Security scan failures do not block deployment in this configuration"
+
+  deploy-staging:
+    needs: [test, build-and-push]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45 # Extended timeout for deployment
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Generate deployment correlation ID
+        id: correlation
+        run: |
+          CORRELATION_ID="deploy-$(date +%Y%m%d-%H%M%S)-${{ github.run_id }}"
+          echo "correlation_id=$CORRELATION_ID" >> $GITHUB_OUTPUT
+          echo "🔗 Deployment Correlation ID: $CORRELATION_ID"
+        timeout-minutes: 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+        timeout-minutes: 1
+
+      - name: Verify AWS credentials and permissions
+        run: |
+          echo "🔐 Verifying AWS credentials..."
+          aws sts get-caller-identity
+
+          echo "🔍 Checking required AWS permissions..."
+          # Test basic permissions
+          aws cloudformation list-stacks --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+          aws ecs list-clusters --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+          aws rds describe-db-instances --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+
+          echo "✅ AWS credentials and permissions verified"
+        timeout-minutes: 2
+
+      - name: Check deployment coordination
+        id: coordination
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          ENVIRONMENT: staging
+          STACK_NAME: CourtCaseManagementStack-Staging
+        run: |
+          echo "🔍 Checking if deployment can proceed..."
+
+          # Make scripts executable
+          chmod +x caseapp/scripts/deployment-coordinator.sh
+          chmod +x caseapp/scripts/slack-notifier.sh
+
+          # Send deployment start notification
+          bash caseapp/scripts/slack-notifier.sh start \
+            "$CORRELATION_ID" \
+            "staging" \
+            "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Check if deployment can proceed
+          if bash caseapp/scripts/deployment-coordinator.sh can_deploy staging "$STACK_NAME"; then
+            echo "✅ No active deployment detected, proceeding..."
+            
+            # Register this deployment
+            bash caseapp/scripts/deployment-coordinator.sh register \
+              "$CORRELATION_ID" \
+              "$WORKFLOW_RUN_ID" \
+              staging \
+              "$STACK_NAME"
+            
+            echo "can_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Active deployment detected, checking if we should wait..."
+            
+            # Send concurrent deployment notification
+            bash caseapp/scripts/slack-notifier.sh concurrent \
+              "$CORRELATION_ID" \
+              "staging" \
+              "30"
+            
+            # Wait for active deployment to complete (max 30 minutes)
+            if bash caseapp/scripts/deployment-coordinator.sh wait staging 30 "$STACK_NAME"; then
+              echo "✅ Previous deployment completed, proceeding..."
+              
+              # Register this deployment
+              bash caseapp/scripts/deployment-coordinator.sh register \
+                "$CORRELATION_ID" \
+                "$WORKFLOW_RUN_ID" \
+                staging \
+                "$STACK_NAME"
+              
+              echo "can_proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Timeout waiting for previous deployment to complete"
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+        timeout-minutes: 35
+
+      - name: Start deployment monitoring
+        if: steps.coordination.outputs.can_proceed == 'true'
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          STACK_NAME: CourtCaseManagementStack-Staging
+        run: |
+          echo "🔍 Starting deployment monitoring in background..."
+
+          # Make monitor script executable
+          chmod +x caseapp/scripts/deployment-monitor.sh
+
+          # Start monitoring in background
+          nohup bash caseapp/scripts/deployment-monitor.sh \
+            "$CORRELATION_ID" \
+            "$STACK_NAME" \
+            "C0A9M9DPFUY" \
+            "deployment-monitor-staging.log" \
+            > monitor-output.log 2>&1 &
+
+          MONITOR_PID=$!
+          echo "monitor_pid=$MONITOR_PID" >> $GITHUB_OUTPUT
+          echo "✅ Deployment monitor started (PID: $MONITOR_PID)"
+
+          # Give monitor time to initialize
+          sleep 5
+        timeout-minutes: 2
+
+      - name: Set up Python for CDK
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+        timeout-minutes: 3
+
+      - name: Install Node.js for CDK CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+        timeout-minutes: 2
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+        timeout-minutes: 3
+
+      - name: Run enhanced pre-deployment validation with auto-resolution
+        if: steps.coordination.outputs.can_proceed == 'true'
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🔍 Running enhanced pre-deployment validation with automatic conflict resolution..."
+
+          # Make scripts executable
+          chmod +x scripts/enhanced-deployment-validation.sh
+          chmod +x scripts/resolve-rds-deletion-protection.sh
+          chmod +x scripts/cleanup-cloudformation-stack.sh
+
+          # Set environment variables for enhanced validation
+          export AUTO_RESOLVE=true
+          export CI=true
+          export GITHUB_ACTIONS=true
+          export CORRELATION_ID="$CORRELATION_ID"
+
+          # Run enhanced validation with automatic resolution
+          if ./scripts/enhanced-deployment-validation.sh; then
+            echo "✅ All deployment validation checks passed"
+          else
+            exit_code=$?
+            if [ $exit_code -eq 1 ]; then
+              echo "⚠️  Deployment validation completed with warnings after auto-resolution"
+              echo "🚀 Proceeding with deployment..."
+            elif [ $exit_code -eq 2 ]; then
+              echo "⚠️  Concurrent deployment detected by validation script"
+              echo "This should have been handled by coordination step"
+              echo "Proceeding as coordination already approved deployment..."
+            else
+              echo "❌ Enhanced deployment validation failed even after auto-resolution"
+              
+              # Fallback to manual cleanup if force cleanup is requested
+              if [ "${{ github.event.inputs.force_cleanup }}" = "true" ]; then
+                echo "🧹 Force cleanup requested as fallback, running manual cleanup..."
+                echo "y" | ./scripts/cleanup-cloudformation-stack.sh || true
+                
+                echo "🔍 Re-running basic validation after manual cleanup..."
+                chmod +x scripts/deployment-validation-gates.sh
+                ./scripts/deployment-validation-gates.sh
+              else
+                echo "❌ Enhanced validation failed and force cleanup not requested"
+                echo "Re-run workflow with force_cleanup=true to attempt manual cleanup"
+                exit 1
+              fi
+            fi
+          fi
+        timeout-minutes: 25
+
+      - name: Deploy to staging with validation and retry
+        if: steps.coordination.outputs.can_proceed == 'true'
+        working-directory: caseapp
+        env:
+          ENVIRONMENT: staging
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          STACK_NAME: CourtCaseManagementStack-Staging
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🚀 Starting staging deployment with enhanced reliability..."
+
+          # Make scripts executable
+          chmod +x scripts/deploy-with-validation.sh
+
+          # Set stack name for staging
+          export STACK_NAME="CourtCaseManagementStack-Staging"
+
+          # Run deployment with validation and retry logic
+          ./scripts/deploy-with-validation.sh
+        timeout-minutes: 45
+
+      - name: Run post-deployment validation
+        working-directory: caseapp
+        run: |
+          echo "🔍 Running post-deployment validation..."
+
+          # Wait for services to stabilize
+          echo "⏳ Waiting for services to stabilize..."
+          sleep 120
+
+          # Get stack outputs
+          STACK_NAME="CourtCaseManagementStack-Staging"
+
+          # Check if stack exists and get outputs
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+            echo "📊 Stack outputs:"
+            aws cloudformation describe-stacks \
+              --stack-name "$STACK_NAME" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'Stacks[0].Outputs' \
+              --output table
+            
+            # Get load balancer DNS if available
+            ALB_DNS=$(aws cloudformation describe-stacks \
+              --stack-name "$STACK_NAME" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerDNS`].OutputValue' \
+              --output text 2>/dev/null || echo "")
+            
+            if [ -n "$ALB_DNS" ] && [ "$ALB_DNS" != "None" ]; then
+              echo "🌐 Load Balancer DNS: $ALB_DNS"
+              
+              # Health check with retry
+              echo "🏥 Testing health endpoint..."
+              for i in {1..5}; do
+                if curl -f --connect-timeout 10 --max-time 30 "http://$ALB_DNS/health" > /dev/null 2>&1; then
+                  echo "✅ Health check passed on attempt $i"
+                  break
+                elif [ $i -eq 5 ]; then
+                  echo "⚠️  Health check failed after 5 attempts, but continuing..."
+                else
+                  echo "⏳ Health check attempt $i failed, retrying in 30s..."
+                  sleep 30
+                fi
+              done
+            else
+              echo "⚠️  Load Balancer DNS not found in stack outputs"
+            fi
+          else
+            echo "⚠️  Stack not found or not accessible"
+          fi
+
+          echo "✅ Post-deployment validation completed"
+        timeout-minutes: 10
+
+      - name: Deployment status summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 Staging deployment completed successfully!"
+            echo "📍 Environment: staging"
+            echo "🏷️  Images deployed:"
+            echo "   - Backend: ${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest"
+            echo "   - Media: ${{ secrets.DOCKER_USERNAME }}/court-case-media:latest"
+          else
+            echo "❌ Staging deployment failed!"
+            echo "🔍 Check the logs above for detailed error information"
+            echo "💡 Consider running with force_cleanup=true if there are resource conflicts"
+          fi
+
+      - name: Cleanup deployment registry
+        if: always()
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🧹 Cleaning up deployment registry..."
+
+          # Make coordinator script executable
+          chmod +x caseapp/scripts/deployment-coordinator.sh
+          chmod +x caseapp/scripts/slack-notifier.sh
+
+          # Remove deployment from registry
+          if bash caseapp/scripts/deployment-coordinator.sh cleanup "$CORRELATION_ID"; then
+            echo "✅ Deployment registry cleaned up successfully"
+          else
+            echo "⚠️  Failed to cleanup deployment registry (non-critical)"
+          fi
+
+          # Send final deployment notification
+          if [ "${{ job.status }}" = "success" ]; then
+            bash caseapp/scripts/slack-notifier.sh complete \
+              "$CORRELATION_ID" \
+              "staging" \
+              "30" \
+              "http://staging-alb-dns.example.com"
+          else
+            bash caseapp/scripts/slack-notifier.sh failed \
+              "$CORRELATION_ID" \
+              "staging" \
+              "Deployment failed - check workflow logs"
+          fi
+        timeout-minutes: 2
+
+  deploy-production:
+    needs: [test, build-and-push, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # Extended timeout for production deployment (2 hours)
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Generate deployment correlation ID
+        id: correlation
+        run: |
+          CORRELATION_ID="deploy-$(date +%Y%m%d-%H%M%S)-${{ github.run_id }}"
+          echo "correlation_id=$CORRELATION_ID" >> $GITHUB_OUTPUT
+          echo "🔗 Deployment Correlation ID: $CORRELATION_ID"
+        timeout-minutes: 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+        timeout-minutes: 1
+
+      - name: Verify AWS credentials and permissions
+        run: |
+          echo "🔐 Verifying AWS credentials for production deployment..."
+
+          # Verify credentials
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          USER_ARN=$(aws sts get-caller-identity --query Arn --output text)
+
+          echo "📋 AWS Account ID: $ACCOUNT_ID"
+          echo "👤 User/Role ARN: $USER_ARN"
+
+          # Verify required secrets
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "❌ AWS credentials not configured in GitHub Secrets"
+            echo "Please add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to repository secrets"
+            exit 1
+          fi
+
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "❌ Docker Hub credentials not configured in GitHub Secrets"
+            echo "Please add DOCKER_USERNAME and DOCKER_PASSWORD to repository secrets"
+            exit 1
+          fi
+
+          echo "🔍 Testing AWS service permissions..."
+          # Test required AWS service permissions
+          aws cloudformation list-stacks --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+          aws ecs list-clusters --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+          aws rds describe-db-instances --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+          aws ec2 describe-vpcs --region ${{ env.AWS_REGION }} --max-items 1 > /dev/null
+
+          echo "✅ AWS credentials and permissions verified for production"
+        timeout-minutes: 3
+
+      - name: Check deployment coordination
+        id: coordination
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          ENVIRONMENT: production
+          STACK_NAME: CourtCaseManagementStack
+        run: |
+          echo "🔍 Checking if production deployment can proceed..."
+
+          # Make scripts executable
+          chmod +x caseapp/scripts/deployment-coordinator.sh
+          chmod +x caseapp/scripts/slack-notifier.sh
+
+          # Send deployment start notification
+          bash caseapp/scripts/slack-notifier.sh start \
+            "$CORRELATION_ID" \
+            "production" \
+            "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Check if deployment can proceed
+          if bash caseapp/scripts/deployment-coordinator.sh can_deploy production "$STACK_NAME"; then
+            echo "✅ No active deployment detected, proceeding..."
+            
+            # Register this deployment
+            bash caseapp/scripts/deployment-coordinator.sh register \
+              "$CORRELATION_ID" \
+              "$WORKFLOW_RUN_ID" \
+              production \
+              "$STACK_NAME"
+            
+            echo "can_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Active deployment detected, checking if we should wait..."
+            
+            # Send concurrent deployment notification
+            bash caseapp/scripts/slack-notifier.sh concurrent \
+              "$CORRELATION_ID" \
+              "production" \
+              "60"
+            
+            # Wait for active deployment to complete (max 60 minutes for production)
+            if bash caseapp/scripts/deployment-coordinator.sh wait production 60 "$STACK_NAME"; then
+              echo "✅ Previous deployment completed, proceeding..."
+              
+              # Register this deployment
+              bash caseapp/scripts/deployment-coordinator.sh register \
+                "$CORRELATION_ID" \
+                "$WORKFLOW_RUN_ID" \
+                production \
+                "$STACK_NAME"
+              
+              echo "can_proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Timeout waiting for previous deployment to complete"
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+        timeout-minutes: 65
+
+      - name: Start deployment monitoring
+        if: steps.coordination.outputs.can_proceed == 'true'
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+          STACK_NAME: CourtCaseManagementStack
+        run: |
+          echo "🔍 Starting deployment monitoring in background..."
+
+          # Make monitor script executable
+          chmod +x caseapp/scripts/deployment-monitor.sh
+
+          # Start monitoring in background
+          nohup bash caseapp/scripts/deployment-monitor.sh \
+            "$CORRELATION_ID" \
+            "$STACK_NAME" \
+            "C0A9M9DPFUY" \
+            "deployment-monitor-production.log" \
+            > monitor-output.log 2>&1 &
+
+          MONITOR_PID=$!
+          echo "monitor_pid=$MONITOR_PID" >> $GITHUB_OUTPUT
+          echo "✅ Deployment monitor started (PID: $MONITOR_PID)"
+
+          # Give monitor time to initialize
+          sleep 5
+        timeout-minutes: 2
+
+      - name: Set up Python for CDK
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+        timeout-minutes: 3
+
+      - name: Install Node.js for CDK CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+        timeout-minutes: 2
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+        timeout-minutes: 3
+
+      - name: Run comprehensive pre-deployment validation with auto-resolution
+        if: steps.coordination.outputs.can_proceed == 'true'
+        working-directory: caseapp
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🔍 Running comprehensive pre-deployment validation with automatic conflict resolution for production..."
+
+          # Make scripts executable
+          chmod +x scripts/enhanced-deployment-validation.sh
+          chmod +x scripts/resolve-rds-deletion-protection.sh
+          chmod +x scripts/cleanup-cloudformation-stack.sh
+          chmod +x scripts/analyze-resource-dependencies.sh
+
+          # Set environment variables for enhanced validation
+          export AUTO_RESOLVE=true
+          export CI=true
+          export GITHUB_ACTIONS=true
+          export CORRELATION_ID="$CORRELATION_ID"
+
+          # Run enhanced validation with automatic resolution
+          if ./scripts/enhanced-deployment-validation.sh; then
+            echo "✅ All deployment validation checks passed"
+          else
+            exit_code=$?
+            if [ $exit_code -eq 1 ]; then
+              echo "⚠️  Deployment validation completed with warnings after auto-resolution"
+              echo "🚀 Proceeding with production deployment..."
+            elif [ $exit_code -eq 2 ]; then
+              echo "⚠️  Concurrent deployment detected by validation script"
+              echo "This should have been handled by coordination step"
+              echo "Proceeding as coordination already approved deployment..."
+            else
+              echo "❌ Enhanced deployment validation failed"
+              
+              # Run dependency analysis for detailed information
+              echo "🔍 Running dependency analysis for additional details..."
+              ./scripts/analyze-resource-dependencies.sh || true
+              
+              # Check if force cleanup is requested
+              if [ "${{ github.event.inputs.force_cleanup }}" = "true" ]; then
+                echo "🧹 Force cleanup requested for production deployment..."
+                echo "⚠️  This will delete existing resources including databases!"
+                
+                echo "y" | ./scripts/cleanup-cloudformation-stack.sh || true
+                
+                # Re-run enhanced validation after cleanup
+                echo "🔍 Re-running enhanced validation after cleanup..."
+                ./scripts/enhanced-deployment-validation.sh
+              else
+                echo "❌ Production validation failed and force cleanup not requested"
+                echo "This is a safety measure to prevent accidental data loss in production"
+                echo "If you're certain you want to proceed, re-run with force_cleanup=true"
+                exit 1
+              fi
+            fi
+          fi
+        timeout-minutes: 35
+
+      - name: Deploy to production with enhanced reliability
+        if: steps.coordination.outputs.can_proceed == 'true'
+        working-directory: caseapp
+        env:
+          ENVIRONMENT: production
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🚀 Starting production deployment with enhanced reliability..."
+          echo "⚠️  Production deployment - proceeding with caution"
+
+          # Make deployment script executable
+          chmod +x scripts/deploy-with-validation.sh
+
+          # Run deployment with validation and retry logic
+          ./scripts/deploy-with-validation.sh
+
+          echo "✅ Production deployment completed successfully"
+        timeout-minutes: 90
+
+      - name: Run comprehensive post-deployment validation
+        run: |
+          echo "🔍 Running comprehensive post-deployment validation..."
+
+          # Extended wait for production services to stabilize
+          echo "⏳ Waiting for production services to fully stabilize..."
+          sleep 180  # 3 minutes for production
+
+          # Get stack outputs
+          STACK_NAME="CourtCaseManagementStack"
+
+          echo "📊 Production stack outputs:"
+          aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Stacks[0].Outputs' \
+            --output table
+
+          # Get load balancer DNS
+          ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerDNS`].OutputValue' \
+            --output text 2>/dev/null || echo "")
+
+          if [ -n "$ALB_DNS" ] && [ "$ALB_DNS" != "None" ]; then
+            echo "🌐 Production Load Balancer DNS: $ALB_DNS"
+            
+            # Comprehensive health checks with retry
+            echo "🏥 Running comprehensive health checks..."
+            
+            # Basic health check
+            for i in {1..10}; do
+              if curl -f --connect-timeout 10 --max-time 30 "http://$ALB_DNS/health" > /dev/null 2>&1; then
+                echo "✅ Basic health check passed on attempt $i"
+                break
+              elif [ $i -eq 10 ]; then
+                echo "❌ Basic health check failed after 10 attempts"
+                exit 1
+              else
+                echo "⏳ Health check attempt $i failed, retrying in 30s..."
+                sleep 30
+              fi
+            done
+            
+            # API documentation check
+            echo "📚 Testing API documentation endpoint..."
+            if curl -f --connect-timeout 10 --max-time 30 "http://$ALB_DNS/docs" > /dev/null 2>&1; then
+              echo "✅ API documentation endpoint accessible"
+            else
+              echo "⚠️  API documentation endpoint not accessible (non-critical)"
+            fi
+            
+            # Ready endpoint check
+            echo "🎯 Testing readiness endpoint..."
+            if curl -f --connect-timeout 10 --max-time 30 "http://$ALB_DNS/health/ready" > /dev/null 2>&1; then
+              echo "✅ Readiness endpoint accessible"
+            else
+              echo "⚠️  Readiness endpoint not accessible"
+            fi
+            
+            echo "🎯 Production application is accessible at: http://$ALB_DNS"
+            
+          else
+            echo "❌ Load Balancer DNS not found in stack outputs"
+            exit 1
+          fi
+
+          # Check ECS service health
+          echo "🐳 Checking ECS service health..."
+          ECS_SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster CourtCaseCluster \
+            --services BackendService \
+            --region ${{ env.AWS_REGION }} \
+            --query 'services[0].status' \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+
+          if [ "$ECS_SERVICE_STATUS" = "ACTIVE" ]; then
+            echo "✅ ECS service is active and healthy"
+          else
+            echo "⚠️  ECS service status: $ECS_SERVICE_STATUS"
+          fi
+
+          echo "✅ Comprehensive post-deployment validation completed"
+        timeout-minutes: 15
+
+      - name: Create deployment summary
+        if: always()
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "### ✅ Deployment Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Production deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Deployment Details:**" >> $GITHUB_STEP_SUMMARY
+            echo "- 📍 Environment: Production" >> $GITHUB_STEP_SUMMARY
+            echo "- 🏷️  Backend Image: \`${{ secrets.DOCKER_USERNAME }}/court-case-backend:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- 🏷️  Media Image: \`${{ secrets.DOCKER_USERNAME }}/court-case-media:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- 🌐 Region: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+            echo "- ⏰ Deployment Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Monitor application health in AWS Console" >> $GITHUB_STEP_SUMMARY
+            echo "2. Check CloudWatch logs for any issues" >> $GITHUB_STEP_SUMMARY
+            echo "3. Verify all application features are working correctly" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Deployment Status: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Production deployment failed!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Troubleshooting Steps:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Check the workflow logs for detailed error information" >> $GITHUB_STEP_SUMMARY
+            echo "2. Verify AWS credentials and permissions" >> $GITHUB_STEP_SUMMARY
+            echo "3. Check for resource conflicts or dependency issues" >> $GITHUB_STEP_SUMMARY
+            echo "4. Consider running with \`force_cleanup=true\` if there are resource conflicts" >> $GITHUB_STEP_SUMMARY
+            echo "5. Review CloudFormation events in AWS Console" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify deployment result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 Production deployment successful!"
+            echo "🌐 Application is now live and accessible"
+            echo "📊 Monitor the application health and performance"
+          else
+            echo "❌ Production deployment failed!"
+            echo "🔍 Check the logs and troubleshooting steps above"
+            echo "🚨 Production environment may be in an inconsistent state"
+            echo "💡 Consider immediate rollback if necessary"
+          fi
+
+      - name: Cleanup deployment registry
+        if: always()
+        env:
+          CORRELATION_ID: ${{ steps.correlation.outputs.correlation_id }}
+        run: |
+          echo "🧹 Cleaning up deployment registry..."
+
+          # Make coordinator script executable
+          chmod +x caseapp/scripts/deployment-coordinator.sh
+          chmod +x caseapp/scripts/slack-notifier.sh
+
+          # Remove deployment from registry
+          if bash caseapp/scripts/deployment-coordinator.sh cleanup "$CORRELATION_ID"; then
+            echo "✅ Deployment registry cleaned up successfully"
+          else
+            echo "⚠️  Failed to cleanup deployment registry (non-critical)"
+          fi
+
+          # Send final deployment notification
+          if [ "${{ job.status }}" = "success" ]; then
+            bash caseapp/scripts/slack-notifier.sh complete \
+              "$CORRELATION_ID" \
+              "production" \
+              "90" \
+              "http://production-alb-dns.example.com"
+          else
+            bash caseapp/scripts/slack-notifier.sh failed \
+              "$CORRELATION_ID" \
+              "production" \
+              "Deployment failed - check workflow logs"
+          fi
+        timeout-minutes: 2
