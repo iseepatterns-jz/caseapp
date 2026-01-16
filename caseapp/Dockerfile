@@ -89,11 +89,19 @@ RUN apt-get update && apt-get install -y \
     libavutil-dev \
     libswscale-dev \
     libswresample-dev \
+    gcc \
+    g++ \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python media processing dependencies
+# Install BOTH core dependencies and media processing dependencies
+# Core dependencies needed for models, schemas, services, core modules
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Media-specific dependencies
 COPY requirements-media.txt .
 RUN pip install --no-cache-dir -r requirements-media.txt
 
