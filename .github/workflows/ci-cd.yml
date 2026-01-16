@@ -147,6 +147,20 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
 
+      - name: Update Docker Hub credentials in AWS Secrets Manager
+        run: |
+          echo "Updating Docker Hub credentials in AWS Secrets Manager..."
+          aws secretsmanager put-secret-value \
+            --secret-id dockerhub-credentials \
+            --secret-string "{\"username\":\"${{ secrets.DOCKER_USERNAME }}\",\"password\":\"${{ secrets.DOCKER_PASSWORD }}\"}" \
+            --region ${{ env.AWS_REGION }} 2>/dev/null || \
+          aws secretsmanager create-secret \
+            --name dockerhub-credentials \
+            --description "Docker Hub credentials for ECS task authentication" \
+            --secret-string "{\"username\":\"${{ secrets.DOCKER_USERNAME }}\",\"password\":\"${{ secrets.DOCKER_PASSWORD }}\"}" \
+            --region ${{ env.AWS_REGION }}
+          echo "✅ Docker Hub credentials updated successfully"
+
       - name: Deploy with CDK
         working-directory: caseapp/infrastructure
         env:
