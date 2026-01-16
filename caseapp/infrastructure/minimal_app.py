@@ -172,9 +172,9 @@ class MinimalBackendStack(Stack):
         
         # Configure health check
         backend_service.target_group.configure_health_check(
-            path="/health/ready",  # Comprehensive check including database
+            path="/health",  # Simple check without database dependency
             interval=Duration.seconds(30),
-            timeout=Duration.seconds(10),  # Increased for database check
+            timeout=Duration.seconds(10),
             healthy_threshold_count=2,
             unhealthy_threshold_count=3
         )
