@@ -464,50 +464,27 @@ class CourtCaseManagementStack(Stack):
             )
         )
         
-        # Get ALB security group reference
-        self.alb_security_group = self.backend_service.load_balancer.connections.security_groups[0]
-        
-        # Create ECS Service Security Group with minimal required permissions
-        self.ecs_security_group = ec2.SecurityGroup(
-            self, "ECSServiceSecurityGroup",
-            vpc=self.vpc,
-            description="Security group for ECS service - minimal required access",
-            allow_all_outbound=True  # Allow outbound for AWS service calls
+        # Configure security group rules using connections API (robust CDK way)
+        self.backend_service.service.connections.allow_from(
+            self.backend_service.load_balancer,
+            ec2.Port.tcp(8000),
+            "Allow HTTP traffic from ALB"
         )
         
-        # Allow inbound HTTP traffic from ALB only
-        self.ecs_security_group.add_ingress_rule(
-            peer=ec2.Peer.security_group_id(self.alb_security_group.security_group_id),
-            connection=ec2.Port.tcp(8000),
-            description="Allow HTTP traffic from ALB"
+        self.database.connections.allow_from(
+            self.backend_service.service,
+            ec2.Port.tcp(5432),
+            "Allow PostgreSQL access from ECS tasks"
         )
         
-        # Configure database access from ECS
-        self.db_security_group.add_ingress_rule(
-            peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
-            connection=ec2.Port.tcp(5432),
-            description="Allow PostgreSQL access from ECS tasks"
+        self.redis_cluster.connections.allow_from(
+            self.backend_service.service,
+            ec2.Port.tcp(6379),
+            "Allow Redis access from ECS tasks"
         )
         
-        # Configure Redis access from ECS
-        self.redis_security_group.add_ingress_rule(
-            peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
-            connection=ec2.Port.tcp(6379),
-            description="Allow Redis access from ECS tasks"
-        )
-        
-        # Configure OpenSearch access from ECS - TEMPORARILY DISABLED
-        # Uncomment when OpenSearch is re-enabled
-        # self.opensearch_security_group.add_ingress_rule(
-        #     peer=ec2.Peer.security_group_id(self.ecs_security_group.security_group_id),
-        #     connection=ec2.Port.tcp(443),
-        #     description="Allow HTTPS access to OpenSearch from ECS tasks"
-        # )
-        
-        # Apply custom security group to ECS service
+        # Subscriptions and more overrides
         cfn_service = self.backend_service.service.node.default_child
-        cfn_service.add_property_override("NetworkConfiguration.AwsvpcConfiguration.SecurityGroups", 
-                                        [self.ecs_security_group.security_group_id])
         
         # Configure ECS service health check settings
         cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
