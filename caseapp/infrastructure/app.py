@@ -29,8 +29,12 @@ from aws_cdk import (
 class CourtCaseManagementStack(Stack):
     """Main infrastructure stack"""
     
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, environment: str = "production", **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+        self.environment = environment
+        
+        # Suffix for named resources
+        self.suffix = f"-{environment}" if environment == "staging" else ""
         
         # VPC
         self.vpc = ec2.Vpc(
@@ -185,7 +189,7 @@ class CourtCaseManagementStack(Stack):
             database_name="courtcase_db",
             credentials=rds.Credentials.from_generated_secret(
                 "courtcase_admin",
-                secret_name="court-case-db-credentials"
+                secret_name=f"court-case-db-credentials{self.suffix}"
             ),
             allocated_storage=100,
             storage_encrypted=True,
@@ -332,7 +336,7 @@ class CourtCaseManagementStack(Stack):
         
         self.user_pool = cognito.UserPool(
             self, "CourtCaseUserPool",
-            user_pool_name="court-case-users",
+            user_pool_name=f"court-case-users{self.suffix}",
             sign_in_aliases=cognito.SignInAliases(email=True),
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
             password_policy=cognito.PasswordPolicy(
@@ -538,7 +542,7 @@ class CourtCaseManagementStack(Stack):
         # Create SNS topic for alerts
         self.alerts_topic = sns.Topic(
             self, "DeploymentAlerts",
-            topic_name="court-case-deployment-alerts",
+            topic_name=f"court-case-deployment-alerts{self.suffix}",
             display_name="Court Case Deployment Alerts"
         )
         
@@ -563,7 +567,7 @@ class CourtCaseManagementStack(Stack):
         # Create CloudWatch dashboard
         dashboard = cloudwatch.Dashboard(
             self, "DeploymentMonitoringDashboard",
-            dashboard_name="CourtCase-Deployment-Monitoring",
+            dashboard_name=f"CourtCase-Deployment-Monitoring{self.suffix}",
             widgets=[
                 [
                     # ECS Service Metrics
@@ -984,5 +988,5 @@ if environment == "staging" and "STACK_NAME" not in os.environ:
     stack_name = f"{stack_name}-Staging"
 
 app = cdk.App()
-CourtCaseManagementStack(app, stack_name)
+CourtCaseManagementStack(app, stack_name, environment=environment)
 app.synth()
