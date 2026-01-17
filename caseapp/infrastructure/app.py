@@ -186,7 +186,7 @@ class CourtCaseManagementStack(Stack):
             vpc=self.vpc,
             subnet_group=db_subnet_group,
             security_groups=[self.db_security_group],
-            database_name="courtcase_db",
+            database_name="courtcase_db" + self.suffix.replace("-", "_"),
             credentials=rds.Credentials.from_generated_secret(
                 "courtcase_admin",
                 secret_name=f"court-case-db-credentials{self.suffix}"
@@ -438,15 +438,15 @@ class CourtCaseManagementStack(Stack):
                     # "OPENSEARCH_ENDPOINT": self.opensearch_domain.domain_endpoint,  # TEMPORARILY DISABLED
                     "COGNITO_USER_POOL_ID": self.user_pool.user_pool_id,
                     "COGNITO_CLIENT_ID": self.user_pool_client.user_pool_client_id,
-                    "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379"
+                    "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379",
+                    "DB_HOST": self.database.instance_endpoint_address,
+                    "DB_PORT": str(self.database.instance_endpoint_port),
+                    "DB_NAME": "courtcase_db" + self.suffix.replace("-", "_")  # Match RDS database_name if possible
                 },
                 secrets={
                     # Use individual secret fields from RDS-generated secret
-                    "DB_HOST": ecs.Secret.from_secrets_manager(self.database.secret, "host"),
                     "DB_USER": ecs.Secret.from_secrets_manager(self.database.secret, "username"),
                     "DB_PASSWORD": ecs.Secret.from_secrets_manager(self.database.secret, "password"),
-                    "DB_PORT": ecs.Secret.from_secrets_manager(self.database.secret, "port"),
-                    "DB_NAME": ecs.Secret.from_secrets_manager(self.database.secret, "dbname")
                 },
                 log_driver=ecs.LogDrivers.aws_logs(
                     stream_prefix="backend",
@@ -880,15 +880,15 @@ class CourtCaseManagementStack(Stack):
                 "AWS_REGION": self.region,
                 "S3_BUCKET_NAME": self.media_bucket.bucket_name,
                 "S3_MEDIA_BUCKET": self.media_bucket.bucket_name,
-                "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379"
+                "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379",
+                "DB_HOST": self.database.instance_endpoint_address,
+                "DB_PORT": str(self.database.instance_endpoint_port),
+                "DB_NAME": "courtcase_db" + self.suffix.replace("-", "_")
             },
             secrets={
                 # Use individual secret fields from RDS-generated secret
-                "DB_HOST": ecs.Secret.from_secrets_manager(self.database.secret, "host"),
                 "DB_USER": ecs.Secret.from_secrets_manager(self.database.secret, "username"),
                 "DB_PASSWORD": ecs.Secret.from_secrets_manager(self.database.secret, "password"),
-                "DB_PORT": ecs.Secret.from_secrets_manager(self.database.secret, "port"),
-                "DB_NAME": ecs.Secret.from_secrets_manager(self.database.secret, "dbname")
             },
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix="media-processor",
