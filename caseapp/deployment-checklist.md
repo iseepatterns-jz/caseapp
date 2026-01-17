@@ -10,7 +10,8 @@
 - [ ] IAM policy quota resolved (see AWS-CREDENTIALS-SETUP.md)
 - [ ] Consolidated IAM policy created and applied
 - [ ] New AWS access keys generated
-- [ ] GitHub Secrets updated with new credentials
+- [ ] GitHub Secrets updated (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `DOCKER_USERNAME`, `DOCKER_PASSWORD`)
+- [ ] Docker Hub credentials secret requirement noted for AWS Secrets Manager
 - [ ] AWS setup validated (`./scripts/validate-aws-setup.sh`)
 - [ ] CDK bootstrapped (done automatically during deployment)
 - [ ] Domain name registered (optional, for custom domain)
