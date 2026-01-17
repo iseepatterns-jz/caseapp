@@ -974,6 +974,15 @@ class CourtCaseManagementStack(Stack):
             )
         )
 
+import os
+
+# Get environment from environment variable
+environment = os.getenv("ENVIRONMENT", "production")
+stack_name = os.getenv("STACK_NAME", "CourtCaseManagementStack")
+
+if environment == "staging" and "STACK_NAME" not in os.environ:
+    stack_name = f"{stack_name}-Staging"
+
 app = cdk.App()
-CourtCaseManagementStack(app, "CourtCaseManagementStack")
+CourtCaseManagementStack(app, stack_name)
 app.synth()
