@@ -439,8 +439,8 @@ class CourtCaseManagementStack(Stack):
                     "COGNITO_USER_POOL_ID": self.user_pool.user_pool_id,
                     "COGNITO_CLIENT_ID": self.user_pool_client.user_pool_client_id,
                     "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379",
-                    "DB_HOST": self.database.instance_endpoint_address,
-                    "DB_PORT": str(self.database.instance_endpoint_port),
+                    "DB_HOST": self.database.db_instance_endpoint_address,
+                    "DB_PORT": str(self.database.db_instance_endpoint_port),
                     "DB_NAME": "courtcase_db" + self.suffix.replace("-", "_")  # Match RDS database_name if possible
                 },
                 secrets={
@@ -881,8 +881,8 @@ class CourtCaseManagementStack(Stack):
                 "S3_BUCKET_NAME": self.media_bucket.bucket_name,
                 "S3_MEDIA_BUCKET": self.media_bucket.bucket_name,
                 "REDIS_URL": f"redis://{self.redis_cluster.attr_redis_endpoint_address}:6379",
-                "DB_HOST": self.database.instance_endpoint_address,
-                "DB_PORT": str(self.database.instance_endpoint_port),
+                "DB_HOST": self.database.db_instance_endpoint_address,
+                "DB_PORT": str(self.database.db_instance_endpoint_port),
                 "DB_NAME": "courtcase_db" + self.suffix.replace("-", "_")
             },
             secrets={
