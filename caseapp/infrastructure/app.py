@@ -31,7 +31,7 @@ class CourtCaseManagementStack(Stack):
     
     def __init__(self, scope: Construct, construct_id: str, environment: str = "production", **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        self.environment = environment
+        self.deploy_env = environment
         
         # Suffix for named resources
         self.suffix = f"-{environment}" if environment == "staging" else ""
