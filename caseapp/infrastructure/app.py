@@ -477,7 +477,7 @@ class CourtCaseManagementStack(Stack):
             "Allow PostgreSQL access from ECS tasks"
         )
         
-        self.redis_cluster.connections.allow_from(
+        self.redis_security_group.connections.allow_from(
             self.backend_service.service,
             ec2.Port.tcp(6379),
             "Allow Redis access from ECS tasks"
