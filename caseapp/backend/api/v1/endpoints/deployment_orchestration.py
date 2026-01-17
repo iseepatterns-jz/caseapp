@@ -6,7 +6,7 @@ Provides unified endpoints for complete deployment orchestration with all reliab
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, List, Any, Optional
 import structlog
-from datetime import datetime
+from datetime import datetime, UTC
 
 from services.deployment_orchestration_service import DeploymentOrchestrationService
 
@@ -54,7 +54,7 @@ async def orchestrate_full_deployment(
         return {
             'cluster_name': cluster_name,
             'service_name': service_name,
-            'orchestration_timestamp': datetime.utcnow().isoformat(),
+            'orchestration_timestamp': datetime.now(UTC).isoformat(),
             **results
         }
         
@@ -108,7 +108,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'healthy' if all_services_ready else 'partial',
             'service': 'deployment_orchestration',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'component_services': services_status,
             'configuration': {
                 'auto_optimization_enabled': orchestration_service.auto_optimization_enabled,
@@ -123,7 +123,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'unhealthy',
             'service': 'deployment_orchestration',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'error': str(e)
         }
 
@@ -199,7 +199,7 @@ async def update_orchestration_config(
         return {
             'status': 'updated',
             'updated_fields': updated_fields,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'current_config': {
                 'auto_optimization_enabled': orchestration_service.auto_optimization_enabled,
                 'auto_recovery_enabled': orchestration_service.auto_recovery_enabled,

@@ -7,7 +7,7 @@ from sqlalchemy import select, func, and_, or_, String
 from sqlalchemy.orm import selectinload
 from typing import Optional, List, Dict, Any, Tuple, BinaryIO
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 import hashlib
 import os
 import uuid
@@ -99,7 +99,7 @@ class DocumentService:
             
             # Generate unique filename for S3
             file_extension = os.path.splitext(file.filename)[1]
-            unique_filename = f"{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}/{file_hash[:8]}{file_extension}"
+            unique_filename = f"{datetime.now(UTC).strftime('%Y/%m/%d')}/{uuid.uuid4().hex}/{file_hash[:8]}{file_extension}"
             s3_key = f"documents/{upload_request.case_id}/{unique_filename}"
             
             # Upload to S3
@@ -113,7 +113,7 @@ class DocumentService:
                         'original_filename': file.filename,
                         'uploaded_by': str(uploaded_by),
                         'case_id': str(upload_request.case_id),
-                        'upload_timestamp': datetime.utcnow().isoformat()
+                        'upload_timestamp': datetime.now(UTC).isoformat()
                     }
                 )
                 logger.info("File uploaded to S3", s3_key=s3_key, file_size=file_size)
@@ -150,6 +150,7 @@ class DocumentService:
                 action="upload",
                 user_id=uploaded_by,
                 case_id=upload_request.case_id,
+                entity_name=file.filename,
                 new_value=f"Uploaded file: {file.filename} ({file_size} bytes)"
             )
             
@@ -257,7 +258,7 @@ class DocumentService:
                         setattr(document, field, value)
             
             document.updated_by = updated_by
-            document.updated_at = datetime.utcnow()
+            document.updated_at = datetime.now(UTC)
             
             # Create audit logs for each changed field
             for field, new_value in update_data.items():
@@ -270,7 +271,8 @@ class DocumentService:
                         old_value=str(original_values[field]) if original_values[field] is not None else None,
                         new_value=str(new_value) if new_value is not None else None,
                         user_id=updated_by,
-                        case_id=document.case_id
+                        case_id=document.case_id,
+                        entity_name=document.original_filename
                     )
             
             await self.db.commit()
@@ -311,7 +313,7 @@ class DocumentService:
             old_status = document.status
             document.status = DocumentStatus.ARCHIVED.value
             document.updated_by = deleted_by
-            document.updated_at = datetime.utcnow()
+            document.updated_at = datetime.now(UTC)
             
             # Create audit log
             await self.audit_service.log_action(
@@ -322,7 +324,8 @@ class DocumentService:
                 old_value=old_status,
                 new_value=DocumentStatus.ARCHIVED.value,
                 user_id=deleted_by,
-                case_id=document.case_id
+                case_id=document.case_id,
+                entity_name=document.original_filename
             )
             
             await self.db.commit()
@@ -375,6 +378,7 @@ class DocumentService:
                     action="download_requested",
                     user_id=user_id,
                     case_id=document.case_id,
+                    entity_name=document.original_filename,
                     new_value=f"Download URL generated (expires in {expires_in}s)"
                 )
                 
@@ -618,7 +622,7 @@ class DocumentService:
                 "total_size_bytes": total_size,
                 "total_size_mb": round(total_size / (1024 * 1024), 2),
                 "case_id": str(case_id) if case_id else None,
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(UTC).isoformat()
             }
             
         except Exception as e:
@@ -713,7 +717,7 @@ class DocumentService:
             # Update document version number
             document.version = next_version
             document.updated_by = created_by
-            document.updated_at = datetime.utcnow()
+            document.updated_at = datetime.now(UTC)
             
             # Create audit log
             await self.audit_service.log_action(
@@ -725,6 +729,7 @@ class DocumentService:
                 new_value=str(next_version),
                 user_id=created_by,
                 case_id=document.case_id,
+                entity_name=document.original_filename,
                 additional_data={
                     "change_description": change_description,
                     "change_type": change_type
@@ -834,7 +839,7 @@ class DocumentService:
             document.ai_summary = target_version_obj.ai_summary_snapshot
             document.entities = target_version_obj.entities_snapshot
             document.updated_by = rolled_back_by
-            document.updated_at = datetime.utcnow()
+            document.updated_at = datetime.now(UTC)
             
             # Create audit log for rollback
             await self.audit_service.log_action(

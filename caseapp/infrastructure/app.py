@@ -79,6 +79,9 @@ class CourtCaseManagementStack(Stack):
         # ECS Cluster
         self.create_ecs_cluster()
         
+        # Frontend Hosting (S3 + CloudFront)
+        self.create_frontend()
+        
         # Monitoring and Alerting
         self.create_monitoring_dashboard()
         
@@ -390,6 +393,11 @@ class CourtCaseManagementStack(Stack):
             vpc=self.vpc,
             container_insights=True
         )
+        
+
+
+        
+        # Monitoring and Alerting
         
         # Task execution role
         execution_role = iam.Role(
@@ -962,6 +970,146 @@ class CourtCaseManagementStack(Stack):
                 resources=["*"]
             )
         )
+
+    def create_frontend(self):
+        """Create S3 bucket and CloudFront distribution for frontend hosting"""
+        
+        # S3 bucket for frontend assets
+        self.frontend_bucket = s3.Bucket(
+            self, "FrontendBucket",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True
+        )
+        
+        # CloudFront Origin Access Identity (OAI)
+        oai = cloudfront.OriginAccessIdentity(
+            self, "FrontendOAI",
+            comment=f"OAI for frontend"
+        )
+        
+        # Grant read access to the OAI
+        self.frontend_bucket.grant_read(oai)
+        
+        # CloudFront Distribution
+        self.distribution = cloudfront.CloudFrontWebDistribution(
+            self, "FrontendDistribution",
+            origin_configs=[
+                # S3 Origin for static assets
+                cloudfront.SourceConfiguration(
+                    s3_origin_source=cloudfront.S3OriginConfig(
+                        s3_bucket_source=self.frontend_bucket,
+                        origin_access_identity=oai
+                    ),
+                    behaviors=[
+                        cloudfront.Behavior(
+                            is_default_behavior=True,
+                            compress=True,
+                            allowed_methods=cloudfront.CloudFrontAllowedMethods.GET_HEAD,
+                            cached_methods=cloudfront.CloudFrontAllowedCachedMethods.GET_HEAD,
+                            viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                        )
+                    ]
+                ),
+                # ALB Origin for API proxying
+                cloudfront.SourceConfiguration(
+                    custom_origin_source=cloudfront.CustomOriginConfig(
+                        domain_name=self.backend_service.load_balancer.load_balancer_dns_name,
+                        origin_protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                    ),
+                    behaviors=[
+                        cloudfront.Behavior(
+                            path_pattern="/api/*",
+                            allowed_methods=cloudfront.CloudFrontAllowedMethods.ALL,
+                            cached_methods=cloudfront.CloudFrontAllowedCachedMethods.GET_HEAD,
+                            default_ttl=Duration.seconds(0),
+                            max_ttl=Duration.seconds(0),
+                            min_ttl=Duration.seconds(0),
+                            forwarded_values=cloudfront.CfnDistribution.ForwardedValuesProperty(
+                                query_string=True,
+                                headers=["Authorization", "Origin", "Referer", "Host"],
+                                cookies=cloudfront.CfnDistribution.CookiesProperty(forward="all")
+                            ),
+                            viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                        ),
+                        cloudfront.Behavior(
+                            path_pattern="/docs*",
+                            allowed_methods=cloudfront.CloudFrontAllowedMethods.GET_HEAD,
+                            cached_methods=cloudfront.CloudFrontAllowedCachedMethods.GET_HEAD,
+                            default_ttl=Duration.seconds(0),
+                            forwarded_values=cloudfront.CfnDistribution.ForwardedValuesProperty(
+                                query_string=True,
+                                headers=["Authorization", "Origin", "Referer", "Host"],
+                                cookies=cloudfront.CfnDistribution.CookiesProperty(forward="all")
+                            ),
+                            viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                        ),
+                        cloudfront.Behavior(
+                            path_pattern="/openapi.json",
+                            allowed_methods=cloudfront.CloudFrontAllowedMethods.GET_HEAD,
+                            cached_methods=cloudfront.CloudFrontAllowedCachedMethods.GET_HEAD,
+                            default_ttl=Duration.seconds(0),
+                            forwarded_values=cloudfront.CfnDistribution.ForwardedValuesProperty(
+                                query_string=True,
+                                headers=["Host"]
+                            ),
+                            viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                        )
+                    ]
+                )
+            ],
+            error_configurations=[
+                # Support Single Page Application (SPA) routing
+                cloudfront.CfnDistribution.CustomErrorResponseProperty(
+                    error_code=403,
+                    response_code=200,
+                    response_page_path="/index.html",
+                    error_caching_min_ttl=300
+                ),
+                cloudfront.CfnDistribution.CustomErrorResponseProperty(
+                    error_code=404,
+                    response_code=200,
+                    response_page_path="/index.html",
+                    error_caching_min_ttl=300
+                )
+            ],
+            price_class=cloudfront.PriceClass.PRICE_CLASS_100,
+            viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            comment=f"Frontend distribution for {self.stack_name}"
+        )
+        
+        # Outputs
+        cdk.CfnOutput(
+            self, "FrontendURL",
+            value=f"https://{self.distribution.distribution_domain_name}",
+            description="CloudFront URL for the frontend application"
+        )
+        
+        cdk.CfnOutput(
+            self, "FrontendBucketName",
+            value=self.frontend_bucket.bucket_name,
+            description="S3 bucket name for frontend assets"
+        )
+        
+        cdk.CfnOutput(
+            self, "FrontendDistributionId",
+            value=self.distribution.distribution_id,
+            description="CloudFront Distribution ID for cache invalidation"
+        )
+        
+        cdk.CfnOutput(
+            self, "UserPoolId",
+            value=self.user_pool.user_pool_id,
+            description="Cognito User Pool ID"
+        )
+        
+        cdk.CfnOutput(
+            self, "UserPoolClientId",
+            value=self.user_pool_client.user_pool_client_id,
+            description="Cognito User Pool Client ID"
+        )
+
 
 import os
 

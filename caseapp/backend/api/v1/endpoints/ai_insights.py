@@ -4,7 +4,7 @@ AI insights API endpoints
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 import structlog
 
 from schemas.ai_insights import (
@@ -325,7 +325,7 @@ async def generate_all_insights(
         return {
             'case_id': case_id,
             'insights': results,
-            'generated_at': str(datetime.utcnow()),
+            'generated_at': str(datetime.now(UTC)),
             'success_count': len([r for r in results.values() if 'error' not in r])
         }
         

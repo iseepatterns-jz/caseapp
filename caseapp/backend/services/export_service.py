@@ -8,7 +8,7 @@ import json
 import asyncio
 from typing import List, Dict, Any, Optional, Union
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -109,7 +109,7 @@ class ExportService:
                 story.append(Spacer(1, 12))
                 story.append(Paragraph(f"Case: {case_data['case']['title']}", styles['Heading2']))
                 story.append(Paragraph(f"Case Number: {case_data['case']['case_number']}", styles['Normal']))
-                story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+                story.append(Paragraph(f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
                 story.append(Spacer(1, 20))
                 
                 # Case summary
@@ -165,7 +165,7 @@ class ExportService:
                 story.append(PageBreak())
                 story.append(Paragraph("Export Information", styles['Heading2']))
                 export_info = [
-                    ['Export Date', datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')],
+                    ['Export Date', datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')],
                     ['Total Events', str(len(case_data['events']))],
                     ['Date Range', f"{date_range['start'].strftime('%Y-%m-%d')} to {date_range['end'].strftime('%Y-%m-%d')}" if date_range else 'All dates'],
                     ['Include Evidence', 'Yes' if include_evidence else 'No'],
@@ -294,7 +294,7 @@ class ExportService:
                 # Add case information
                 info_text = f"Case: {case_data['case']['case_number']}\n"
                 info_text += f"Total Events: {len(events)}\n"
-                info_text += f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+                info_text += f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
                 
                 ax.text(0.02, 0.98, info_text, transform=ax.transAxes, 
                        verticalalignment='top', fontsize=10,
@@ -372,7 +372,7 @@ class ExportService:
                 story.append(Paragraph("Forensic Analysis Report", title_style))
                 story.append(Spacer(1, 12))
                 story.append(Paragraph(f"Case: {forensic_data['case']['title']}", styles['Heading2']))
-                story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+                story.append(Paragraph(f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
                 story.append(Spacer(1, 20))
                 
                 # Executive summary
@@ -523,7 +523,7 @@ class ExportService:
                 dashboard = {
                     'case_id': case_id,
                     'case_title': forensic_data['case']['title'],
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'dashboard_type': 'court_presentation'
                 }
                 
@@ -588,7 +588,7 @@ class ExportService:
                 stats_report = {
                     'case_id': case_id,
                     'report_type': 'communication_statistics',
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'time_period': time_period,
                     'sources_analyzed': len(forensic_data['sources'])
                 }
@@ -680,7 +680,7 @@ class ExportService:
                     return {
                         'case_id': case_id,
                         'network_type': 'communication_network',
-                        'generated_at': datetime.utcnow().isoformat(),
+                        'generated_at': datetime.now(UTC).isoformat(),
                         'nodes': network_data['nodes'],
                         'edges': network_data['edges'],
                         'metadata': network_data['metadata'] if include_metadata else None,
@@ -966,7 +966,7 @@ class ExportService:
         
         # Add filter metadata
         case_data['export_filters'] = filters
-        case_data['export_timestamp'] = datetime.utcnow().isoformat()
+        case_data['export_timestamp'] = datetime.now(UTC).isoformat()
         
         return case_data
     

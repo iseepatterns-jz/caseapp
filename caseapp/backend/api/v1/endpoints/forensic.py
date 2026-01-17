@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any
 import structlog
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, UTC
 
 from core.database import get_db
 from core.config import settings
@@ -24,10 +24,15 @@ from schemas.forensic import (
 )
 from core.auth import get_current_user
 
+from services.audit_service import AuditService
+
 logger = structlog.get_logger()
 router = APIRouter()
 
-forensic_service = ForensicAnalysisService()
+async def get_forensic_service(db: AsyncSession = Depends(get_db)) -> ForensicAnalysisService:
+    """Dependency to get forensic service instance"""
+    audit_service = AuditService(db)
+    return ForensicAnalysisService(audit_service=audit_service)
 
 @router.post("/upload", response_model=ForensicSourceResponse)
 async def upload_forensic_data(
@@ -35,8 +40,8 @@ async def upload_forensic_data(
     source_name: str = Form(...),
     source_type: str = Form(...),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    forensic_service: ForensicAnalysisService = Depends(get_forensic_service)
 ):
     """Upload forensic data file for analysis"""
     
@@ -458,7 +463,7 @@ async def acknowledge_alert(
     
     alert.is_acknowledged = True
     alert.acknowledged_by_id = current_user.id
-    alert.acknowledged_at = datetime.utcnow()
+    alert.acknowledged_at = datetime.now(UTC)
     
     await db.commit()
     
@@ -509,7 +514,8 @@ async def get_suspicious_patterns(
 async def analyze_suspicious_patterns(
     source_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    forensic_service: ForensicAnalysisService = Depends(get_forensic_service)
 ):
     """Re-analyze forensic source for suspicious patterns (Requirements 5.5)"""
     
@@ -528,10 +534,6 @@ async def analyze_suspicious_patterns(
     
     if not items:
         return {"message": "No forensic items found for analysis", "patterns": []}
-    
-    # Import the service to access pattern detection methods
-    from services.forensic_analysis_service import ForensicAnalysisService
-    forensic_service = ForensicAnalysisService()
     
     # Analyze communication patterns
     communication_stats = forensic_service._analyze_communication_patterns(items)

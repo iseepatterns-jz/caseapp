@@ -7,7 +7,7 @@ from sqlalchemy import select, func, and_, or_, desc, asc
 from sqlalchemy.orm import selectinload
 from typing import Optional, List, Dict, Any, Tuple
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 import structlog
 
 from models.timeline import TimelineEvent, EvidencePin, TimelineComment, EventType
@@ -198,7 +198,7 @@ class TimelineService:
                         setattr(event, field, value)
             
             event.updated_by = updated_by
-            event.updated_at = datetime.utcnow()
+            event.updated_at = datetime.now(UTC)
             
             # Create audit logs for each changed field
             for field, new_value in update_data.items():
@@ -557,7 +557,7 @@ class TimelineService:
                 
                 event.display_order = display_order
                 event.updated_by = reordered_by
-                event.updated_at = datetime.utcnow()
+                event.updated_at = datetime.now(UTC)
                 
                 updated_events.append(event)
             

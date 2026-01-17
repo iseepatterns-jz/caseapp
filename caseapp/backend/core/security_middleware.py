@@ -5,7 +5,7 @@ Security middleware for HIPAA and SOC 2 compliance
 import time
 import json
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from fastapi import Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
 import structlog
@@ -66,7 +66,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         
         compliance_log = {
             "event_type": "api_request",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "user_id": user_id,
             "client_ip": client_ip,
             "user_agent": user_agent,
@@ -142,7 +142,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     
     def _check_rate_limit(self, client_ip: str, category: str) -> bool:
         """Check if request is within rate limit"""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         limit_config = self.rate_limits[category]
         window_start = now - timedelta(seconds=limit_config["window"])
         
@@ -208,7 +208,7 @@ class DataClassificationMiddleware(BaseHTTPMiddleware):
         
         sensitive_access_log = {
             "event_type": "sensitive_data_access",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "client_ip": client_ip,
             "path": request.url.path,
             "method": request.method,
@@ -253,7 +253,7 @@ class ComplianceAuditMiddleware(BaseHTTPMiddleware):
         if contains_phi:
             hipaa_audit = {
                 "event_type": "hipaa_phi_access",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "url": str(request.url),
                 "method": request.method,
                 "status_code": response.status_code,
@@ -271,7 +271,7 @@ class ComplianceAuditMiddleware(BaseHTTPMiddleware):
         # Audit system access and data processing
         soc2_audit = {
             "event_type": "soc2_system_access",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "url": str(request.url),
             "method": request.method,
             "status_code": response.status_code,

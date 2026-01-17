@@ -6,7 +6,7 @@ Provides endpoints for deployment validation, testing, and health checks
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, List, Any, Optional
 import structlog
-from datetime import datetime
+from datetime import datetime, UTC
 
 from services.deployment_validation_service import (
     DeploymentValidationService, 
@@ -104,7 +104,7 @@ async def run_smoke_tests(
             'test_type': 'smoke_tests',
             'cluster_name': cluster_name,
             'service_name': service_name,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             **results
         }
         
@@ -143,7 +143,7 @@ async def validate_api_endpoints(
             'test_type': 'api_validation',
             'cluster_name': cluster_name,
             'service_name': service_name,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             **results
         }
         
@@ -182,7 +182,7 @@ async def run_integration_tests(
             'test_type': 'integration_tests',
             'cluster_name': cluster_name,
             'service_name': service_name,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             **results
         }
         
@@ -228,7 +228,7 @@ async def run_performance_tests(
         
         return {
             'test_type': 'performance_test',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             **results
         }
         
@@ -266,7 +266,7 @@ async def wait_for_service_healthy(
             'cluster_name': cluster_name,
             'service_name': service_name,
             'timeout_seconds': timeout_seconds,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             **results
         }
         
@@ -342,7 +342,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'healthy',
             'service': 'deployment_validation',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'aws_clients_initialized': all([
                 validation_service.ecs is not None,
                 validation_service.elbv2 is not None,
@@ -360,7 +360,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'unhealthy',
             'service': 'deployment_validation',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'error': str(e)
         }
 
@@ -389,7 +389,7 @@ async def get_service_status(
             'cluster_name': cluster_name,
             'service_name': service_name,
             'load_balancer_dns': load_balancer_dns,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'status': 'available' if load_balancer_dns else 'not_available'
         }
         

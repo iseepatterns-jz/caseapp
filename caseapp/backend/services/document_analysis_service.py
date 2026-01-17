@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional, List, Dict, Any, Tuple
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 import json
 import asyncio
 import structlog
@@ -85,7 +85,7 @@ class DocumentAnalysisService:
             
             # Update document status to processing
             document.status = DocumentStatus.PROCESSING.value
-            document.processing_started_at = datetime.utcnow()
+            document.processing_started_at = datetime.now(UTC)
             document.processing_error = None
             await self.db.commit()
             
@@ -102,6 +102,18 @@ class DocumentAnalysisService:
             try:
                 # Step 1: Extract text using Textract
                 extracted_text = await self._extract_text_with_textract(document)
+                
+                # Step 1b: Detect financial transactions in text
+                try:
+                    from services.financial_analysis_service import FinancialAnalysisService
+                    financial_service = FinancialAnalysisService(self.db)
+                    await financial_service.ingest_from_text(
+                        case_id=document.case_id,
+                        text=extracted_text,
+                        document_id=document.id
+                    )
+                except Exception as financial_error:
+                    logger.warning("Financial analysis failed, continuing with other analysis", error=str(financial_error))
                 
                 # Step 2: Perform entity recognition using Comprehend
                 entities = []
@@ -143,7 +155,7 @@ class DocumentAnalysisService:
                     "sentiment": sentiment_analysis.get("confidence", 0)
                 }
                 document.status = DocumentStatus.PROCESSED.value
-                document.processing_completed_at = datetime.utcnow()
+                document.processing_completed_at = datetime.now(UTC)
                 
                 # Store extracted entities in separate table
                 await self._store_extracted_entities(document.id, entities)
@@ -186,7 +198,7 @@ class DocumentAnalysisService:
                 # Update document with error status
                 document.status = DocumentStatus.FAILED.value
                 document.processing_error = str(analysis_error)
-                document.processing_completed_at = datetime.utcnow()
+                document.processing_completed_at = datetime.now(UTC)
                 await self.db.commit()
                 
                 # Log analysis failure

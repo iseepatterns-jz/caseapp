@@ -7,7 +7,7 @@ import uuid
 import json
 import asyncio
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, or_, desc, func
@@ -43,7 +43,7 @@ class IntegrationService:
         self.webhook_configs = {}
         self.sync_operations = {}
         self.api_keys = {}
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(UTC)
     
     async def get_health_status(self) -> Dict[str, Any]:
         """
@@ -53,7 +53,7 @@ class IntegrationService:
             Dictionary with health information
         """
         try:
-            uptime = (datetime.utcnow() - self.start_time).total_seconds()
+            uptime = (datetime.now(UTC) - self.start_time).total_seconds()
             
             # Check dependent services
             services_status = {
@@ -71,7 +71,7 @@ class IntegrationService:
             health_data = {
                 "status": overall_status,
                 "version": "1.0.0",
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(UTC),
                 "services": services_status,
                 "uptime_seconds": int(uptime)
             }
@@ -84,7 +84,7 @@ class IntegrationService:
             return {
                 "status": "error",
                 "version": "1.0.0",
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(UTC),
                 "services": {"error": str(e)},
                 "uptime_seconds": 0
             }
@@ -601,8 +601,8 @@ class IntegrationService:
                     "url": config["url"],
                     "events": config["events"],
                     "active": config.get("active", True),
-                    "created_at": config.get("created_at", datetime.utcnow()),
-                    "updated_at": config.get("updated_at", datetime.utcnow())
+                    "created_at": config.get("created_at", datetime.now(UTC)),
+                    "updated_at": config.get("updated_at", datetime.now(UTC))
                 }
                 webhooks.append(webhook_data)
             
@@ -642,8 +642,8 @@ class IntegrationService:
                 "retry_count": webhook_data.get("retry_count", 3),
                 "timeout_seconds": webhook_data.get("timeout_seconds", 30),
                 "created_by": created_by,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             }
             
             # Store configuration
@@ -771,7 +771,7 @@ class IntegrationService:
                 # Prepare webhook payload
                 webhook_payload = {
                     "event": event_type,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "data": payload
                 }
                 

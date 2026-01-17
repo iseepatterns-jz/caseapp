@@ -5,7 +5,7 @@ Provides automated smoke tests, API validation, and integration testing for depl
 
 import asyncio
 import aiohttp
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Any, Optional, Tuple
 import structlog
 import json
@@ -312,7 +312,7 @@ class DeploymentValidationService:
                         status_code=None,
                         error_message=str(e),
                         details={},
-                        timestamp=datetime.utcnow()
+                        timestamp=datetime.now(UTC)
                     ))
                     
                     if test.critical:
@@ -342,7 +342,7 @@ class DeploymentValidationService:
                 'cluster_name': cluster_name,
                 'service_name': service_name,
                 'load_balancer_dns': load_balancer_dns,
-                'validation_timestamp': datetime.utcnow().isoformat(),
+                'validation_timestamp': datetime.now(UTC).isoformat(),
                 'overall_status': overall_status,
                 'summary': {
                     'total_tests': total_tests,
@@ -438,7 +438,7 @@ class DeploymentValidationService:
     async def _run_validation_test(self, base_url: str, test: ValidationTest) -> ValidationResult:
         """Run a single validation test"""
         
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
         
         for attempt in range(test.retry_count + 1):
             try:
@@ -449,7 +449,7 @@ class DeploymentValidationService:
                     url = urljoin(base_url, test.endpoint) if test.endpoint else base_url
                     
                     async with session.request(test.method, url) as response:
-                        end_time = datetime.utcnow()
+                        end_time = datetime.now(UTC)
                         response_time_ms = (end_time - start_time).total_seconds() * 1000
                         
                         # Read response content for analysis
@@ -503,7 +503,7 @@ class DeploymentValidationService:
                     status_code=None,
                     error_message=f"Request timed out after {test.timeout_seconds} seconds",
                     details={'url': urljoin(base_url, test.endpoint), 'timeout_seconds': test.timeout_seconds},
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(UTC)
                 )
                 
             except Exception as e:
@@ -519,7 +519,7 @@ class DeploymentValidationService:
                     status_code=None,
                     error_message=str(e),
                     details={'url': urljoin(base_url, test.endpoint), 'exception_type': type(e).__name__},
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(UTC)
                 )
         
         # Should not reach here, but return failure as fallback
@@ -531,7 +531,7 @@ class DeploymentValidationService:
             status_code=None,
             error_message="Unexpected test execution path",
             details={},
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(UTC)
         )
     
     async def run_performance_tests(self,
@@ -552,7 +552,7 @@ class DeploymentValidationService:
         try:
             self.logger.info(f"Starting performance tests", concurrent_requests=concurrent_requests, duration=duration_seconds)
             
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
             end_time = start_time + timedelta(seconds=duration_seconds)
             
             # Performance test endpoints
@@ -575,9 +575,9 @@ class DeploymentValidationService:
                 nonlocal total_requests, successful_requests, failed_requests
                 
                 try:
-                    request_start = datetime.utcnow()
+                    request_start = datetime.now(UTC)
                     async with session.get(urljoin(base_url, endpoint)) as response:
-                        request_end = datetime.utcnow()
+                        request_end = datetime.now(UTC)
                         response_time = (request_end - request_start).total_seconds() * 1000
                         
                         total_requests += 1
@@ -603,7 +603,7 @@ class DeploymentValidationService:
                 
                 tasks = []
                 
-                while datetime.utcnow() < end_time:
+                while datetime.now(UTC) < end_time:
                     # Create batch of concurrent requests
                     for _ in range(concurrent_requests):
                         endpoint = test_endpoints[total_requests % len(test_endpoints)]
@@ -618,7 +618,7 @@ class DeploymentValidationService:
                     await asyncio.sleep(0.1)
             
             # Calculate statistics
-            actual_duration = (datetime.utcnow() - start_time).total_seconds()
+            actual_duration = (datetime.now(UTC) - start_time).total_seconds()
             requests_per_second = total_requests / actual_duration if actual_duration > 0 else 0
             
             if response_times:
@@ -658,7 +658,7 @@ class DeploymentValidationService:
                     'p99_ms': p99_response_time
                 },
                 'errors': error_counts,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(UTC).isoformat()
             }
             
         except Exception as e:
@@ -683,10 +683,10 @@ class DeploymentValidationService:
         try:
             self.logger.info(f"Waiting for service {service_name} to be healthy after deployment")
             
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
             end_time = start_time + timedelta(seconds=wait_timeout_seconds)
             
-            while datetime.utcnow() < end_time:
+            while datetime.now(UTC) < end_time:
                 # Check service status
                 response = await asyncio.to_thread(
                     self.ecs.describe_services,
@@ -714,7 +714,7 @@ class DeploymentValidationService:
                     if validation_results['overall_status'] in ['success', 'warning']:
                         return {
                             'status': 'healthy',
-                            'wait_time_seconds': (datetime.utcnow() - start_time).total_seconds(),
+                            'wait_time_seconds': (datetime.now(UTC) - start_time).total_seconds(),
                             'service_status': service['status'],
                             'running_count': service['runningCount'],
                             'desired_count': service['desiredCount'],

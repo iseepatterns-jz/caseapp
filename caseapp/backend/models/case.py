@@ -108,6 +108,7 @@ class AuditLog(Base):
     # What was changed
     entity_type = Column(String(50), nullable=False)  # 'case', 'document', etc.
     entity_id = Column(UUID(as_uuid=True), nullable=False)
+    entity_name = Column(String(200))  # Descriptive name for display
     action = Column(String(20), nullable=False)  # 'create', 'update', 'delete'
     
     # Change details

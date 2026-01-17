@@ -6,7 +6,7 @@ Provides endpoints for disaster recovery, rollback operations, and emergency pro
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, List, Any, Optional
 import structlog
-from datetime import datetime
+from datetime import datetime, UTC
 
 from services.disaster_recovery_service import DisasterRecoveryService
 
@@ -130,7 +130,7 @@ async def rollback_to_snapshot(
         return {
             'cluster_name': cluster_name,
             'service_name': service_name,
-            'rollback_timestamp': datetime.utcnow().isoformat(),
+            'rollback_timestamp': datetime.now(UTC).isoformat(),
             **result
         }
         
@@ -175,7 +175,7 @@ async def emergency_scale_service(
         return {
             'cluster_name': cluster_name,
             'service_name': service_name,
-            'scaling_timestamp': datetime.utcnow().isoformat(),
+            'scaling_timestamp': datetime.now(UTC).isoformat(),
             **result
         }
         
@@ -221,7 +221,7 @@ async def execute_recovery_plan(
             'cluster_name': cluster_name,
             'service_name': service_name,
             'plan_id': plan_id,
-            'started_at': datetime.utcnow().isoformat()
+            'started_at': datetime.now(UTC).isoformat()
         }
         
     except Exception as e:
@@ -250,7 +250,7 @@ async def get_recovery_operation_status(
             raise HTTPException(status_code=404, detail=f"Recovery operation {operation_id} not found")
         
         return {
-            'query_timestamp': datetime.utcnow().isoformat(),
+            'query_timestamp': datetime.now(UTC).isoformat(),
             **status
         }
         
@@ -274,7 +274,7 @@ async def get_recovery_plans() -> Dict[str, Any]:
         plans = await recovery_service.get_recovery_plans()
         
         return {
-            'query_timestamp': datetime.utcnow().isoformat(),
+            'query_timestamp': datetime.now(UTC).isoformat(),
             'total_plans': len(plans['plans']),
             **plans
         }
@@ -295,7 +295,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'healthy',
             'service': 'disaster_recovery',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'aws_clients_initialized': all([
                 recovery_service.ecs is not None,
                 recovery_service.elbv2 is not None,
@@ -312,7 +312,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'unhealthy',
             'service': 'disaster_recovery',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'error': str(e)
         }
 
@@ -368,7 +368,7 @@ async def test_recovery_plan(
         test_results = {
             'plan_id': plan_id,
             'plan_name': plan['name'],
-            'test_timestamp': datetime.utcnow().isoformat(),
+            'test_timestamp': datetime.now(UTC).isoformat(),
             'cluster_name': cluster_name,
             'service_name': service_name,
             'estimated_rto_minutes': plan['estimated_rto_minutes'],

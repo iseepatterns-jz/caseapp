@@ -13,6 +13,7 @@ class AuditLogBase(BaseModel):
     """Base audit log schema"""
     entity_type: str = Field(..., description="Type of entity (case, document, etc.)")
     entity_id: UUID = Field(..., description="ID of the entity")
+    entity_name: Optional[str] = Field(None, description="Descriptive name for display")
     action: str = Field(..., description="Action performed")
     field_name: Optional[str] = Field(None, description="Specific field changed")
     old_value: Optional[str] = Field(None, description="Previous value")
@@ -27,6 +28,7 @@ class AuditLogResponse(BaseModel):
     id: UUID
     entity_type: str
     entity_id: UUID
+    entity_name: Optional[str]
     action: str
     field_name: Optional[str]
     old_value: Optional[str]

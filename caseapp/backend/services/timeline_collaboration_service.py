@@ -3,7 +3,7 @@ Timeline collaboration service for managing sharing and permissions
 """
 
 import structlog
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, delete
@@ -324,7 +324,7 @@ class TimelineCollaborationService:
         
         # Generate secure token
         share_token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+        expires_at = datetime.now(UTC) + timedelta(hours=expires_in_hours)
         
         # In a full implementation, this would be stored in a separate table
         # For now, return the share link data
@@ -335,7 +335,7 @@ class TimelineCollaborationService:
             'expires_at': expires_at,
             'view_limit': view_limit,
             'password_protected': password is not None,
-            'created_at': datetime.utcnow()
+            'created_at': datetime.now(UTC)
         }
         
         logger.info("External share link created", 

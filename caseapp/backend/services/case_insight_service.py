@@ -7,7 +7,7 @@ import json
 import asyncio
 from typing import List, Dict, Any, Optional, Tuple
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import structlog
 import boto3
 from botocore.exceptions import ClientError
@@ -84,11 +84,27 @@ class CaseInsightService:
                 # Parse and validate response
                 categorization = self._parse_categorization_response(response)
                 
-                # Filter by confidence threshold
-                filtered_suggestions = {
-                    category: details for category, details in categorization.items()
-                    if details.get('confidence', 0) >= confidence_threshold
-                }
+                # Filter results by confidence threshold where applicable
+                filtered_suggestions = {}
+                if isinstance(categorization, dict):
+                    for category, details in categorization.items():
+                        if isinstance(details, dict) and 'confidence' in details:
+                            # Single suggestion with confidence
+                            if details.get('confidence', 0) >= confidence_threshold:
+                                filtered_suggestions[category] = details
+                        elif isinstance(details, list):
+                            # List of suggestions, filter each one
+                            filtered_list = [
+                                item for item in details
+                                if not isinstance(item, dict) or item.get('confidence', 1.0) >= confidence_threshold
+                            ]
+                            if filtered_list:
+                                filtered_suggestions[category] = filtered_list
+                        else:
+                            # Other metadata (strings, complexity, etc.) - keep as is
+                            filtered_suggestions[category] = details
+                else:
+                    logger.warning("AI categorization response was not a dictionary", type=type(categorization))
                 
                 logger.info("Generated case categorization", 
                            case_id=case_id, 
@@ -97,7 +113,7 @@ class CaseInsightService:
                 return {
                     'case_id': case_id,
                     'categorization': filtered_suggestions,
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'confidence_threshold': confidence_threshold,
                     'model_used': self.model_id
                 }
@@ -161,7 +177,7 @@ class CaseInsightService:
                 return {
                     'case_id': case_id,
                     'correlations': filtered_correlations,
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'correlation_threshold': correlation_threshold,
                     'total_evidence_items': len(evidence_data),
                     'model_used': self.model_id
@@ -243,7 +259,7 @@ class CaseInsightService:
                     'risk_assessment': risk_assessment,
                     'complexity_metrics': complexity_metrics,
                     'evidence_quality': evidence_quality,
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'model_used': self.model_id
                 }
                 
@@ -315,7 +331,7 @@ class CaseInsightService:
                     'anomalies': significant_anomalies,
                     'patterns': analysis.get('patterns', []),
                     'recommendations': analysis.get('recommendations', []),
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'anomaly_threshold': anomaly_threshold,
                     'model_used': self.model_id
                 }
@@ -425,7 +441,7 @@ Case Description: {case.description[:500] if case.description else ""}
                     'processed_documents': processed_documents,
                     'total_suggestions': len(suggestion_dicts),
                     'confidence_threshold': confidence_threshold,
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(UTC).isoformat(),
                     'model_used': self.model_id
                 }
                 
@@ -587,43 +603,59 @@ Return your analysis as JSON:
             # Extract JSON from the response
             import re
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if not json_match:
-                logger.warning("No JSON found in categorization response")
-                return {}
             
-            categorization = json.loads(json_match.group())
+            if json_match:
+                try:
+                    categorization = json.loads(json_match.group())
+                    
+                    # If it's a valid dictionary, process it
+                    if isinstance(categorization, dict):
+                        # Validate and structure the response
+                        result = {}
+                        
+                        if 'primary_category' in categorization:
+                            result['primary'] = categorization['primary_category']
+                        
+                        if 'secondary_categories' in categorization:
+                            result['secondary'] = categorization['secondary_categories']
+                        
+                        if 'practice_areas' in categorization:
+                            result['practice_areas'] = categorization['practice_areas']
+                        
+                        if 'complexity_level' in categorization:
+                            result['complexity'] = categorization['complexity_level']
+                        
+                        if 'estimated_duration' in categorization:
+                            result['duration'] = categorization['estimated_duration']
+                        
+                        if 'resource_requirements' in categorization:
+                            result['resources'] = categorization['resource_requirements']
+                        
+                        if 'key_legal_issues' in categorization:
+                            result['legal_issues'] = categorization['key_legal_issues']
+                        
+                        return result
+                except json.JSONDecodeError:
+                    logger.warning("Found JSON-like structure but failed to decode", response=response)
+
+            # Fallback for non-dictionary/non-JSON responses
+            # If the AI just returned a categorisation name, wrap it
+            clean_response = response.strip()
+            if clean_response and len(clean_response) < 100:
+                logger.info("Raw string AI response detected, treating as primary category", response=clean_response)
+                return {
+                    'primary': {
+                        'category': clean_response,
+                        'confidence': 0.5,  # Lower confidence for unstructured text
+                        'reasoning': "Extracted from plain text AI response"
+                    }
+                }
             
-            # Validate and structure the response
-            result = {}
-            
-            if 'primary_category' in categorization:
-                result['primary'] = categorization['primary_category']
-            
-            if 'secondary_categories' in categorization:
-                result['secondary'] = categorization['secondary_categories']
-            
-            if 'practice_areas' in categorization:
-                result['practice_areas'] = categorization['practice_areas']
-            
-            if 'complexity_level' in categorization:
-                result['complexity'] = categorization['complexity_level']
-            
-            if 'estimated_duration' in categorization:
-                result['duration'] = categorization['estimated_duration']
-            
-            if 'resource_requirements' in categorization:
-                result['resources'] = categorization['resource_requirements']
-            
-            if 'key_legal_issues' in categorization:
-                result['legal_issues'] = categorization['key_legal_issues']
-            
-            return result
-            
-        except json.JSONDecodeError as e:
-            logger.error("Failed to parse categorization response as JSON", error=str(e))
+            logger.warning("No usable categorization found in AI response", response=response)
             return {}
+            
         except Exception as e:
-            logger.error("Failed to parse categorization response", error=str(e))
+            logger.error("Failed to parse categorization response", error=str(e), response=response)
             return {}
     
     async def _prepare_evidence_data(self, case: Case) -> List[Dict[str, Any]]:
@@ -802,7 +834,7 @@ Return your analysis as JSON:
             'media_count': len(case.media_evidence),
             'forensic_sources_count': len(case.forensic_sources),
             'timeline_events_count': sum(len(timeline.events) for timeline in case.timelines),
-            'case_age_days': (datetime.utcnow() - case.created_at).days,
+            'case_age_days': (datetime.now(UTC) - case.created_at).days,
             'has_court_date': case.court_date is not None,
             'has_deadline': case.deadline_date is not None,
             'document_types': list(set(doc.document_type for doc in case.documents)),

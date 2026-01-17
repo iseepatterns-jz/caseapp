@@ -6,7 +6,7 @@ import asyncio
 import json
 import hmac
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, Dict, Any, List
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,7 +103,7 @@ class NotificationService:
                     success = False
                 
                 if success:
-                    delivery_results[channel] = datetime.utcnow().isoformat()
+                    delivery_results[channel] = datetime.now(UTC).isoformat()
                 
             except Exception as e:
                 logger.error("Failed to deliver notification", 
@@ -233,18 +233,18 @@ class NotificationService:
                     
                     stored_delivery.http_status_code = response.status
                     stored_delivery.response_body = response_body[:1000]  # Limit size
-                    stored_delivery.completed_at = datetime.utcnow()
+                    stored_delivery.completed_at = datetime.now(UTC)
                     
                     if 200 <= response.status < 300:
                         stored_delivery.status = 'success'
                         # Update endpoint success tracking
-                        endpoint.last_success_at = datetime.utcnow()
+                        endpoint.last_success_at = datetime.now(UTC)
                         endpoint.failure_count = 0
                     else:
                         stored_delivery.status = 'failed'
                         stored_delivery.error_message = f"HTTP {response.status}: {response_body[:200]}"
                         # Update endpoint failure tracking
-                        endpoint.last_failure_at = datetime.utcnow()
+                        endpoint.last_failure_at = datetime.now(UTC)
                         endpoint.failure_count += 1
                     
                     await db.commit()
@@ -263,10 +263,10 @@ class NotificationService:
                 
                 stored_delivery.status = 'failed'
                 stored_delivery.error_message = str(e)[:500]
-                stored_delivery.completed_at = datetime.utcnow()
+                stored_delivery.completed_at = datetime.now(UTC)
                 
                 # Update endpoint failure tracking
-                endpoint.last_failure_at = datetime.utcnow()
+                endpoint.last_failure_at = datetime.now(UTC)
                 endpoint.failure_count += 1
                 
                 await db.commit()
@@ -280,7 +280,7 @@ class NotificationService:
         """Schedule webhook retry with exponential backoff"""
         
         retry_delay = min(300, 30 * (2 ** delivery.retry_count))  # Max 5 minutes
-        next_retry = datetime.utcnow() + timedelta(seconds=retry_delay)
+        next_retry = datetime.now(UTC) + timedelta(seconds=retry_delay)
         
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -499,7 +499,7 @@ class NotificationService:
             
             if notification and not notification.is_read:
                 notification.is_read = True
-                notification.read_at = datetime.utcnow()
+                notification.read_at = datetime.now(UTC)
                 await db.commit()
                 return True
             

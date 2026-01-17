@@ -2,7 +2,7 @@
 Timeline schemas for API requests and responses
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
@@ -50,11 +50,11 @@ class TimelineEventCreateRequest(BaseModel):
     color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$', description="Hex color code")
     event_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional event metadata")
 
-    @validator('end_date')
-    def validate_end_date(cls, v, values):
-        if v and 'event_date' in values and v < values['event_date']:
+    @model_validator(mode='after')
+    def validate_end_date(self) -> 'TimelineEventCreateRequest':
+        if self.end_date and self.event_date and self.end_date < self.event_date:
             raise ValueError('End date must be after event date')
-        return v
+        return self
 
 class TimelineEventUpdateRequest(BaseModel):
     """Schema for updating timeline events"""

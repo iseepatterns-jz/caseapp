@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Core Palette: Deep Space */
+  --bg-primary: hsl(230, 25%, 5%);
+  --bg-secondary: hsl(230, 25%, 8%);
+  --bg-tertiary: hsl(230, 25%, 12%);
+  
+  /* Accents: Court Blue & Forensic Purple */
+  --accent-primary: hsl(210, 100%, 50%);
+  --accent-secondary: hsl(280, 80%, 60%);
+  --accent-glow: hsla(210, 100%, 50%, 0.15);
+  
+  /* Text: High Contrast & Dimmed */
+  --text-primary: hsl(0, 0%, 98%);
+  --text-secondary: hsl(230, 10%, 70%);
+  --text-muted: hsl(230, 10%, 45%);
+  
+  /* Borders & Glassmorphism */
+  --border-subtle: hsla(0, 0%, 100%, 0.08);
+  --glass-bg: hsla(0, 0%, 100%, 0.03);
+  --glass-blur: blur(12px);
+  
+  /* Scales */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: radial-gradient(circle at 50% -20%, hsl(230, 25%, 10%), var(--bg-primary));
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Glassmorphism Tier 1 */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* Glassmorphism Tier 2 (Interactive) */
+.glass-card {
+  background: hsla(0, 0%, 100%, 0.02);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-smooth);
+}
+
+.glass-card:hover {
+  background: hsla(0, 0%, 100%, 0.04);
+  border-color: hsla(0, 0%, 100%, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Typography Hub */
+h1, h2, h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

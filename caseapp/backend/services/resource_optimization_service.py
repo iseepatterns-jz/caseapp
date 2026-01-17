@@ -4,7 +4,7 @@ Provides automated resource optimization based on usage patterns and performance
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Any, Optional, Tuple
 import structlog
 import boto3
@@ -97,7 +97,7 @@ class ResourceOptimizationService:
             List of resource metrics
         """
         try:
-            end_time = datetime.utcnow()
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=hours_back)
             
             # Get ECS service metrics

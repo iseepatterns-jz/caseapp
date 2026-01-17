@@ -7,7 +7,7 @@ Validates Requirements 10.3
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional
 from enum import Enum
 import aiohttp
@@ -99,8 +99,8 @@ class EFilingService:
                 document_ids=document_ids,
                 filing_type=filing_type,
                 status=FilingStatus.PENDING,
-                submitted_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                submitted_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
                 metadata=metadata or {}
             )
             
@@ -115,7 +115,7 @@ class EFilingService:
             # Update submission with court response
             submission.status = FilingStatus.SUBMITTED
             submission.court_reference = court_response.get("reference_number")
-            submission.updated_at = datetime.utcnow()
+            submission.updated_at = datetime.now(UTC)
             
             logger.info(f"Filing submitted: {submission_id} to {court_system}")
             
@@ -129,7 +129,7 @@ class EFilingService:
             if submission_id in self.submissions:
                 self.submissions[submission_id].status = FilingStatus.ERROR
                 self.submissions[submission_id].rejection_reason = str(e)
-                self.submissions[submission_id].updated_at = datetime.utcnow()
+                self.submissions[submission_id].updated_at = datetime.now(UTC)
             raise
     
     async def get_filing_status(self, submission_id: str) -> Optional[FilingSubmission]:
@@ -183,7 +183,7 @@ class EFilingService:
             # Update local status
             submission.status = FilingStatus.ERROR
             submission.rejection_reason = "Cancelled by user"
-            submission.updated_at = datetime.utcnow()
+            submission.updated_at = datetime.now(UTC)
             
             return True
             
@@ -209,7 +209,7 @@ class EFilingService:
             # Reset status and retry
             submission.status = FilingStatus.PENDING
             submission.rejection_reason = None
-            submission.updated_at = datetime.utcnow()
+            submission.updated_at = datetime.now(UTC)
             
             # Resubmit to court system
             court_response = await self._submit_to_court_system(
@@ -218,7 +218,7 @@ class EFilingService:
             
             submission.status = FilingStatus.SUBMITTED
             submission.court_reference = court_response.get("reference_number")
-            submission.updated_at = datetime.utcnow()
+            submission.updated_at = datetime.now(UTC)
             
             # Restart monitoring
             asyncio.create_task(self._monitor_filing_status(submission_id))
@@ -229,7 +229,7 @@ class EFilingService:
             logger.error(f"Filing retry failed: {str(e)}")
             submission.status = FilingStatus.ERROR
             submission.rejection_reason = str(e)
-            submission.updated_at = datetime.utcnow()
+            submission.updated_at = datetime.now(UTC)
             return False
     
     async def get_court_requirements(
@@ -369,16 +369,16 @@ class EFilingService:
         try:
             # Monitor for up to 7 days
             max_monitoring_time = timedelta(days=7)
-            start_time = datetime.utcnow()
+            start_time = datetime.now(UTC)
             
-            while (datetime.utcnow() - start_time) < max_monitoring_time:
+            while (datetime.now(UTC) - start_time) < max_monitoring_time:
                 # Check status with court system
                 status_update = await self._check_court_status(submission)
                 
                 if status_update:
                     old_status = submission.status
                     submission.status = FilingStatus(status_update["status"])
-                    submission.updated_at = datetime.utcnow()
+                    submission.updated_at = datetime.now(UTC)
                     
                     if "rejection_reason" in status_update:
                         submission.rejection_reason = status_update["rejection_reason"]
@@ -402,7 +402,7 @@ class EFilingService:
             logger.error(f"Filing monitoring failed: {str(e)}")
             submission.status = FilingStatus.ERROR
             submission.rejection_reason = f"Monitoring error: {str(e)}"
-            submission.updated_at = datetime.utcnow()
+            submission.updated_at = datetime.now(UTC)
     
     async def _check_court_status(self, submission: FilingSubmission) -> Optional[Dict[str, Any]]:
         """
@@ -418,7 +418,7 @@ class EFilingService:
             # Mock status checking (in real implementation, would call court API)
             if submission.court_system == CourtSystem.MOCK_COURT:
                 # Simulate status progression
-                time_since_submission = datetime.utcnow() - submission.submitted_at
+                time_since_submission = datetime.now(UTC) - submission.submitted_at
                 
                 if time_since_submission < timedelta(minutes=5):
                     return {"status": "processing"}
@@ -464,7 +464,7 @@ class EFilingService:
         Returns:
             Filing statistics dictionary
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
         
         # Filter submissions
         filtered_submissions = [

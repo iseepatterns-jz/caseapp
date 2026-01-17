@@ -5,7 +5,7 @@ Provides automated rollback capabilities, backup procedures, and emergency deplo
 
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Any, Optional, Tuple
 import structlog
 import boto3
@@ -279,7 +279,7 @@ class DisasterRecoveryService:
             
             # Create snapshot
             snapshot = DeploymentSnapshot(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 cluster_name=cluster_name,
                 service_name=service_name,
                 task_definition_arn=service['taskDefinition'],
@@ -369,7 +369,7 @@ class DisasterRecoveryService:
             objects.sort(key=lambda x: x['LastModified'], reverse=True)
             
             # Delete objects beyond max count or retention period
-            cutoff_date = datetime.utcnow() - timedelta(days=self.snapshot_retention_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=self.snapshot_retention_days)
             
             objects_to_delete = []
             
@@ -636,14 +636,14 @@ class DisasterRecoveryService:
                 raise ValueError(f"Recovery plan {plan_id} not found")
             
             plan = self.recovery_plans[plan_id]
-            operation_id = f"{plan_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            operation_id = f"{plan_id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
             
             # Create recovery operation
             operation = RecoveryOperation(
                 operation_id=operation_id,
                 plan_id=plan_id,
                 status=RecoveryStatus.PENDING,
-                started_at=datetime.utcnow(),
+                started_at=datetime.now(UTC),
                 completed_at=None,
                 actions_completed=[],
                 actions_failed=[],
@@ -706,7 +706,7 @@ class DisasterRecoveryService:
             else:
                 operation.status = RecoveryStatus.COMPLETED
             
-            operation.completed_at = datetime.utcnow()
+            operation.completed_at = datetime.now(UTC)
             
             self.logger.info(f"Recovery plan execution completed", 
                            operation_id=operation.operation_id, 
@@ -714,7 +714,7 @@ class DisasterRecoveryService:
             
         except Exception as e:
             operation.status = RecoveryStatus.FAILED
-            operation.completed_at = datetime.utcnow()
+            operation.completed_at = datetime.now(UTC)
             operation.error_messages.append(f"Recovery execution failed: {str(e)}")
             self.logger.error(f"Recovery plan execution failed: {str(e)}", 
                             operation_id=operation.operation_id)

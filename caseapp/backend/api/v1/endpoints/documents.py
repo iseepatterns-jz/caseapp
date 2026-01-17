@@ -224,9 +224,9 @@ async def search_documents(
     - **search_request**: Search parameters including query, filters, and pagination
     """
     try:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
         documents, total_count = await document_service.search_documents(search_request)
-        end_time = datetime.utcnow()
+        end_time = datetime.now(UTC)
         
         search_time_ms = int((end_time - start_time).total_seconds() * 1000)
         

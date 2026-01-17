@@ -4,7 +4,7 @@ Request and response models for background job processing and webhook management
 Validates Requirements 10.4, 10.6
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
@@ -23,7 +23,7 @@ class JobSubmissionRequest(BaseModel):
     timeout_seconds: int = Field(default=300, ge=10, le=7200, description="Job timeout in seconds")
     metadata: Dict[str, Any] = Field(default={}, description="Additional job metadata")
     
-    @validator('task_name')
+    @field_validator('task_name')
     def validate_task_name(cls, v):
         allowed_tasks = [
             "document_analysis", "media_processing", "forensic_analysis",
@@ -85,13 +85,13 @@ class WebhookEndpointRequest(BaseModel):
     timeout_seconds: int = Field(default=30, ge=5, le=300, description="Request timeout")
     headers: Dict[str, str] = Field(default={}, description="Additional headers to send")
     
-    @validator('url')
+    @field_validator('url')
     def validate_url(cls, v):
         if not v.startswith(('http://', 'https://')):
             raise ValueError("URL must start with http:// or https://")
         return v
     
-    @validator('events')
+    @field_validator('events')
     def validate_events(cls, v):
         if not v:
             raise ValueError("At least one event must be specified")

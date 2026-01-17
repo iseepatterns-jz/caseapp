@@ -4,7 +4,7 @@ Real-time presence service for collaboration sessions
 
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, Dict, Any, List, Set
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,7 +71,7 @@ class PresenceService:
                 timeline_id=timeline_id,
                 user_id=user_id,
                 is_active=True,
-                last_activity=datetime.utcnow(),
+                last_activity=datetime.now(UTC),
                 current_view=session_metadata or {},
                 ip_address=session_metadata.get('ip_address') if session_metadata else None,
                 user_agent=session_metadata.get('user_agent') if session_metadata else None
@@ -86,8 +86,8 @@ class PresenceService:
                 'session_id': session_id,
                 'timeline_id': timeline_id,
                 'user_id': user_id,
-                'started_at': datetime.utcnow().isoformat(),
-                'last_activity': datetime.utcnow().isoformat(),
+                'started_at': datetime.now(UTC).isoformat(),
+                'last_activity': datetime.now(UTC).isoformat(),
                 'current_view': session_metadata or {},
                 'is_active': True
             }
@@ -125,7 +125,7 @@ class PresenceService:
         if session_id not in self.active_sessions:
             return False
         
-        current_time = datetime.utcnow()
+        current_time = datetime.now(UTC)
         
         # Update in-memory data
         session_data = self.active_sessions[session_id]
@@ -197,7 +197,7 @@ class PresenceService:
             
             if session:
                 session.is_active = False
-                session.last_activity = datetime.utcnow()
+                session.last_activity = datetime.now(UTC)
                 await db.commit()
         
         # Remove from Redis if available
@@ -231,7 +231,7 @@ class PresenceService:
                     and_(
                         CollaborationSession.timeline_id == timeline_id,
                         CollaborationSession.is_active == True,
-                        CollaborationSession.last_activity > datetime.utcnow() - timedelta(minutes=5)
+                        CollaborationSession.last_activity > datetime.now(UTC) - timedelta(minutes=5)
                     )
                 )
                 .options(selectinload(CollaborationSession.user))
@@ -257,7 +257,7 @@ class PresenceService:
     async def cleanup_inactive_sessions(self, inactive_threshold_minutes: int = 30):
         """Clean up inactive collaboration sessions"""
         
-        cutoff_time = datetime.utcnow() - timedelta(minutes=inactive_threshold_minutes)
+        cutoff_time = datetime.now(UTC) - timedelta(minutes=inactive_threshold_minutes)
         
         async with AsyncSessionLocal() as db:
             # Find inactive sessions
@@ -289,7 +289,7 @@ class PresenceService:
                     and_(
                         CollaborationSession.user_id == user_id,
                         CollaborationSession.is_active == True,
-                        CollaborationSession.last_activity > datetime.utcnow() - timedelta(hours=1)
+                        CollaborationSession.last_activity > datetime.now(UTC) - timedelta(hours=1)
                     )
                 )
                 .options(selectinload(CaseTimeline.case))
@@ -332,7 +332,7 @@ class PresenceService:
                 update_message = {
                     'type': 'presence_update',
                     'timeline_id': timeline_id,
-                    'timestamp': datetime.utcnow().isoformat(),
+                    'timestamp': datetime.now(UTC).isoformat(),
                     'data': update_data
                 }
                 

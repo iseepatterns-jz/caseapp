@@ -4,7 +4,7 @@ Unified orchestration of monitoring, alerting, recovery, and validation systems
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Any, Optional, Tuple
 import structlog
 from dataclasses import dataclass
@@ -104,7 +104,7 @@ class DeploymentOrchestrationService:
         try:
             self.logger.info(f"Starting full deployment orchestration for {service_name}", cluster=cluster_name)
             
-            orchestration_start = datetime.utcnow()
+            orchestration_start = datetime.now(UTC)
             results = []
             overall_status = OrchestrationStatus.COMPLETED
             
@@ -162,7 +162,7 @@ class DeploymentOrchestrationService:
             return {
                 'status': 'failed',
                 'error_message': str(e),
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(UTC).isoformat()
             }
     
     async def _execute_pre_deployment_phase(self,
@@ -171,7 +171,7 @@ class DeploymentOrchestrationService:
                                           deployment_config: Optional[Dict[str, Any]]) -> OrchestrationResult:
         """Execute pre-deployment validation and preparation"""
         
-        phase_start = datetime.utcnow()
+        phase_start = datetime.now(UTC)
         
         try:
             self.logger.info("Executing pre-deployment phase", service=service_name)
@@ -204,7 +204,7 @@ class DeploymentOrchestrationService:
                     return OrchestrationResult(
                         phase=OrchestrationPhase.PRE_DEPLOYMENT,
                         status=OrchestrationStatus.FAILED,
-                        duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                        duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                         details=phase_details,
                         error_message=f"Critical issues found: {len(critical_issues)} issues must be resolved before deployment"
                     )
@@ -226,7 +226,7 @@ class DeploymentOrchestrationService:
                     return OrchestrationResult(
                         phase=OrchestrationPhase.PRE_DEPLOYMENT,
                         status=OrchestrationStatus.WARNING,
-                        duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                        duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                         details=phase_details,
                         error_message="Service health score below recommended threshold for deployment"
                     )
@@ -238,7 +238,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.PRE_DEPLOYMENT,
                 status=OrchestrationStatus.COMPLETED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details=phase_details
             )
             
@@ -246,7 +246,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.PRE_DEPLOYMENT,
                 status=OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={},
                 error_message=str(e)
             )
@@ -257,7 +257,7 @@ class DeploymentOrchestrationService:
                                       deployment_config: Optional[Dict[str, Any]]) -> OrchestrationResult:
         """Execute deployment monitoring and validation"""
         
-        phase_start = datetime.utcnow()
+        phase_start = datetime.now(UTC)
         
         try:
             self.logger.info("Executing deployment phase", service=service_name)
@@ -275,7 +275,7 @@ class DeploymentOrchestrationService:
                     return OrchestrationResult(
                         phase=OrchestrationPhase.DEPLOYMENT,
                         status=OrchestrationStatus.FAILED,
-                        duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                        duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                         details=phase_details,
                         error_message="Service did not become healthy after deployment"
                     )
@@ -286,7 +286,7 @@ class DeploymentOrchestrationService:
                 return OrchestrationResult(
                     phase=OrchestrationPhase.DEPLOYMENT,
                     status=OrchestrationStatus.FAILED,
-                    duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                    duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                     details=phase_details,
                     error_message=f"Health validation failed: {str(e)}"
                 )
@@ -294,7 +294,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.DEPLOYMENT,
                 status=OrchestrationStatus.COMPLETED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details=phase_details
             )
             
@@ -302,7 +302,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.DEPLOYMENT,
                 status=OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={},
                 error_message=str(e)
             )
@@ -313,7 +313,7 @@ class DeploymentOrchestrationService:
                                            deployment_config: Optional[Dict[str, Any]]) -> OrchestrationResult:
         """Execute post-deployment validation and setup"""
         
-        phase_start = datetime.utcnow()
+        phase_start = datetime.now(UTC)
         
         try:
             self.logger.info("Executing post-deployment phase", service=service_name)
@@ -339,7 +339,7 @@ class DeploymentOrchestrationService:
                     return OrchestrationResult(
                         phase=OrchestrationPhase.POST_DEPLOYMENT,
                         status=OrchestrationStatus.WARNING,
-                        duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                        duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                         details=phase_details,
                         error_message=f"Validation success rate {success_rate}% below 90% threshold"
                     )
@@ -362,7 +362,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.POST_DEPLOYMENT,
                 status=OrchestrationStatus.COMPLETED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details=phase_details
             )
             
@@ -370,7 +370,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.POST_DEPLOYMENT,
                 status=OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={},
                 error_message=str(e)
             )
@@ -381,7 +381,7 @@ class DeploymentOrchestrationService:
                                             deployment_config: Optional[Dict[str, Any]]) -> OrchestrationResult:
         """Execute monitoring and alerting setup"""
         
-        phase_start = datetime.utcnow()
+        phase_start = datetime.now(UTC)
         
         try:
             self.logger.info("Executing monitoring setup phase", service=service_name)
@@ -411,7 +411,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.MONITORING,
                 status=OrchestrationStatus.COMPLETED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details=phase_details
             )
             
@@ -419,7 +419,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.MONITORING,
                 status=OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={},
                 error_message=str(e)
             )
@@ -430,7 +430,7 @@ class DeploymentOrchestrationService:
                                         deployment_config: Optional[Dict[str, Any]]) -> OrchestrationResult:
         """Execute resource optimization analysis"""
         
-        phase_start = datetime.utcnow()
+        phase_start = datetime.now(UTC)
         
         try:
             self.logger.info("Executing optimization phase", service=service_name)
@@ -454,7 +454,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.OPTIMIZATION,
                 status=OrchestrationStatus.COMPLETED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details=phase_details
             )
             
@@ -462,7 +462,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.OPTIMIZATION,
                 status=OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={},
                 error_message=str(e)
             )
@@ -472,7 +472,7 @@ class DeploymentOrchestrationService:
                                         service_name: str) -> OrchestrationResult:
         """Execute emergency recovery procedures"""
         
-        phase_start = datetime.utcnow()
+        phase_start = datetime.now(UTC)
         
         try:
             self.logger.info("Executing emergency recovery", service=service_name)
@@ -483,9 +483,9 @@ class DeploymentOrchestrationService:
             )
             
             # Wait for recovery to complete (with timeout)
-            timeout_end = datetime.utcnow() + timedelta(minutes=10)
+            timeout_end = datetime.now(UTC) + timedelta(minutes=10)
             
-            while datetime.utcnow() < timeout_end:
+            while datetime.now(UTC) < timeout_end:
                 status = await self.recovery_service.get_recovery_operation_status(operation_id)
                 if status and status['status'] in ['completed', 'failed']:
                     break
@@ -496,7 +496,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.PRE_DEPLOYMENT,  # Recovery is part of deployment phase
                 status=OrchestrationStatus.COMPLETED if final_status.get('status') == 'completed' else OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={'recovery_operation': final_status}
             )
             
@@ -504,7 +504,7 @@ class DeploymentOrchestrationService:
             return OrchestrationResult(
                 phase=OrchestrationPhase.PRE_DEPLOYMENT,
                 status=OrchestrationStatus.FAILED,
-                duration_seconds=(datetime.utcnow() - phase_start).total_seconds(),
+                duration_seconds=(datetime.now(UTC) - phase_start).total_seconds(),
                 details={},
                 error_message=f"Emergency recovery failed: {str(e)}"
             )
@@ -515,13 +515,13 @@ class DeploymentOrchestrationService:
                                     overall_status: OrchestrationStatus) -> Dict[str, Any]:
         """Create comprehensive orchestration summary"""
         
-        total_duration = (datetime.utcnow() - start_time).total_seconds()
+        total_duration = (datetime.now(UTC) - start_time).total_seconds()
         
         return {
             'orchestration_id': f"orch_{start_time.strftime('%Y%m%d_%H%M%S')}",
             'status': overall_status.value,
             'started_at': start_time.isoformat(),
-            'completed_at': datetime.utcnow().isoformat(),
+            'completed_at': datetime.now(UTC).isoformat(),
             'total_duration_seconds': total_duration,
             'phases_executed': len(results),
             'phases_successful': len([r for r in results if r.status == OrchestrationStatus.COMPLETED]),
@@ -551,7 +551,7 @@ class DeploymentOrchestrationService:
             return {
                 'cluster_name': cluster_name,
                 'service_name': service_name,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(UTC).isoformat(),
                 'monitoring': {
                     'status': monitoring_status.get('status', 'unknown'),
                     'metrics_available': len(monitoring_status.get('metrics', {}))
@@ -579,5 +579,5 @@ class DeploymentOrchestrationService:
             return {
                 'status': 'error',
                 'error_message': str(e),
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(UTC).isoformat()
             }

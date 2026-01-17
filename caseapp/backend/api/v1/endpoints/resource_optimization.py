@@ -6,7 +6,7 @@ Provides endpoints for automated resource optimization and recommendations
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, List, Any, Optional
 import structlog
-from datetime import datetime
+from datetime import datetime, UTC
 
 from services.resource_optimization_service import ResourceOptimizationService, OptimizationRecommendation
 
@@ -90,7 +90,7 @@ async def analyze_resource_usage(
             'service_name': service_name,
             'analysis_period_hours': hours_back,
             'data_points_analyzed': len(metrics),
-            'analysis_timestamp': datetime.utcnow().isoformat(),
+            'analysis_timestamp': datetime.now(UTC).isoformat(),
             'summary_statistics': summary,
             'detailed_metrics': [
                 {
@@ -155,7 +155,7 @@ async def get_optimization_recommendations(
             'cluster_name': cluster_name,
             'service_name': service_name,
             'analysis_period_hours': hours_back,
-            'recommendation_timestamp': datetime.utcnow().isoformat(),
+            'recommendation_timestamp': datetime.now(UTC).isoformat(),
             'total_recommendations': len(recommendations),
             'high_priority_count': len([r for r in recommendations if r.priority == 'high']),
             'medium_priority_count': len([r for r in recommendations if r.priority == 'medium']),
@@ -248,7 +248,7 @@ async def apply_optimization_recommendation(
             'service_name': service_name,
             'recommendation_id': recommendation_data.get('id'),
             'dry_run': dry_run,
-            'application_timestamp': datetime.utcnow().isoformat(),
+            'application_timestamp': datetime.now(UTC).isoformat(),
             'result': result
         }
         
@@ -277,7 +277,7 @@ async def get_optimization_summary(
         summary = await optimization_service.get_optimization_summary(cluster_name, service_name)
         
         return {
-            'summary_timestamp': datetime.utcnow().isoformat(),
+            'summary_timestamp': datetime.now(UTC).isoformat(),
             **summary
         }
         
@@ -297,7 +297,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'healthy',
             'service': 'resource_optimization',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'aws_clients_initialized': all([
                 optimization_service.cloudwatch is not None,
                 optimization_service.ecs is not None,
@@ -310,7 +310,7 @@ async def health_check() -> Dict[str, Any]:
         return {
             'status': 'unhealthy',
             'service': 'resource_optimization',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'error': str(e)
         }
 
@@ -366,7 +366,7 @@ async def update_optimization_config(
         return {
             'status': 'updated',
             'updated_fields': updated_fields,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(UTC).isoformat()
         }
         
     except Exception as e:

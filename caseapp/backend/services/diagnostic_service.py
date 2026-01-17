@@ -6,7 +6,7 @@ Provides automated diagnostics, log analysis, and guided troubleshooting workflo
 import asyncio
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 import structlog
 from pathlib import Path
@@ -29,7 +29,7 @@ class DiagnosticIssue:
         self.description = description
         self.recommendations = recommendations
         self.details = details or {}
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
 class DiagnosticService:
     """Comprehensive diagnostic and troubleshooting service"""
@@ -83,8 +83,8 @@ class DiagnosticService:
             summary = self._create_diagnostic_summary(health_data, issues)
             
             report = {
-                "report_id": f"diag_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
-                "timestamp": datetime.utcnow().isoformat(),
+                "report_id": f"diag_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
+                "timestamp": datetime.now(UTC).isoformat(),
                 "summary": summary,
                 "health_data": health_data,
                 "system_info": system_info,
@@ -108,7 +108,7 @@ class DiagnosticService:
             self.logger.error("Failed to generate diagnostic report", error=str(e))
             return {
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "status": "failed"
             }
     
@@ -174,7 +174,7 @@ class DiagnosticService:
             if not self.logs_client:
                 return {"error": "CloudWatch Logs client not available"}
             
-            end_time = datetime.utcnow()
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=hours_back)
             
             # Convert to milliseconds since epoch

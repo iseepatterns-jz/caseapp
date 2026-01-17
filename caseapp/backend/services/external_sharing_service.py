@@ -4,7 +4,7 @@ External sharing service for timeline collaboration
 
 import secrets
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, Dict, Any, List
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,7 +46,7 @@ class ExternalSharingService:
             
             # Generate secure token
             share_token = secrets.token_urlsafe(32)
-            expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+            expires_at = datetime.now(UTC) + timedelta(hours=expires_in_hours)
             
             # Hash password if provided
             password_hash = None
@@ -112,7 +112,7 @@ class ExternalSharingService:
                 }
             
             # Check if link is expired
-            if share_link.expires_at < datetime.utcnow():
+            if share_link.expires_at < datetime.now(UTC):
                 if share_link.status == ShareLinkStatus.ACTIVE.value:
                     share_link.status = ShareLinkStatus.EXPIRED.value
                     await db.commit()
@@ -200,7 +200,7 @@ class ExternalSharingService:
                 
                 if share_link:
                     share_link.view_count += 1
-                    share_link.last_accessed_at = datetime.utcnow()
+                    share_link.last_accessed_at = datetime.now(UTC)
                     share_link.last_accessed_ip = ip_address
             
             await db.commit()
@@ -226,7 +226,7 @@ class ExternalSharingService:
             
             share_link.status = ShareLinkStatus.REVOKED.value
             share_link.revoked_by_id = revoked_by_id
-            share_link.revoked_at = datetime.utcnow()
+            share_link.revoked_at = datetime.now(UTC)
             
             await db.commit()
             
@@ -296,7 +296,7 @@ class ExternalSharingService:
                 actions[log.action] = actions.get(log.action, 0) + 1
             
             # Recent activity (last 24 hours)
-            recent_cutoff = datetime.utcnow() - timedelta(hours=24)
+            recent_cutoff = datetime.now(UTC) - timedelta(hours=24)
             recent_accesses = [
                 log for log in access_logs 
                 if log.accessed_at > recent_cutoff
@@ -339,7 +339,7 @@ class ExternalSharingService:
             result = await db.execute(
                 select(ExternalShareLink).where(
                     and_(
-                        ExternalShareLink.expires_at < datetime.utcnow(),
+                        ExternalShareLink.expires_at < datetime.now(UTC),
                         ExternalShareLink.status == ShareLinkStatus.ACTIVE.value
                     )
                 )

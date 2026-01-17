@@ -3,7 +3,7 @@ API v1 router configuration
 """
 
 from fastapi import APIRouter
-from api.v1.endpoints import cases, documents, timeline, media, forensic, collaboration, insights, exports, auth, audit, integrations, efiling, background_jobs, health, monitoring, diagnostics
+from api.v1.endpoints import cases, documents, timeline, media, forensic, financial_analysis, collaboration, insights, exports, auth, audit, integrations, efiling, background_jobs, health, monitoring, diagnostics
 
 api_router = APIRouter()
 
@@ -14,6 +14,7 @@ api_router.include_router(documents.router, prefix="/documents", tags=["document
 api_router.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 api_router.include_router(media.router, prefix="/media", tags=["media"])
 api_router.include_router(forensic.router, prefix="/forensic", tags=["forensic"])
+api_router.include_router(financial_analysis.router, prefix="/financial", tags=["financial-analysis"])
 api_router.include_router(collaboration.router, prefix="/collaboration", tags=["collaboration"])
 api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
 api_router.include_router(exports.router, prefix="/exports", tags=["exports"])

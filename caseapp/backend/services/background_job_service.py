@@ -7,7 +7,7 @@ Validates Requirements 10.4
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional, Callable
 from enum import Enum
 import logging
@@ -134,7 +134,7 @@ class BackgroundJobService:
             kwargs=kwargs or {},
             status=JobStatus.PENDING,
             priority=priority,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             max_retries=max_retries,
             retry_delay_seconds=retry_delay_seconds,
             timeout_seconds=timeout_seconds,
@@ -209,7 +209,7 @@ class BackgroundJobService:
             if job_id in self.job_queue:
                 self.job_queue.remove(job_id)
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             return True
         
         elif job.status == JobStatus.RUNNING:
@@ -218,7 +218,7 @@ class BackgroundJobService:
                 self.running_jobs[job_id].cancel()
                 del self.running_jobs[job_id]
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             return True
         
         return False
@@ -267,7 +267,7 @@ class BackgroundJobService:
         Returns:
             Statistics dictionary
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
         
         recent_jobs = [
             job for job in self.jobs.values()
@@ -386,9 +386,9 @@ class BackgroundJobService:
         
         # Update job status
         job.status = JobStatus.RUNNING
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(UTC)
         
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
         
         try:
             # Get task function
@@ -407,10 +407,10 @@ class BackgroundJobService:
             )
             
             # Job completed successfully
-            execution_time = (datetime.utcnow() - start_time).total_seconds()
+            execution_time = (datetime.now(UTC) - start_time).total_seconds()
             
             job.status = JobStatus.COMPLETED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.result = JobResult(
                 success=True,
                 result=result,
@@ -423,7 +423,7 @@ class BackgroundJobService:
         except asyncio.TimeoutError:
             # Job timed out
             job.status = JobStatus.FAILED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.result = JobResult(
                 success=False,
                 error=f"Job timed out after {job.timeout_seconds} seconds",
@@ -435,17 +435,17 @@ class BackgroundJobService:
         except asyncio.CancelledError:
             # Job was cancelled
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             
             logger.info(f"Job {job_id} was cancelled")
             
         except Exception as e:
             # Job failed with error
-            execution_time = (datetime.utcnow() - start_time).total_seconds()
+            execution_time = (datetime.now(UTC) - start_time).total_seconds()
             error_message = f"{str(e)}\n{traceback.format_exc()}"
             
             job.status = JobStatus.FAILED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.result = JobResult(
                 success=False,
                 error=error_message,

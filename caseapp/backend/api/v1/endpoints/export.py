@@ -4,7 +4,7 @@ Provides timeline and forensic report generation in multiple formats
 """
 
 from typing import Optional, List, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, UTC
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 import io
@@ -58,7 +58,7 @@ async def export_timeline_pdf(
         )
         
         # Generate filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"timeline_report_{request.case_id[:8]}_{timestamp}.pdf"
         
         # Return as streaming response
@@ -123,7 +123,7 @@ async def export_timeline_png(
         )
         
         # Generate filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"timeline_visualization_{request.case_id[:8]}_{timestamp}.png"
         
         logger.info("Timeline PNG export completed", 
@@ -175,7 +175,7 @@ async def export_forensic_report_pdf(
         )
         
         # Generate filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"forensic_report_{request.case_id[:8]}_{timestamp}.pdf"
         
         logger.info("Forensic report PDF export completed", 
@@ -242,11 +242,11 @@ async def export_selective_data(
                 message="Export completed successfully",
                 data=result,
                 export_format=request.export_format,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(UTC)
             )
         else:
             # For PDF format, return as streaming response
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             filename = f"selective_export_{request.case_id[:8]}_{timestamp}.pdf"
             
             logger.info("Selective PDF export completed", 
@@ -476,7 +476,7 @@ async def export_network_graph_data(
             return network_data
         else:
             # CSV format - return as streaming response
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             filename = f"network_graph_{case_id[:8]}_{timestamp}.csv"
             
             logger.info("Network graph CSV export completed", 

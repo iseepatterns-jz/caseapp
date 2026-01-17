@@ -6,7 +6,7 @@ Provides multi-level health checks, performance monitoring, and anomaly detectio
 import asyncio
 import psutil
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional, Tuple
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from core.database import get_db, validate_database_connection, get_database_inf
 from core.redis import redis_service
 from core.config import settings
 from services.health_service import HealthService, HealthStatus, HealthCheckResult
+from services.audit_service import AuditService
 
 logger = structlog.get_logger()
 
@@ -28,7 +29,7 @@ class PerformanceMetrics:
         self.error_rates: List[float] = []
         self.throughput: List[float] = []
         self.resource_usage: Dict[str, float] = {}
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
 class ComprehensiveHealthService(HealthService):
     """Enhanced health service with comprehensive monitoring capabilities"""
@@ -53,20 +54,28 @@ class ComprehensiveHealthService(HealthService):
             self.logger.warning("CloudWatch client initialization failed", error=str(e))
             self.cloudwatch = None
     
-    async def comprehensive_health_check(self) -> Dict[str, Any]:
+    async def comprehensive_health_check(
+        self, 
+        db: Optional[AsyncSession] = None, 
+        audit_service: Optional[AuditService] = None
+    ) -> Dict[str, Any]:
         """
         Perform comprehensive health check with performance monitoring
         
+        Args:
+            db: Optional database session
+            audit_service: Optional audit service
+            
         Returns:
             Dict containing detailed health status, metrics, and recommendations
         """
         self.logger.info("Starting comprehensive health check with performance monitoring")
         
         # Run all health checks concurrently
-        health_results = await self.check_all_services()
+        health_results = await self.check_all_services(db, audit_service)
         
         # Collect performance metrics
-        performance_metrics = await self._collect_performance_metrics()
+        performance_metrics = await self._collect_performance_metrics(db)
         
         # Check resource utilization
         resource_metrics = await self._check_resource_utilization()
@@ -93,7 +102,7 @@ class ComprehensiveHealthService(HealthService):
         comprehensive_result = {
             "overall_status": health_results["overall_status"],
             "health_score": health_score,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "services": health_results["services"],
             "performance_metrics": performance_metrics,
             "resource_metrics": resource_metrics,
@@ -116,13 +125,13 @@ class ComprehensiveHealthService(HealthService):
         
         return comprehensive_result
     
-    async def _collect_performance_metrics(self) -> Dict[str, Any]:
+    async def _collect_performance_metrics(self, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
         """Collect application performance metrics"""
         try:
             metrics = {}
             
             # Database performance metrics
-            db_metrics = await self._get_database_performance()
+            db_metrics = await self._get_database_performance(db)
             metrics["database"] = db_metrics
             
             # Redis performance metrics
@@ -143,17 +152,20 @@ class ComprehensiveHealthService(HealthService):
             self.logger.error("Failed to collect performance metrics", error=str(e))
             return {"error": str(e)}
     
-    async def _get_database_performance(self) -> Dict[str, Any]:
+    async def _get_database_performance(self, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
         """Get database performance metrics"""
         try:
             db_info = await get_database_info()
             
             # Measure query response time
             start_time = time.time()
-            async for session in get_db():
-                result = await session.execute(text("SELECT 1"))
-                await session.commit()
-                break
+            if db:
+                result = await db.execute(text("SELECT 1"))
+            else:
+                async for session in get_db():
+                    result = await session.execute(text("SELECT 1"))
+                    await session.commit()
+                    break
             query_time = time.time() - start_time
             
             return {
@@ -570,7 +582,7 @@ class ComprehensiveHealthService(HealthService):
     async def get_performance_trends(self, hours_back: int = 24) -> Dict[str, Any]:
         """Get performance trends over specified time period"""
         try:
-            cutoff_time = datetime.utcnow() - timedelta(hours=hours_back)
+            cutoff_time = datetime.now(UTC) - timedelta(hours=hours_back)
             
             # Filter metrics by time
             recent_metrics = [

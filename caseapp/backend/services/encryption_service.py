@@ -7,7 +7,7 @@ import base64
 import json
 import hashlib
 from typing import Dict, Any, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, UTC
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -62,7 +62,7 @@ class EncryptionService:
             # Create encryption metadata
             encryption_metadata = {
                 'document_id': document_id,
-                'encrypted_at': datetime.utcnow().isoformat(),
+                'encrypted_at': datetime.now(UTC).isoformat(),
                 'encryption_algorithm': 'AES-256-GCM',
                 'key_management': 'AWS-KMS',
                 'content_hash': hashlib.sha256(content).hexdigest(),
@@ -174,7 +174,7 @@ class EncryptionService:
             
             # Generate unique communication ID
             communication_id = hashlib.sha256(
-                f"{sender_id}:{':'.join(recipient_ids)}:{datetime.utcnow().isoformat()}".encode()
+                f"{sender_id}:{':'.join(recipient_ids)}:{datetime.now(UTC).isoformat()}".encode()
             ).hexdigest()[:16]
             
             # Encrypt the message
@@ -200,7 +200,7 @@ class EncryptionService:
                 'sender_id': sender_id,
                 'recipient_ids': recipient_ids,
                 'communication_type': communication_type,
-                'encrypted_at': datetime.utcnow().isoformat()
+                'encrypted_at': datetime.now(UTC).isoformat()
             }
             
         except Exception as e:
@@ -367,7 +367,7 @@ class EncryptionService:
             rotation_results = {
                 'rotated_count': 0,
                 'failed_count': 0,
-                'rotation_timestamp': datetime.utcnow().isoformat(),
+                'rotation_timestamp': datetime.now(UTC).isoformat(),
                 'failed_documents': []
             }
             

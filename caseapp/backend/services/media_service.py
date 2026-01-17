@@ -5,7 +5,10 @@ Media evidence management service
 import os
 import hashlib
 import mimetypes
+import asyncio
+from functools import partial
 from typing import List, Optional, Dict, Any, Tuple
+
 from uuid import UUID
 from datetime import datetime
 from pathlib import Path
@@ -129,6 +132,7 @@ class MediaService:
                 action="create",
                 user_id=user_id,
                 case_id=upload_request.case_id,
+                entity_name=file.filename,
                 new_value=f"Uploaded media: {file.filename}"
             )
             
@@ -304,13 +308,75 @@ class MediaService:
             return MediaType.OTHER, MediaFormat.UNKNOWN
     
     async def _extract_basic_metadata(self, file_path: Path, media_type: MediaType) -> Dict[str, Any]:
-        """Extract basic metadata from media file"""
+        """Extract basic metadata from media file using appropriate libraries"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, 
+            partial(self._sync_extract_metadata, file_path, media_type)
+        )
+
+    def _sync_extract_metadata(self, file_path: Path, media_type: MediaType) -> Dict[str, Any]:
+        """Synchronous part of metadata extraction to be run in thread pool"""
         metadata = {}
         
-        # For now, return empty metadata - in a real implementation,
-        # you would use libraries like PIL, ffmpeg-python, etc.
-        # to extract technical metadata
-        
+        try:
+            if media_type == MediaType.IMAGE:
+                from PIL import Image
+                with Image.open(file_path) as img:
+                    metadata['width'] = img.width
+                    metadata['height'] = img.height
+                    
+            elif media_type in [MediaType.VIDEO, MediaType.AUDIO]:
+                import ffmpeg
+                try:
+                    probe = ffmpeg.probe(str(file_path))
+                    
+                    # Extract stream info
+                    video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+                    audio_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'audio'), None)
+                    format_info = probe.get('format', {})
+                    
+                    # Duration from format info
+                    if 'duration' in format_info:
+                        metadata['duration'] = int(float(format_info['duration']))
+                    
+                    # Bitrate from format info
+                    if 'bit_rate' in format_info:
+                        metadata['bit_rate'] = int(format_info['bit_rate'])
+                    
+                    if video_stream:
+                        # Video dimensions
+                        if 'width' in video_stream:
+                            metadata['width'] = int(video_stream['width'])
+                        if 'height' in video_stream:
+                            metadata['height'] = int(video_stream['height'])
+                            
+                        # Frame rate parsing (e.g., "30000/1001" or "25/1")
+                        if 'avg_frame_rate' in video_stream:
+                            try:
+                                num, den = video_stream['avg_frame_rate'].split('/')
+                                if int(den) > 0:
+                                    metadata['frame_rate'] = int(int(num) / int(den))
+                            except (ValueError, ZeroDivisionError):
+                                pass
+                                
+                    if audio_stream:
+                        # Audio specific metadata
+                        if 'sample_rate' in audio_stream:
+                            metadata['sample_rate'] = int(audio_stream['sample_rate'])
+                        if not metadata.get('bit_rate') and 'bit_rate' in audio_stream:
+                            metadata['bit_rate'] = int(audio_stream['bit_rate'])
+                            
+                except ffmpeg.Error as e:
+                    logger.error("FFmpeg probe failed", file_path=str(file_path), error=e.stderr.decode() if e.stderr else str(e))
+                except Exception as e:
+                    logger.error("Internal error during FFmpeg probe", file_path=str(file_path), error=str(e))
+                        
+        except ImportError as e:
+            logger.error("Required library for metadata extraction not installed", error=str(e))
+        except Exception as e:
+            logger.error("Unexpected error extracting metadata", file_path=str(file_path), error=str(e))
+            
         return metadata
     
     async def _queue_processing_jobs(self, media_evidence: MediaEvidence, user_id: UUID):
@@ -400,6 +466,7 @@ class MediaService:
                 action="create",
                 user_id=user_id,
                 case_id=media.case_id,
+                entity_name=media.original_filename,
                 new_value=f"Created share link for media: {media.original_filename}"
             )
             

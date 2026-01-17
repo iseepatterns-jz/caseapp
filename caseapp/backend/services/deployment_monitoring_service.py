@@ -5,7 +5,7 @@ Provides real-time deployment status tracking and CloudWatch metrics
 
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Any, Optional
 import structlog
 import boto3
@@ -186,7 +186,7 @@ class DeploymentMonitoringService:
         Returns:
             Dict containing ECS metrics
         """
-        end_time = datetime.utcnow()
+        end_time = datetime.now(UTC)
         start_time = end_time - timedelta(hours=hours_back)
         
         metric_queries = [
@@ -253,7 +253,7 @@ class DeploymentMonitoringService:
         Returns:
             Dict containing ALB metrics
         """
-        end_time = datetime.utcnow()
+        end_time = datetime.now(UTC)
         start_time = end_time - timedelta(hours=hours_back)
         
         # Extract load balancer name from ARN
@@ -335,7 +335,7 @@ class DeploymentMonitoringService:
         Returns:
             Dict containing RDS metrics
         """
-        end_time = datetime.utcnow()
+        end_time = datetime.now(UTC)
         start_time = end_time - timedelta(hours=hours_back)
         
         metric_queries = [
@@ -748,7 +748,7 @@ class DeploymentMonitoringService:
                         "memory_utilization": ecs_metrics["metrics"].get("memory_utilization", {}),
                         "running_task_count": ecs_metrics["metrics"].get("running_task_count", {})
                     },
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(UTC).isoformat()
                 }
             }
             

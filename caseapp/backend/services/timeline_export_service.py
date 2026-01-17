@@ -5,7 +5,7 @@ Timeline export service for generating various formats (PDF, PNG, JSON)
 import asyncio
 import os
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List, Tuple
 from uuid import UUID
 import structlog
@@ -187,7 +187,7 @@ class TimelineExportService:
             "case_id": str(case_id),
             "title": export_request.title or f"Case Timeline - {case_id}",
             "export_format": export_request.format,
-            "exported_at": datetime.utcnow().isoformat(),
+            "exported_at": datetime.now(UTC).isoformat(),
             "exported_by": str(user_id),
             "events": export_events,
             "statistics": {

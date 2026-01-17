@@ -4,7 +4,7 @@ Comprehensive security service for authentication, authorization, and compliance
 
 import re
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional, Tuple
 from fastapi import HTTPException, status
 import structlog
@@ -127,7 +127,7 @@ class SecurityService:
             lockout_time = self.locked_accounts[user_id]
             lockout_duration = timedelta(minutes=settings.LOCKOUT_DURATION_MINUTES)
             
-            if datetime.utcnow() < lockout_time + lockout_duration:
+            if datetime.now(UTC) < lockout_time + lockout_duration:
                 logger.warning("Account access attempted while locked", user_id=user_id)
                 return True
             else:
@@ -148,7 +148,7 @@ class SecurityService:
         Returns:
             True if account is now locked, False otherwise
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         
         # Initialize failed attempts list if not exists
         if user_id not in self.failed_login_attempts:
@@ -214,7 +214,7 @@ class SecurityService:
                 "qr_code": qr_code,
                 "backup_codes": backup_codes,
                 "hashed_backup_codes": hashed_backup_codes,
-                "setup_timestamp": datetime.utcnow().isoformat()
+                "setup_timestamp": datetime.now(UTC).isoformat()
             }
             
             logger.info("MFA setup completed", user_id=user_id, user_email=user_email)
@@ -290,7 +290,7 @@ class SecurityService:
                 "mfa_verified": mfa_verified,
                 "mfa_required": settings.MFA_REQUIRED,
                 "session_id": secrets.token_hex(16),
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.now(UTC).isoformat()
             }
             
             # Create access token
@@ -441,7 +441,7 @@ class SecurityService:
             Dictionary with security metrics
         """
         try:
-            end_date = datetime.utcnow()
+            end_date = datetime.now(UTC)
             start_date = end_date - timedelta(days=days)
             
             # In a real implementation, this would query audit logs from database

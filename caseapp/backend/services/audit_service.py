@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import json
 import structlog
 
@@ -32,7 +32,8 @@ class AuditService:
         new_value: Optional[str] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
-        case_id: Optional[UUID] = None
+        case_id: Optional[UUID] = None,
+        entity_name: Optional[str] = None
     ) -> AuditLog:
         """
         Create an audit log entry for entity changes
@@ -48,6 +49,7 @@ class AuditService:
             ip_address: User's IP address (optional)
             user_agent: User's browser/client info (optional)
             case_id: Associated case ID (optional)
+            entity_name: Descriptive name for the entity (optional)
             
         Returns:
             Created audit log entry
@@ -66,7 +68,8 @@ class AuditService:
                 user_id=user_id,
                 ip_address=ip_address,
                 user_agent=user_agent,
-                case_id=case_id
+                case_id=case_id,
+                entity_name=entity_name
             )
             
             self.db.add(audit_log)
@@ -78,7 +81,8 @@ class AuditService:
                 entity_type=entity_type,
                 entity_id=str(entity_id),
                 action=action,
-                user_id=str(user_id)
+                user_id=str(user_id),
+                entity_name=entity_name
             )
             
             return audit_log
@@ -104,7 +108,8 @@ class AuditService:
         user_agent: Optional[str] = None,
         query_params: Optional[str] = None,
         request_data: Optional[str] = None,
-        response_data: Optional[str] = None
+        response_data: Optional[str] = None,
+        entity_name: Optional[str] = None
     ) -> AuditLog:
         """
         Create an audit log entry for API requests
@@ -120,6 +125,7 @@ class AuditService:
             query_params: Query parameters (optional)
             request_data: Request body data (optional)
             response_data: Response data (optional)
+            entity_name: Descriptive name for the request (optional)
             
         Returns:
             Created audit log entry
@@ -140,7 +146,8 @@ class AuditService:
                 }),
                 user_id=user_id,
                 ip_address=ip_address,
-                user_agent=user_agent
+                user_agent=user_agent,
+                entity_name=entity_name
             )
             
             self.db.add(audit_log)
@@ -176,7 +183,8 @@ class AuditService:
         user_id: Optional[UUID] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
-        severity: str = "info"
+        severity: str = "info",
+        entity_name: Optional[str] = None
     ) -> AuditLog:
         """
         Log security-related events
@@ -188,6 +196,7 @@ class AuditService:
             ip_address: User's IP address (optional)
             user_agent: User's browser/client info (optional)
             severity: Event severity (info, warning, error, critical)
+            entity_name: Descriptive name for the security event (optional)
             
         Returns:
             Created audit log entry
@@ -204,7 +213,8 @@ class AuditService:
                 }),
                 user_id=user_id or UUID("00000000-0000-0000-0000-000000000000"),
                 ip_address=ip_address,
-                user_agent=user_agent
+                user_agent=user_agent,
+                entity_name=entity_name
             )
             
             self.db.add(audit_log)
@@ -339,7 +349,7 @@ class AuditService:
             Dictionary with audit statistics
         """
         try:
-            start_date = datetime.utcnow() - timedelta(days=days)
+            start_date = datetime.now(UTC) - timedelta(days=days)
             
             # Total audit entries
             total_result = await self.db.execute(
@@ -383,7 +393,7 @@ class AuditService:
                 "by_action": actions,
                 "by_entity_type": entities,
                 "most_active_users": active_users,
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(UTC).isoformat()
             }
             
         except Exception as e:

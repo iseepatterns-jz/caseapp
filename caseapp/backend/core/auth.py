@@ -3,7 +3,7 @@ Authentication and authorization middleware with multi-factor authentication
 """
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -21,6 +21,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Security scheme
 security = HTTPBearer()
+
+import json
+import httpx
+from core.config import settings
+
+# JWKS Cache
+jwks_cache = {}
 
 class AuthService:
     """Authentication service with multi-factor authentication support"""
@@ -41,25 +48,103 @@ class AuthService:
         to_encode = data.copy()
         
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(UTC) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         
         to_encode.update({"exp": expire})
+        # For local tokens (if any), we might still use HS256, but for production we expect RS256 from Cognito
+        # This function might be used for testing or local auth? 
+        # Assuming we only verify Cognito tokens for now.
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         return encoded_jwt
     
     @staticmethod
-    def verify_token(token: str) -> Dict[str, Any]:
-        """Verify and decode JWT token"""
+    async def get_cognito_jwks() -> Dict[str, Any]:
+        """Fetch JWKS from Cognito"""
+        global jwks_cache
+        
+        if jwks_cache:
+            return jwks_cache
+            
+        region = settings.AWS_REGION
+        user_pool_id = settings.COGNITO_USER_POOL_ID
+        jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}/.well-known/jwks.json"
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(jwks_url)
+                response.raise_for_status()
+                jwks_cache = response.json()
+                logger.info("Fetched JWKS from Cognito")
+                return jwks_cache
+            except Exception as e:
+                logger.error("Failed to fetch JWKS", error=str(e))
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal authentication configuration error"
+                )
+
+    @staticmethod
+    async def verify_token(token: str) -> Dict[str, Any]:
+        """Verify and decode JWT token using Cognito JWKS"""
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            # 1. Get the Kid from the token header
+            unverified_header = jwt.get_unverified_header(token)
+            kid = unverified_header.get("kid")
+            
+            if not kid:
+                raise JWTError("Missing kid in token header")
+                
+            # 2. Get JWKS
+            jwks = await AuthService.get_cognito_jwks()
+            
+            # 3. Find matches key
+            public_key = None
+            for key in jwks.get("keys", []):
+                if key["kid"] == kid:
+                    public_key = key
+                    break
+            
+            if not public_key:
+                # Refresh cache once if key not found (maybe key rotation)
+                global jwks_cache
+                jwks_cache = {} 
+                jwks = await AuthService.get_cognito_jwks()
+                for key in jwks.get("keys", []):
+                    if key["kid"] == kid:
+                        public_key = key
+                        break
+            
+            if not public_key:
+                raise JWTError("Public key not found for token signature")
+            
+            # 4. Verify token
+            # Construct the public key object from JWK dictionary might be needed by some libs,
+            # but python-jose handles JWK dicts directly if passed correctly or constructed.
+            # python-jose verify needs the key content.
+            
+            payload = jwt.decode(
+                token, 
+                public_key, 
+                algorithms=["RS256"],
+                audience=settings.COGNITO_CLIENT_ID,
+                access_token=token # Some checks might need this
+            )
             return payload
+            
         except JWTError as e:
             logger.warning("Token verification failed", error=str(e))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except Exception as e:
+            logger.error("Unexpected authentication error", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials", 
                 headers={"WWW-Authenticate": "Bearer"},
             )
     
@@ -132,8 +217,8 @@ class AuthService:
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
     """Get current authenticated user from token"""
     try:
-        payload = AuthService.verify_token(credentials.credentials)
-        user_id: str = payload.get("sub")
+        payload = await AuthService.verify_token(credentials.credentials)
+        user_id: str = payload.get("sub") or payload.get("username")
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -186,7 +271,7 @@ class SecurityAuditService:
             "success": success,
             "client_ip": client_ip,
             "user_agent": user_agent,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "failure_reason": failure_reason
         }
         
@@ -213,7 +298,7 @@ class SecurityAuditService:
             "user_roles": user_roles,
             "required_roles": required_roles,
             "client_ip": client_ip,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
         
         logger.warning("Privilege escalation attempt detected", **audit_data)
@@ -236,7 +321,7 @@ class SecurityAuditService:
             "resource_id": resource_id,
             "action": action,
             "client_ip": client_ip,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
         
         logger.info("Data access logged", **audit_data)

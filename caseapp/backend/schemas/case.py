@@ -2,7 +2,7 @@
 Case-related schemas for API requests and responses
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
@@ -66,12 +66,12 @@ class CaseStatusUpdate(BaseModel):
     closure_reason: Optional[str] = Field(None, description="Reason for closure (required when closing)")
     closure_notes: Optional[str] = Field(None, description="Additional closure notes")
     
-    @validator('closure_reason')
-    def validate_closure_reason(cls, v, values):
+    @model_validator(mode='after')
+    def validate_closure_reason(self) -> 'CaseStatusUpdate':
         """Require closure reason when status is closed"""
-        if values.get('status') == CaseStatus.CLOSED and not v:
+        if self.status == CaseStatus.CLOSED and not self.closure_reason:
             raise ValueError('closure_reason is required when closing a case')
-        return v
+        return self
 
 class CaseResponse(BaseEntity):
     """Schema for case API responses"""

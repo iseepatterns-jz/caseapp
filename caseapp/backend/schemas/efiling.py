@@ -4,7 +4,7 @@ Request and response models for court e-filing integration
 Validates Requirements 10.3
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -19,7 +19,7 @@ class FilingSubmissionRequest(BaseModel):
     filing_type: str = Field(..., description="Type of filing (motion, brief, exhibit, etc.)")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Additional filing metadata")
     
-    @validator('document_ids')
+    @field_validator('document_ids')
     def validate_document_ids(cls, v):
         if not v or len(v) == 0:
             raise ValueError("At least one document ID is required")
@@ -27,7 +27,7 @@ class FilingSubmissionRequest(BaseModel):
             raise ValueError("Maximum 50 documents per filing")
         return v
     
-    @validator('filing_type')
+    @field_validator('filing_type')
     def validate_filing_type(cls, v):
         allowed_types = [
             "motion", "brief", "exhibit", "pleading", "discovery",
@@ -83,7 +83,7 @@ class DocumentValidationRequest(BaseModel):
     court_system: CourtSystem = Field(..., description="Target court system")
     filing_type: str = Field(..., description="Type of filing")
     
-    @validator('document_ids')
+    @field_validator('document_ids')
     def validate_document_ids(cls, v):
         if not v or len(v) == 0:
             raise ValueError("At least one document ID is required")
@@ -119,7 +119,7 @@ class FilingEventNotification(BaseModel):
     timestamp: datetime = Field(..., description="Event timestamp")
     court_reference: Optional[str] = Field(None, description="Court system reference number")
     
-    @validator('event_type')
+    @field_validator('event_type')
     def validate_event_type(cls, v):
         allowed_events = [
             "status_change", "submission_error", "court_response",
@@ -135,7 +135,7 @@ class BulkFilingRequest(BaseModel):
     court_system: CourtSystem = Field(..., description="Target court system")
     filings: List[Dict[str, Any]] = Field(..., min_items=1, max_items=20, description="List of filing requests")
     
-    @validator('filings')
+    @field_validator('filings')
     def validate_filings(cls, v):
         if not v or len(v) == 0:
             raise ValueError("At least one filing is required")

@@ -7,7 +7,7 @@ from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import selectinload
 from typing import Optional, List, Dict, Any, Tuple
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 import structlog
 
 from models.case import Case, CaseStatus, CaseType, CasePriority, AuditLog
@@ -84,6 +84,7 @@ class CaseService:
                 action="create",
                 user_id=created_by,
                 case_id=case.id,
+                entity_name=case.title,
                 new_value=case_data.model_dump_json()
             )
             
@@ -159,7 +160,7 @@ class CaseService:
                     setattr(case, field, value)
             
             case.updated_by = updated_by
-            case.updated_at = datetime.utcnow()
+            case.updated_at = datetime.now(UTC)
             
             # Create audit logs for each changed field
             for field, new_value in update_data.items():
@@ -172,7 +173,8 @@ class CaseService:
                         old_value=str(original_values[field]) if original_values[field] is not None else None,
                         new_value=str(new_value) if new_value is not None else None,
                         user_id=updated_by,
-                        case_id=case.id
+                        case_id=case.id,
+                        entity_name=case.title
                     )
             
             await self.db.commit()
@@ -221,7 +223,7 @@ class CaseService:
                         error_code="CLOSURE_REASON_REQUIRED"
                     )
                 
-                case.closed_date = datetime.utcnow()
+                case.closed_date = datetime.now(UTC)
                 
                 # Add closure metadata
                 closure_metadata = {
@@ -238,7 +240,7 @@ class CaseService:
             
             case.status = status_data.status
             case.updated_by = updated_by
-            case.updated_at = datetime.utcnow()
+            case.updated_at = datetime.now(UTC)
             
             # Create audit log
             await self.audit_service.log_action(
@@ -249,7 +251,8 @@ class CaseService:
                 old_value=old_status.value,
                 new_value=status_data.status.value,
                 user_id=updated_by,
-                case_id=case.id
+                case_id=case.id,
+                entity_name=case.title
             )
             
             await self.db.commit()
@@ -290,7 +293,7 @@ class CaseService:
             old_status = case.status
             case.status = CaseStatus.ARCHIVED
             case.updated_by = deleted_by
-            case.updated_at = datetime.utcnow()
+            case.updated_at = datetime.now(UTC)
             
             # Create audit log
             await self.audit_service.log_action(
@@ -301,7 +304,8 @@ class CaseService:
                 old_value=old_status.value,
                 new_value=CaseStatus.ARCHIVED.value,
                 user_id=deleted_by,
-                case_id=case.id
+                case_id=case.id,
+                entity_name=case.title
             )
             
             await self.db.commit()
@@ -435,7 +439,7 @@ class CaseService:
                 "by_status": status_counts,
                 "by_type": type_counts,
                 "by_priority": priority_counts,
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(UTC).isoformat()
             }
             
         except Exception as e:

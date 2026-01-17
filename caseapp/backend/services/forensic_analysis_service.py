@@ -8,8 +8,9 @@ import os
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Optional, Dict, Any, List, Tuple
+from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc
@@ -35,13 +36,16 @@ from models.forensic_analysis import (
     CommunicationNetwork, ForensicDataType, AnalysisStatus
 )
 from models.case import Case
+from services.audit_service import AuditService
 
 logger = structlog.get_logger()
 
 class ForensicAnalysisService:
     """Service for forensic analysis of digital communications"""
     
-    def __init__(self):
+    def __init__(self, audit_service: Optional[AuditService] = None):
+        """Initialize forensic analysis service"""
+        self.audit_service = audit_service
         # Load NLP model
         try:
             self.nlp = spacy.load("en_core_web_sm")
@@ -80,60 +84,108 @@ class ForensicAnalysisService:
             await db.commit()
             await db.refresh(source)
             
+            # Log audit action if service is available
+            if self.audit_service:
+                await self.audit_service.log_action(
+                    entity_type="forensic_source",
+                    entity_id=source.id,
+                    action="UPLOAD",
+                    user_id=user_id,
+                    case_id=case_id,
+                    entity_name=source_name
+                )
+            
             # Start background analysis
-            asyncio.create_task(self._analyze_source_background(source.id))
+            asyncio.create_task(self._analyze_source_background(source.id, case_id, user_id))
             
             logger.info("Forensic source created", source_id=source.id, source_type=source_type)
             return source
     
-    async def _analyze_source_background(self, source_id: int):
-        """Background task to analyze forensic source"""
-        async with AsyncSessionLocal() as db:
-            source_result = await db.execute(select(ForensicSource).where(ForensicSource.id == source_id))
-            source = source_result.scalar_one_or_none()
-            
-            if not source:
-                return
-            
-            try:
+    async def _analyze_source_background(
+        self, 
+        source_id: int,
+        case_id: int,
+        user_id: int
+    ) -> None:
+        """Background task for forensic source analysis with audit logging"""
+        try:
+            # Log analysis start
+            if self.audit_service:
+                await self.audit_service.log_action(
+                    entity_type="forensic_source",
+                    entity_id=source_id,
+                    action="START_ANALYSIS",
+                    user_id=user_id,
+                    case_id=case_id
+                )
+
+            async with AsyncSessionLocal() as db:
+                source_result = await db.execute(
+                    select(ForensicSource).where(ForensicSource.id == source_id)
+                )
+                source = source_result.scalar_one_or_none()
+                
+                if not source:
+                    logger.error("Forensic source not found for background analysis", source_id=source_id)
+                    return
+                
                 # Update status to processing
                 source.analysis_status = AnalysisStatus.PROCESSING
-                source.analysis_started_at = datetime.now(timezone.utc)
                 await db.commit()
                 
-                # Analyze based on source type
-                if source.source_type == 'iphone_backup':
-                    await self._analyze_iphone_backup(source, db)
-                elif source.source_type == 'android_backup':
-                    await self._analyze_android_backup(source, db)
-                elif source.source_type == 'email_archive':
-                    await self._analyze_email_archive(source, db)
-                elif source.source_type == 'whatsapp_db':
-                    await self._analyze_whatsapp_db(source, db)
-                else:
-                    await self._analyze_generic_db(source, db)
+                # Step 1: Extract messages based on source type
+                logger.info("Starting message extraction", source_id=source_id, type=source.source_type)
+                messages = await self._extract_messages(source)
                 
-                # Generate analysis report
-                await self._generate_analysis_report(source, db)
+                # Step 2: Analyze messages
+                logger.info("Analyzing messages", source_id=source_id, count=len(messages))
+                analysis_results = await self._analyze_communication_patterns(messages)
                 
-                # Generate forensic alerts for suspicious patterns
-                await self._generate_forensic_alerts(source, db)
-                
-                # Update status to completed
+                # Step 3: Save results and update status
+                source.analysis_results = analysis_results
                 source.analysis_status = AnalysisStatus.COMPLETED
-                source.analysis_completed_at = datetime.now(timezone.utc)
-                source.analysis_progress = 100.0
+                source.completed_at = datetime.now(UTC)
                 
                 await db.commit()
                 
-                logger.info("Forensic analysis completed", source_id=source_id)
+                # Log analysis completion
+                if self.audit_service:
+                    await self.audit_service.log_action(
+                        entity_type="forensic_source",
+                        entity_id=source_id,
+                        action="COMPLETE_ANALYSIS",
+                        user_id=user_id,
+                        case_id=case_id
+                    )
                 
-            except Exception as e:
-                source.analysis_status = AnalysisStatus.FAILED
-                source.analysis_errors = {"error": str(e)}
-                await db.commit()
+                logger.info("Forensic analysis background task completed", source_id=source_id)
                 
-                logger.error("Forensic analysis failed", source_id=source_id, error=str(e))
+        except Exception as e:
+            logger.error("Background forensic analysis failed", source_id=source_id, error=str(e))
+            
+            # Log analysis failure
+            if self.audit_service:
+                try:
+                    await self.audit_service.log_action(
+                        entity_type="forensic_source",
+                        entity_id=source_id,
+                        action="FAILED_ANALYSIS",
+                        user_id=user_id,
+                        case_id=case_id,
+                        metadata={"error": str(e)}
+                    )
+                except Exception as audit_err:
+                    logger.error("Failed to log audit action for failed analysis", error=str(audit_err))
+
+            async with AsyncSessionLocal() as db:
+                source_result = await db.execute(
+                    select(ForensicSource).where(ForensicSource.id == source_id)
+                )
+                source = source_result.scalar_one_or_none()
+                if source:
+                    source.analysis_status = AnalysisStatus.FAILED
+                    source.error_message = str(e)
+                    await db.commit()
     
     async def _analyze_iphone_backup(self, source: ForensicSource, db: AsyncSession):
         """Analyze iPhone backup database"""
@@ -239,7 +291,7 @@ class ForensicAnalysisService:
                         pass
                 
                 # Analyze content
-                analysis_results = await self._analyze_text_content(content)
+                analysis_results = await self._analyze_text_content(content, db=db, case_id=source.case_id)
                 
                 # Create forensic item
                 forensic_item = ForensicItem(
@@ -337,7 +389,7 @@ class ForensicAnalysisService:
             content = self._extract_email_content(message)
             
             # Analyze content
-            analysis_results = await self._analyze_text_content(content)
+            analysis_results = await self._analyze_text_content(content, db=db, case_id=source.case_id)
             
             # Extract attachments info
             attachments = []
@@ -383,8 +435,17 @@ class ForensicAnalysisService:
             logger.warning("Failed to process email message", error=str(e))
             return None
     
-    async def _analyze_text_content(self, content: str) -> Dict[str, Any]:
+    async def _analyze_text_content(self, content: str, db: Optional[AsyncSession] = None, case_id: Optional[UUID] = None) -> Dict[str, Any]:
         """Analyze text content for sentiment, entities, keywords"""
+        
+        # Financial transaction detection if DB and case_id provided
+        if db and case_id and content:
+            try:
+                from services.financial_analysis_service import FinancialAnalysisService
+                financial_service = FinancialAnalysisService(db)
+                await financial_service.ingest_from_text(case_id, content)
+            except Exception as e:
+                logger.warning("Financial ingestion failed during forensic text analysis", error=str(e))
         
         if not content or len(content.strip()) == 0:
             return {

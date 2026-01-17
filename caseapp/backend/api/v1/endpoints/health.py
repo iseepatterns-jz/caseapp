@@ -5,13 +5,16 @@ Provides comprehensive system health monitoring
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 import structlog
 
 from services.health_service import HealthService, HealthStatus
 from services.comprehensive_health_service import ComprehensiveHealthService
 from core.auth import get_current_user
 from models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession
+from core.database import get_db
+from services.audit_service import AuditService
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -32,34 +35,13 @@ async def basic_health_check():
 
 @router.get("/detailed", response_model=Dict[str, Any])
 async def detailed_health_check(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Detailed health check of all system components
-    
-    Requires authentication to access detailed system information.
-    
-    Returns:
-        Comprehensive health status of all services and dependencies
-    """
-    try:
-        health_service = HealthService()
-        health_status = await health_service.check_all_services()
-        
-        logger.info(
-            "Detailed health check performed",
-            user_id=current_user.id,
-            overall_status=health_status["overall_status"]
-        )
-        
-        return health_status
-    
-    except Exception as e:
-        logger.error("Health check failed", error=str(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Health check failed: {str(e)}"
-        )
+    """Perform a detailed health check of all system components"""
+    audit_service = AuditService(db)
+    health_service = HealthService()
+    return await health_service.check_all_services(db, audit_service)
 
 @router.get("/dependencies", response_model=Dict[str, Any])
 async def check_dependencies(
@@ -89,23 +71,19 @@ async def check_dependencies(
             detail=f"Dependency check failed: {str(e)}"
         )
 
-@router.get("/services/{service_name}", response_model=Dict[str, Any])
+@router.get("/service/{service_name}", response_model=Dict[str, Any])
 async def check_specific_service(
     service_name: str,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Check health of a specific service
+    """Check the health of a specific service"""
+    audit_service = AuditService(db)
+    health_service = HealthService()
+    results = await health_service.check_all_services(db, audit_service)
     
-    Args:
-        service_name: Name of the service to check
-        
-    Returns:
-        Health status of the specified service
-    """
     try:
-        health_service = HealthService()
-        full_status = await health_service.check_all_services()
+        full_status = results # Use results from the new call
         
         if service_name not in full_status["services"]:
             raise HTTPException(
@@ -117,8 +95,7 @@ async def check_specific_service(
         
         logger.info(
             "Specific service health check performed",
-            user_id=current_user.id,
-            service_name=service_name,
+            service_name=service_name, # Removed user_id as current_user is removed
             status=service_status["status"]
         )
         
@@ -192,29 +169,13 @@ async def liveness_check():
 
 @router.get("/comprehensive", response_model=Dict[str, Any])
 async def comprehensive_health_check(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Comprehensive health check with performance monitoring and anomaly detection
-    
-    Returns:
-        Detailed health status, performance metrics, resource utilization, and recommendations
-    """
-    try:
-        comprehensive_service = ComprehensiveHealthService()
-        result = await comprehensive_service.comprehensive_health_check()
-        
-        logger.info(
-            "Comprehensive health check performed",
-            user_id=current_user.id,
-            health_score=result.get("health_score", 0),
-            anomaly_count=len(result.get("anomalies", []))
-        )
-        
-        return result
-    except Exception as e:
-        logger.error("Comprehensive health check failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Comprehensive health check failed: {str(e)}")
+    """Perform a comprehensive health check with performance metrics"""
+    audit_service = AuditService(db)
+    comp_health_service = ComprehensiveHealthService()
+    return await comp_health_service.comprehensive_health_check(db, audit_service)
 
 @router.get("/performance/trends", response_model=Dict[str, Any])
 async def get_performance_trends(
@@ -268,7 +229,7 @@ async def get_resource_metrics(
         
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "resource_metrics": resource_metrics
         }
     except Exception as e:
@@ -296,7 +257,7 @@ async def get_performance_metrics(
         
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "performance_metrics": performance_metrics
         }
     except Exception as e:
@@ -335,7 +296,7 @@ async def get_active_alerts(
         
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "anomalies": anomalies,
             "alert_status": alert_status,
             "total_alerts": len(alert_status["active_alerts"]),
@@ -371,7 +332,7 @@ async def get_health_recommendations(
         
         return {
             "status": "success",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "recommendations": health_data.get("recommendations", []),
             "health_score": health_data.get("health_score", 0),
             "overall_status": health_data.get("overall_status", "unknown")
@@ -380,29 +341,25 @@ async def get_health_recommendations(
         logger.error("Failed to get health recommendations", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to get health recommendations: {str(e)}")
 
-# Public endpoints for load balancer health checks (no authentication required)
-
-@router.get("/ready", response_model=Dict[str, Any])
-async def readiness_check_public():
-    """
-    Public readiness check for load balancer health checks
-    
-    Returns:
-        Simple ready/not ready status
-    """
+@router.get("/readiness/public", response_model=Dict[str, Any])
+async def readiness_check_public(
+    db: AsyncSession = Depends(get_db)
+):
+    """Public readiness check (returns 200/503)"""
     try:
+        audit_service = AuditService(db)
         health_service = HealthService()
-        result = await health_service.check_all_services()
+        result = await health_service.check_all_services(db, audit_service)
         
         if result["overall_status"] == "healthy":
-            return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
+            return {"status": "ready", "timestamp": datetime.now(UTC).isoformat()}
         else:
             raise HTTPException(
                 status_code=503, 
                 detail={
                     "status": "not_ready", 
                     "reason": result["overall_status"],
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(UTC).isoformat()
                 }
             )
     except HTTPException:
@@ -419,4 +376,4 @@ async def liveness_check_public():
     Returns:
         Simple alive status
     """
-    return {"status": "alive", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "alive", "timestamp": datetime.now(UTC).isoformat()}

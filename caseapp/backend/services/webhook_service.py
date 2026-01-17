@@ -8,7 +8,7 @@ import asyncio
 import json
 import uuid
 import aiohttp
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional
 from enum import Enum
 import logging
@@ -132,8 +132,8 @@ class WebhookService:
             retry_delay_seconds=retry_delay_seconds,
             timeout_seconds=timeout_seconds,
             headers=headers or {},
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC)
         )
         
         self.endpoints[endpoint_id] = endpoint
@@ -196,7 +196,7 @@ class WebhookService:
         if headers is not None:
             endpoint.headers = headers
         
-        endpoint.updated_at = datetime.utcnow()
+        endpoint.updated_at = datetime.now(UTC)
         
         logger.info(f"Updated webhook endpoint {endpoint_id}")
         return endpoint
@@ -313,7 +313,7 @@ class WebhookService:
         enhanced_payload = {
             "id": delivery_id,
             "event": event_type.value,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "data": payload
         }
         
@@ -323,8 +323,8 @@ class WebhookService:
             event_type=event_type,
             payload=enhanced_payload,
             status=WebhookStatus.PENDING,
-            created_at=datetime.utcnow(),
-            scheduled_at=datetime.utcnow()
+            created_at=datetime.now(UTC),
+            scheduled_at=datetime.now(UTC)
         )
         
         self.deliveries[delivery_id] = delivery
@@ -404,7 +404,7 @@ class WebhookService:
             ) as response:
                 delivery.response_code = response.status
                 delivery.response_body = await response.text()
-                delivery.delivered_at = datetime.utcnow()
+                delivery.delivered_at = datetime.now(UTC)
                 
                 if 200 <= response.status < 300:
                     delivery.status = WebhookStatus.DELIVERED
@@ -452,7 +452,7 @@ class WebhookService:
         
         delivery.retry_count += 1
         delivery.status = WebhookStatus.RETRYING
-        delivery.next_retry_at = datetime.utcnow() + timedelta(seconds=endpoint.retry_delay_seconds)
+        delivery.next_retry_at = datetime.now(UTC) + timedelta(seconds=endpoint.retry_delay_seconds)
         
         # Schedule retry
         if self.background_job_service:
@@ -535,7 +535,7 @@ class WebhookService:
         Returns:
             Statistics dictionary
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=hours)
         
         # Filter deliveries
         deliveries = [
@@ -607,7 +607,7 @@ class WebhookService:
         test_payload = {
             "test": True,
             "endpoint_id": endpoint_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "message": "This is a test webhook from Court Case Management System"
         }
         
@@ -619,8 +619,8 @@ class WebhookService:
             event_type=WebhookEvent.CASE_CREATED,  # Use any event type for testing
             payload=test_payload,
             status=WebhookStatus.PENDING,
-            created_at=datetime.utcnow(),
-            scheduled_at=datetime.utcnow()
+            created_at=datetime.now(UTC),
+            scheduled_at=datetime.now(UTC)
         )
         
         self.deliveries[delivery_id] = delivery

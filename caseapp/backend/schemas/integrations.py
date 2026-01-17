@@ -4,7 +4,7 @@ Pydantic schemas for integration API endpoints
 
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 class IntegrationStatus(str, Enum):
@@ -101,7 +101,7 @@ class CaseCreateRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     external_id: Optional[str] = Field(None, description="External system identifier")
     
-    @validator('case_type')
+    @field_validator('case_type')
     def validate_case_type(cls, v):
         allowed_types = [
             'civil', 'criminal', 'family', 'corporate', 'immigration',
@@ -111,7 +111,7 @@ class CaseCreateRequest(BaseModel):
             raise ValueError(f'Case type must be one of: {", ".join(allowed_types)}')
         return v
     
-    @validator('priority')
+    @field_validator('priority')
     def validate_priority(cls, v):
         if v and v not in ['low', 'medium', 'high', 'urgent']:
             raise ValueError('Priority must be one of: low, medium, high, urgent')
@@ -126,7 +126,7 @@ class CaseUpdateRequest(BaseModel):
     priority: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     
-    @validator('status')
+    @field_validator('status')
     def validate_status(cls, v):
         if v and v not in ['active', 'closed', 'on_hold', 'archived']:
             raise ValueError('Status must be one of: active, closed, on_hold, archived')
@@ -157,7 +157,7 @@ class DocumentUploadRequest(BaseModel):
     document_type: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     
-    @validator('file_content_base64')
+    @field_validator('file_content_base64')
     def validate_base64_content(cls, v):
         import base64
         try:
@@ -257,7 +257,7 @@ class WebhookConfigRequest(BaseModel):
     retry_count: int = Field(3, ge=0, le=10)
     timeout_seconds: int = Field(30, ge=5, le=300)
     
-    @validator('url')
+    @field_validator('url')
     def validate_url(cls, v):
         import re
         url_pattern = re.compile(
@@ -333,7 +333,7 @@ class APIKeyCreateRequest(BaseModel):
     permissions: List[str] = Field(..., min_items=1)
     expires_days: Optional[int] = Field(None, ge=1, le=365)
     
-    @validator('permissions')
+    @field_validator('permissions')
     def validate_permissions(cls, v):
         allowed_permissions = [
             'cases:read', 'cases:write', 'cases:delete',

@@ -4,7 +4,8 @@ Validates all services and dependencies are functioning properly
 """
 
 import asyncio
-from datetime import datetime
+import importlib
+from datetime import datetime, UTC
 from typing import Dict, Any, List, Optional
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +28,7 @@ from services.background_job_service import BackgroundJobService
 from services.webhook_service import WebhookService
 from services.security_service import SecurityService
 from services.encryption_service import EncryptionService
+from services.audit_service import AuditService
 
 logger = structlog.get_logger()
 
@@ -43,7 +45,7 @@ class HealthCheckResult:
         self.status = status
         self.message = message
         self.details = details or {}
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(UTC)
 
 class HealthService:
     """Comprehensive health check service"""
@@ -51,10 +53,18 @@ class HealthService:
     def __init__(self):
         self.logger = logger.bind(service="health")
     
-    async def check_all_services(self) -> Dict[str, Any]:
+    async def check_all_services(
+        self, 
+        db: Optional[AsyncSession] = None, 
+        audit_service: Optional[AuditService] = None
+    ) -> Dict[str, Any]:
         """
         Perform comprehensive health check of all services
         
+        Args:
+            db: Optional database session
+            audit_service: Optional audit service
+            
         Returns:
             Dict containing overall status and individual service results
         """
@@ -65,10 +75,10 @@ class HealthService:
             self._check_database(),
             self._check_redis(),
             self._check_aws_services(),
-            self._check_core_services(),
-            self._check_ai_services(),
-            self._check_security_services(),
-            self._check_integration_services(),
+            self._check_core_services(db, audit_service),
+            self._check_ai_services(db, audit_service),
+            self._check_security_services(db, audit_service),
+            self._check_integration_services(db, audit_service),
             return_exceptions=True
         )
         
@@ -92,7 +102,7 @@ class HealthService:
         # Format response
         response = {
             "overall_status": overall_status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "services": {
                 result.name: {
                     "status": result.status,
@@ -219,7 +229,11 @@ class HealthService:
         
         return results
     
-    async def _check_core_services(self) -> List[HealthCheckResult]:
+    async def _check_core_services(
+        self, 
+        db: Optional[AsyncSession] = None, 
+        audit_service: Optional[AuditService] = None
+    ) -> List[HealthCheckResult]:
         """Check core business services"""
         results = []
         
@@ -235,9 +249,24 @@ class HealthService:
         for service_name, module_path in services:
             try:
                 # Test service import and instantiation
-                module = __import__(module_path, fromlist=[service_name])
+                module = importlib.import_module(module_path)
                 service_class = getattr(module, service_name)
-                service = service_class()
+                
+                # Handle dependencies
+                if db and audit_service:
+                    service = service_class(db, audit_service)
+                else:
+                    # Some services might not require db/audit_service
+                    try:
+                        service = service_class()
+                    except TypeError:
+                        # Skip services that require arguments if they aren't provided
+                        results.append(HealthCheckResult(
+                            name=service_name.lower(),
+                            status=HealthStatus.DEGRADED,
+                            message=f"{service_name} skipped: Missing required dependencies (db/audit_service)"
+                        ))
+                        continue
                 
                 results.append(HealthCheckResult(
                     name=service_name.lower(),
@@ -254,7 +283,11 @@ class HealthService:
         
         return results
     
-    async def _check_ai_services(self) -> List[HealthCheckResult]:
+    async def _check_ai_services(
+        self, 
+        db: Optional[AsyncSession] = None, 
+        audit_service: Optional[AuditService] = None
+    ) -> List[HealthCheckResult]:
         """Check AI-powered services"""
         results = []
         
@@ -267,9 +300,17 @@ class HealthService:
         for service_name, module_path in ai_services:
             try:
                 # Test service import and instantiation
-                module = __import__(module_path, fromlist=[service_name])
+                module = importlib.import_module(module_path)
                 service_class = getattr(module, service_name)
-                service = service_class()
+                
+                # Handle dependencies
+                if db and audit_service:
+                    try:
+                        service = service_class(db, audit_service)
+                    except TypeError:
+                        service = service_class()
+                else:
+                    service = service_class()
                 
                 results.append(HealthCheckResult(
                     name=service_name.lower(),
@@ -286,7 +327,11 @@ class HealthService:
         
         return results
     
-    async def _check_security_services(self) -> List[HealthCheckResult]:
+    async def _check_security_services(
+        self, 
+        db: Optional[AsyncSession] = None, 
+        audit_service: Optional[AuditService] = None
+    ) -> List[HealthCheckResult]:
         """Check security and encryption services"""
         results = []
         
@@ -299,9 +344,17 @@ class HealthService:
         for service_name, module_path in security_services:
             try:
                 # Test service import and instantiation
-                module = __import__(module_path, fromlist=[service_name])
+                module = importlib.import_module(module_path)
                 service_class = getattr(module, service_name)
-                service = service_class()
+                
+                # Handle dependencies
+                if db and audit_service:
+                    try:
+                        service = service_class(db, audit_service)
+                    except TypeError:
+                        service = service_class()
+                else:
+                    service = service_class()
                 
                 results.append(HealthCheckResult(
                     name=service_name.lower(),
@@ -318,7 +371,11 @@ class HealthService:
         
         return results
     
-    async def _check_integration_services(self) -> List[HealthCheckResult]:
+    async def _check_integration_services(
+        self, 
+        db: Optional[AsyncSession] = None, 
+        audit_service: Optional[AuditService] = None
+    ) -> List[HealthCheckResult]:
         """Check integration and background services"""
         results = []
         
@@ -333,9 +390,17 @@ class HealthService:
         for service_name, module_path in integration_services:
             try:
                 # Test service import and instantiation
-                module = __import__(module_path, fromlist=[service_name])
+                module = importlib.import_module(module_path)
                 service_class = getattr(module, service_name)
-                service = service_class()
+                
+                # Handle dependencies
+                if db and audit_service:
+                    try:
+                        service = service_class(db, audit_service)
+                    except TypeError:
+                        service = service_class()
+                else:
+                    service = service_class()
                 
                 results.append(HealthCheckResult(
                     name=service_name.lower(),

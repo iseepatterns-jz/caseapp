@@ -2,7 +2,7 @@
 Pydantic schemas for media evidence management
 """
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, root_validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from uuid import UUID
@@ -80,13 +80,13 @@ class MediaUploadRequest(BaseModel):
     is_privileged: bool = Field(False, description="Whether media is privileged")
     privilege_reason: Optional[str] = Field(None, description="Reason for privilege if applicable")
     
-    @validator('tags', 'categories')
+    @field_validator('tags', 'categories')
     def validate_lists(cls, v):
         if v is None:
             return []
         return [item.strip() for item in v if item.strip()]
     
-    @validator('privilege_reason')
+    @field_validator('privilege_reason')
     def validate_privilege_reason(cls, v, values):
         if values.get('is_privileged') and not v:
             raise ValueError('Privilege reason is required when media is marked as privileged')
@@ -110,13 +110,13 @@ class MediaUpdateRequest(BaseModel):
     authenticity_verified: Optional[bool] = Field(None, description="Whether authenticity is verified")
     authenticity_method: Optional[str] = Field(None, description="Method used to verify authenticity")
     
-    @validator('tags', 'categories')
+    @field_validator('tags', 'categories')
     def validate_lists(cls, v):
         if v is None:
             return None
         return [item.strip() for item in v if item.strip()]
     
-    @validator('admissibility_status')
+    @field_validator('admissibility_status')
     def validate_admissibility_status(cls, v):
         if v and v not in ['admissible', 'inadmissible', 'pending']:
             raise ValueError('Admissibility status must be admissible, inadmissible, or pending')
@@ -140,7 +140,7 @@ class MediaSearchRequest(BaseModel):
     admissibility_status: Optional[str] = Field(None, description="Filter by admissibility status")
     search_text: Optional[str] = Field(None, description="Search in extracted text and descriptions")
     
-    @validator('admissibility_status')
+    @field_validator('admissibility_status')
     def validate_admissibility_status(cls, v):
         if v and v not in ['admissible', 'inadmissible', 'pending']:
             raise ValueError('Admissibility status must be admissible, inadmissible, or pending')
@@ -159,32 +159,32 @@ class MediaAnnotationCreateRequest(BaseModel):
     is_key_evidence: bool = Field(False, description="Whether this annotation marks key evidence")
     relevance_score: Optional[int] = Field(None, description="Relevance score (1-10)")
     
-    @validator('annotation_type')
+    @field_validator('annotation_type')
     def validate_annotation_type(cls, v):
         valid_types = ['rectangle', 'circle', 'arrow', 'text', 'highlight', 'polygon', 'line']
         if v not in valid_types:
             raise ValueError(f'Annotation type must be one of: {", ".join(valid_types)}')
         return v
     
-    @validator('color')
+    @field_validator('color')
     def validate_color(cls, v):
         if v and not v.startswith('#') or len(v) != 7:
             raise ValueError('Color must be a valid hex color (e.g., #FF0000)')
         return v
     
-    @validator('opacity')
+    @field_validator('opacity')
     def validate_opacity(cls, v):
         if v is not None and (v < 0 or v > 100):
             raise ValueError('Opacity must be between 0 and 100')
         return v
     
-    @validator('relevance_score')
+    @field_validator('relevance_score')
     def validate_relevance_score(cls, v):
         if v is not None and (v < 1 or v > 10):
             raise ValueError('Relevance score must be between 1 and 10')
         return v
     
-    @validator('end_time')
+    @field_validator('end_time')
     def validate_time_range(cls, v, values):
         start_time = values.get('start_time')
         if start_time is not None and v is not None and v <= start_time:
@@ -203,19 +203,19 @@ class MediaAnnotationUpdateRequest(BaseModel):
     is_key_evidence: Optional[bool] = Field(None, description="Whether this annotation marks key evidence")
     relevance_score: Optional[int] = Field(None, description="Relevance score (1-10)")
     
-    @validator('color')
+    @field_validator('color')
     def validate_color(cls, v):
         if v and (not v.startswith('#') or len(v) != 7):
             raise ValueError('Color must be a valid hex color (e.g., #FF0000)')
         return v
     
-    @validator('opacity')
+    @field_validator('opacity')
     def validate_opacity(cls, v):
         if v is not None and (v < 0 or v > 100):
             raise ValueError('Opacity must be between 0 and 100')
         return v
     
-    @validator('relevance_score')
+    @field_validator('relevance_score')
     def validate_relevance_score(cls, v):
         if v is not None and (v < 1 or v > 10):
             raise ValueError('Relevance score must be between 1 and 10')
@@ -281,7 +281,11 @@ class MediaEvidenceResponse(BaseModel):
     # Content analysis
     ai_analysis_status: ProcessingStatusEnum
     has_ai_analysis: bool
+    ai_analysis_results: Optional[Dict[str, Any]]
     extracted_text: Optional[str]
+    detected_objects: Optional[List[Dict[str, Any]]]
+    detected_faces: Optional[List[Dict[str, Any]]]
+    audio_transcript: Optional[str]
     
     # Legal and administrative
     is_privileged: bool
@@ -368,7 +372,7 @@ class MediaAnalysisRequest(BaseModel):
     analysis_types: List[str] = Field(..., description="Types of analysis to perform")
     priority: int = Field(5, description="Processing priority (1-10)")
     
-    @validator('analysis_types')
+    @field_validator('analysis_types')
     def validate_analysis_types(cls, v):
         valid_types = ['thumbnail', 'ocr', 'object_detection', 'face_detection', 'transcription', 'content_moderation']
         for analysis_type in v:
@@ -376,7 +380,7 @@ class MediaAnalysisRequest(BaseModel):
                 raise ValueError(f'Invalid analysis type: {analysis_type}. Valid types: {", ".join(valid_types)}')
         return v
     
-    @validator('priority')
+    @field_validator('priority')
     def validate_priority(cls, v):
         if v < 1 or v > 10:
             raise ValueError('Priority must be between 1 and 10')

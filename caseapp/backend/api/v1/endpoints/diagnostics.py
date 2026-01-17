@@ -2,7 +2,7 @@
 Diagnostic and Troubleshooting API endpoints
 """
 
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
@@ -202,7 +202,7 @@ async def get_issues_summary(
             issues_by_severity[severity] += 1
         
         summary = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total_issues": len(issues),
             "issues_by_severity": issues_by_severity,
             "issues_by_category": issues_by_category,
@@ -250,7 +250,7 @@ async def get_troubleshooting_workflows(
             workflows = report.get("troubleshooting_workflows", {})
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "available_workflows": list(workflows.keys()),
             "workflows": workflows
         }
@@ -309,7 +309,7 @@ async def get_diagnostic_recommendations(
         recommendations = recommendations[:limit]
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total_recommendations": len(recommendations),
             "filters_applied": {
                 "priority": priority_filter,
@@ -340,7 +340,7 @@ async def get_system_information(
         system_info = await diagnostic_service._collect_system_information()
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "system_info": system_info
         }
         
@@ -376,7 +376,7 @@ async def get_log_analysis(
             raise HTTPException(status_code=500, detail=log_analysis["error"])
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "log_analysis": log_analysis
         }
         

@@ -3,8 +3,8 @@ Pydantic schemas for export and reporting functionality
 """
 
 from typing import Optional, List, Dict, Any, Union
-from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+from datetime import datetime, UTC
 from enum import Enum
 
 class ExportFormat(str, Enum):
@@ -19,11 +19,11 @@ class DateRange(BaseModel):
     start_date: datetime = Field(..., description="Start date for filtering")
     end_date: datetime = Field(..., description="End date for filtering")
     
-    @validator('end_date')
-    def end_date_must_be_after_start_date(cls, v, values):
-        if 'start_date' in values and v <= values['start_date']:
+    @model_validator(mode='after')
+    def end_date_must_be_after_start_date(self) -> 'DateRange':
+        if self.end_date <= self.start_date:
             raise ValueError('end_date must be after start_date')
-        return v
+        return self
 
 class TimelineExportRequest(BaseModel):
     """Request schema for timeline export"""
@@ -38,7 +38,7 @@ class TimelineExportRequest(BaseModel):
     height: Optional[int] = Field(1080, ge=600, le=3000, description="Image height in pixels")
     dpi: Optional[int] = Field(300, ge=72, le=600, description="Image resolution")
     
-    @validator('case_id')
+    @field_validator('case_id')
     def validate_case_id(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError('case_id cannot be empty')
@@ -52,13 +52,13 @@ class ForensicReportRequest(BaseModel):
     include_network_analysis: bool = Field(True, description="Whether to include network graphs")
     include_raw_data: bool = Field(False, description="Whether to include raw message data")
     
-    @validator('case_id')
+    @field_validator('case_id')
     def validate_case_id(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError('case_id cannot be empty')
         return v.strip()
     
-    @validator('source_ids')
+    @field_validator('source_ids')
     def validate_source_ids(cls, v):
         if v is not None:
             # Remove empty strings and duplicates
@@ -73,13 +73,13 @@ class SelectiveExportRequest(BaseModel):
     export_format: ExportFormat = Field(..., description="Export format")
     filters: Dict[str, Any] = Field(default_factory=dict, description="Export filters")
     
-    @validator('case_id')
+    @field_validator('case_id')
     def validate_case_id(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError('case_id cannot be empty')
         return v.strip()
     
-    @validator('filters')
+    @field_validator('filters')
     def validate_filters(cls, v):
         # Validate common filter structures
         if 'date_range' in v and v['date_range']:
@@ -111,7 +111,7 @@ class ExportResponse(BaseModel):
     message: str = Field(..., description="Status message")
     data: Optional[Dict[str, Any]] = Field(None, description="Export data (for JSON exports)")
     export_format: Optional[str] = Field(None, description="Format of the export")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Export timestamp")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Export timestamp")
     file_size: Optional[int] = Field(None, description="Size of exported file in bytes")
     download_url: Optional[str] = Field(None, description="URL for downloading the export")
 
@@ -186,13 +186,13 @@ class AdvancedExportRequest(BaseModel):
     options: Optional[Dict[str, Any]] = Field(None, description="Format-specific options")
     include_audit_trail: bool = Field(False, description="Whether to include audit trail information")
     
-    @validator('case_id')
+    @field_validator('case_id')
     def validate_case_id(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError('case_id cannot be empty')
         return v.strip()
     
-    @validator('export_type')
+    @field_validator('export_type')
     def validate_export_type(cls, v):
         valid_types = ['timeline', 'forensic', 'selective', 'comprehensive']
         if v not in valid_types:
