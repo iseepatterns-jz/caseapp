@@ -894,10 +894,18 @@ class CourtCaseManagementStack(Stack):
             )
         )
         
-        # Apply same security group as backend service to allow database and Redis access
-        cfn_media_service = self.media_service.node.default_child
-        cfn_media_service.add_property_override("NetworkConfiguration.AwsvpcConfiguration.SecurityGroups",
-                                                [self.ecs_security_group.security_group_id])
+        # Configure security group rules for media service (database and redis access)
+        self.database.connections.allow_from(
+            self.media_service,
+            ec2.Port.tcp(5432),
+            "Allow PostgreSQL access from media service tasks"
+        )
+        
+        self.redis_security_group.connections.allow_from(
+            self.media_service,
+            ec2.Port.tcp(6379),
+            "Allow Redis access from media service tasks"
+        )
     
     def setup_ai_services(self):
         """Setup AI services permissions and configurations"""
