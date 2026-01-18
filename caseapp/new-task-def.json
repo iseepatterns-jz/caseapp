@@ -1,0 +1,141 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:us-east-1:730335557645:task-definition/CourtCaseManagementStackBackendServiceTaskDef2C4FC482:27",
+    "containerDefinitions": [
+        {
+            "name": "web",
+            "image": "iseepatterns/court-case-backend:latest",
+            "repositoryCredentials": {
+                "credentialsParameter": "arn:aws:secretsmanager:us-east-1:730335557645:secret:dockerhub-credentials"
+            },
+            "cpu": 0,
+            "links": [],
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "entryPoint": [],
+            "command": [],
+            "environment": [
+                {
+                    "name": "S3_MEDIA_BUCKET",
+                    "value": "courtcasemanagementstack-mediabucketbcbb02ba-1dbxzshopggz"
+                },
+                {
+                    "name": "AWS_REGION",
+                    "value": "us-east-1"
+                },
+                {
+                    "name": "DB_PORT",
+                    "value": "5432"
+                },
+                {
+                    "name": "DB_NAME",
+                    "value": "courtcase_db"
+                },
+                {
+                    "name": "S3_BUCKET_NAME",
+                    "value": "courtcasemanagementstack-documentsbucket9ec9deb9-oplgdijgpxex"
+                },
+                {
+                    "name": "COGNITO_CLIENT_ID",
+                    "value": "g0krs2pf69ephllpnrkvl5ktg"
+                },
+                {
+                    "name": "DB_HOST",
+                    "value": "courtcasemanagementstack-courtcasedatabasef7bbe8d0-4bgttz8ypsfp.cv0iquw2k1to.us-east-1.rds.amazonaws.com"
+                },
+                {
+                    "name": "COGNITO_USER_POOL_ID",
+                    "value": "us-east-1_Nc0OZJRgL"
+                },
+                {
+                    "name": "REDIS_URL",
+                    "value": "redis://cou-re-bcfjjai4fqwh.s5nrko.0001.use1.cache.amazonaws.com:6379"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "DB_USER",
+                    "valueFrom": "arn:aws:secretsmanager:us-east-1:730335557645:secret:court-case-db-credentials-F7ZUo8:username::"
+                },
+                {
+                    "name": "DB_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:us-east-1:730335557645:secret:court-case-db-credentials-F7ZUo8:password::"
+                }
+            ],
+            "dnsServers": [],
+            "dnsSearchDomains": [],
+            "extraHosts": [],
+            "dockerSecurityOptions": [],
+            "dockerLabels": {},
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "CourtCaseManagementStack-BackendServiceTaskDefwebLogGroup614D1BFF-QwuiSdCE2x0e",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "backend"
+                },
+                "secretOptions": []
+            },
+            "systemControls": [],
+            "credentialSpecs": []
+        }
+    ],
+    "family": "CourtCaseManagementStackBackendServiceTaskDef2C4FC482",
+    "taskRoleArn": "arn:aws:iam::730335557645:role/CourtCaseManagementStack-TaskRole30FC0FBB-6dLUivszMgQ8",
+    "executionRoleArn": "arn:aws:iam::730335557645:role/CourtCaseManagementStack-TaskExecutionRole250D2532-yp1MYTZy7hss",
+    "networkMode": "awsvpc",
+    "revision": 27,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "ecs.capability.secrets.asm.environment-variables"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.17"
+        },
+        {
+            "name": "ecs.capability.private-registry-authentication.secretsmanager"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "MANAGED_INSTANCES",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "2048",
+    "memory": "4096",
+    "registeredAt": "2026-01-16T23:24:08.970000-06:00",
+    "registeredBy": "arn:aws:sts::730335557645:assumed-role/cdk-hnb659fds-cfn-exec-role-730335557645-us-east-1/AWSCloudFormation"
+}

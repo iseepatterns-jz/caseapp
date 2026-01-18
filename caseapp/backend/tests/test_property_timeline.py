@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, AsyncMock
 from uuid import UUID, uuid4
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from typing import List
 
 from models.timeline import TimelineEvent, EvidencePin, EventType
@@ -39,7 +39,7 @@ class TestTimelineEventDataPreservation:
         Validates: Requirements 3.1
         """
         # Create timeline event with provided data
-        event_date = datetime.utcnow()
+        event_date = datetime.now(UTC)
         participants = ["John Doe", "Jane Smith"]
         
         timeline_event = TimelineEvent(
@@ -91,7 +91,7 @@ class TestTimelineDateValidation:
         Validates: Requirements 3.3
         """
         # Create base event date
-        base_date = datetime.utcnow()
+        base_date = datetime.now(UTC)
         event_date = base_date + timedelta(days=days_offset)
         end_date = event_date + timedelta(days=end_days_offset)
         
@@ -133,7 +133,7 @@ class TestTimelineDateValidation:
         Validates: Requirements 3.3
         """
         # Create multiple timeline events with different dates
-        base_date = datetime.utcnow()
+        base_date = datetime.now(UTC)
         events = []
         
         for i in range(event_count):
@@ -194,7 +194,7 @@ class TestEvidencePinningAssociation:
             title="Test Event with Evidence",
             description="Event for testing evidence pinning",
             event_type=EventType.EVIDENCE_COLLECTION.value,
-            event_date=datetime.utcnow(),
+            event_date=datetime.now(UTC),
             created_by=uuid4()
         )
         
@@ -315,7 +315,7 @@ class TestTimelineEventWorkflow:
             title=initial_title,
             description="Initial description",
             event_type=EventType.MEETING.value,
-            event_date=datetime.utcnow(),
+            event_date=datetime.now(UTC),
             importance_level=initial_importance,
             is_milestone=False,
             created_by=uuid4()
@@ -331,7 +331,7 @@ class TestTimelineEventWorkflow:
         event.title = updated_title
         event.importance_level = updated_importance
         event.updated_by = uuid4()
-        event.updated_at = datetime.utcnow()
+        event.updated_at = datetime.now(UTC)
         
         # Property: Updated fields should reflect new values
         assert event.title == updated_title
@@ -370,7 +370,7 @@ class TestTimelineIntegrity:
         """
         # Create a case for the timeline
         case_id = uuid4()
-        base_date = datetime.utcnow()
+        base_date = datetime.now(UTC)
         
         # Create multiple events for the same case
         events = []

@@ -2,7 +2,7 @@
 Court Case Management System - Main FastAPI Application
 """
 
-from datetime import datetime
+from datetime import datetime, UTC
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -260,7 +260,7 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "service": "backend",
         "version": "1.0.0"
     }
@@ -283,7 +283,7 @@ async def readiness_check():
                 status_code=503,
                 detail={
                     "status": "not_ready",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "message": "Database connection validation failed",
                     "database": "disconnected"
                 }
@@ -300,7 +300,7 @@ async def readiness_check():
         
         return {
             "status": "ready",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "message": "Service ready for traffic",
             "database": "connected",
             "redis": redis_status,
@@ -320,7 +320,7 @@ async def readiness_check():
             status_code=503,
             detail={
                 "status": "not_ready",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "error": str(e),
                 "message": "Service not ready for traffic"
             }
@@ -354,7 +354,7 @@ async def detailed_health_check():
         
         response = {
             "status": overall_status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "database": database_status,
             "redis": redis_status,
             "aws_services": "initialized",
@@ -386,7 +386,7 @@ async def detailed_health_check():
             status_code=503,
             detail={
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "database": "error",
                 "redis": "error",
                 "aws_services": "unknown",

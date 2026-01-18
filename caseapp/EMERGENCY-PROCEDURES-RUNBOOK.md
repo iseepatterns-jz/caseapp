@@ -307,6 +307,34 @@ curl https://<load-balancer-dns>/api/v1/diagnostics/database-connections
 aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment
 ```
 
+### Scenario 6: Database Schema Out of Sync
+
+**Symptoms**:
+- API returns `400 Bad Request` on specific endpoints (e.g., `/api/v1/audit/search`)
+- Backend logs show `ProgrammingError: column ... does not exist`
+- Alembic migrations fail or are stuck
+
+**Response**:
+
+1. **Verify Backend Connection Details**:
+   Check ECS task environment variables for `DB_HOST`, `DB_USER`, etc.
+
+2. **Execute Manual Schema Fix (via ECS Task)**:
+   If standard migrations fail, execute a direct SQL fix using a one-off ECS Fargate task.
+
+   > [!IMPORTANT]
+   > The production RDS instance **requires SSL**. When executing manual Python scripts or SQL commands, ensure the connection string includes `ssl=require`.
+
+   **Example Python Force Fix Script**:
+   ```python
+   # url = f'postgresql+asyncpg://{user}:{pass}@{host}:5432/{db}?ssl=require'
+   # await conn.execute(text('ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...;'))
+   # await conn.execute(text('DELETE FROM alembic_version; INSERT INTO alembic_version (version_num) VALUES (...);'))
+   ```
+
+3. **Synchronize Alembic**:
+   Ensure `alembic_version` matches the latest migration ID to prevent future conflicts.
+
 ### Scenario 5: AWS Service Outage
 
 **Symptoms**:

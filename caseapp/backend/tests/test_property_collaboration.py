@@ -5,7 +5,7 @@ Validates Requirements 6.1 (granular permissions) and 6.3 (comment threading)
 
 import pytest
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from typing import Dict, Any, List
 from hypothesis import given, strategies as st, settings, assume
 import uuid
@@ -102,7 +102,7 @@ class TestCollaborationPermissionProperties:
                 case_id=self.test_case.id,
                 title="Test Event",
                 description="Event for testing",
-                event_date=datetime.utcnow(),
+                event_date=datetime.now(UTC),
                 created_by=self.owner_user.id
             )
             db.add(self.test_event)
@@ -259,7 +259,7 @@ class TestCommentThreadProperties:
                 case_id=self.test_case.id,
                 title="Test Event",
                 description="Event for comment testing",
-                event_date=datetime.utcnow(),
+                event_date=datetime.now(UTC),
                 created_by=self.user1.id
             )
             db.add(self.test_event)

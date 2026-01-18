@@ -5,7 +5,7 @@ Tests end-to-end workflows across multiple services
 
 import pytest
 import asyncio
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -59,7 +59,7 @@ class TestCompleteWorkflowIntegration:
                     "case_id": "case123",
                     "user_id": "user123",
                     "job_id": job_id,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(UTC).isoformat()
                 }
             )
             assert len(delivery_ids) > 0

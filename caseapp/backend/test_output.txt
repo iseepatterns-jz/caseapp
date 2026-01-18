@@ -1,0 +1,576 @@
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform darwin -- Python 3.13.1, pytest-8.3.5, pluggy-1.5.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend
+configfile: pytest.ini
+plugins: langsmith-0.3.3, anyio-4.8.0, asyncio-1.3.0, hypothesis-6.150.0, typeguard-2.13.3
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow FAILED [ 12%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow FAILED [ 25%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_collaboration_workflow FAILED [ 37%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow FAILED [ 50%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow FAILED [ 62%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow PASSED [ 75%]
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery PASSED [ 87%]
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_data_consistency_under_failure ERROR [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestErrorHandlingAndRecovery.test_data_consistency_under_failure _
+file /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/tests/test_integration_complete_workflow.py, line 434
+      @pytest.mark.asyncio
+      async def test_data_consistency_under_failure(self, mock_db_session):
+          """Test data consistency when operations fail"""
+          audit_service = AuditService(mock_db_session)
+          case_service = CaseService(mock_db_session, audit_service)
+
+          # Test case creation with database failure
+          with patch('services.case_service.get_db', return_value=mock_db_session):
+              mock_db_session.commit.side_effect = Exception("Database commit failed")
+
+              try:
+                  await case_service.create_case(
+                      case_data={
+                          "case_number": "FAIL-001",
+                          "title": "Test Case",
+                          "case_type": "civil"
+                      },
+                      user_id="user-123"
+                  )
+                  assert False, "Should have raised exception"
+              except Exception as e:
+                  # Verify proper error handling
+                  assert "Database commit failed" in str(e)
+E       fixture 'mock_db_session' not found
+>       available fixtures: _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, event_loop_policy, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/tests/test_integration_complete_workflow.py:434
+=================================== FAILURES ===================================
+__________ TestCompleteWorkflows.test_complete_case_creation_workflow __________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x108d6d6d0>
+mock_db_session = <AsyncMock id='4535149840'>
+sample_case_data = {'case_number': 'CASE-2024-001', 'case_type': 'civil', 'client_id': 'client-123', 'description': 'Test case for integration testing', ...}
+
+    @pytest.mark.asyncio
+    async def test_complete_case_creation_workflow(self, mock_db_session, sample_case_data):
+        """
+        Test complete case creation workflow
+        """
+        # Initialize services
+        audit_service = AuditService(mock_db_session)
+        case_service = CaseService(mock_db_session, audit_service)
+        document_service = DocumentService(mock_db_session, audit_service)
+        timeline_service = TimelineService(mock_db_session, audit_service)
+        insight_service = CaseInsightService()
+        export_service = ExportService()
+    
+        # Mock database operations
+>       with patch('services.case_service.get_db', return_value=mock_db_session):
+
+tests/test_integration_complete_workflow.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1495: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x10f0aa3c0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'services.case_service' from '/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/case_service.py'> does not have the attribute 'get_db'
+
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1465: AttributeError
+____________ TestCompleteWorkflows.test_forensic_analysis_workflow _____________
+
+self = <services.export_service.ExportService object at 0x10e4e3890>
+case_id = 'case-123', source_ids = None, include_statistics = True
+include_network_analysis = True, include_raw_data = False
+
+    async def export_forensic_report_pdf(
+        self,
+        case_id: str,
+        source_ids: Optional[List[str]] = None,
+        include_statistics: bool = True,
+        include_network_analysis: bool = True,
+        include_raw_data: bool = False
+    ) -> bytes:
+        """
+        Export comprehensive forensic analysis report as PDF
+    
+        Args:
+            case_id: UUID of the case
+            source_ids: Optional list of specific forensic source IDs
+            include_statistics: Whether to include communication statistics
+            include_network_analysis: Whether to include network graphs
+            include_raw_data: Whether to include raw message data
+    
+        Returns:
+            PDF content as bytes
+        """
+        try:
+            async with AsyncSessionLocal() as db:
+                # Get forensic data
+                forensic_data = await self._get_forensic_data(db, case_id, source_ids)
+    
+                # Generate PDF
+                pdf_buffer = io.BytesIO()
+                doc = SimpleDocTemplate(
+                    pdf_buffer,
+                    pagesize=A4,
+                    rightMargin=72,
+                    leftMargin=72,
+                    topMargin=72,
+                    bottomMargin=18
+                )
+    
+                story = []
+                styles = getSampleStyleSheet()
+    
+                # Title
+                title_style = ParagraphStyle(
+                    'CustomTitle',
+                    parent=styles['Heading1'],
+                    fontSize=18,
+                    spaceAfter=30,
+                    alignment=TA_CENTER
+                )
+    
+                story.append(Paragraph("Forensic Analysis Report", title_style))
+                story.append(Spacer(1, 12))
+>               story.append(Paragraph(f"Case: {forensic_data['case']['title']}", styles['Heading2']))
+E               KeyError: 'case'
+
+services/export_service.py:374: KeyError
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x10e4e3110>
+mock_db_session = <AsyncMock name='mock.__aenter__()' id='4547323488'>
+
+    @pytest.mark.asyncio
+    async def test_forensic_analysis_workflow(self, mock_db_session):
+        """
+        Test forensic analysis workflow
+        """
+        export_svc = ExportService()
+    
+        # Step 1: Mock forensic analysis results
+        mock_forensic_data = {
+            "case_id": "case-123",
+            "analysis_results": {}
+        }
+    
+        # Step 2: Export forensic report
+        # Refined patch for AsyncSessionLocal to act as a proper async context manager
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_db_session
+    
+        with patch('services.export_service.AsyncSessionLocal', return_value=mock_cm):
+            with patch('services.export_service.SimpleDocTemplate') as mock_doc:
+                mock_doc.return_value = MagicMock()
+    
+                # Mock the internal data fetching to avoid more DB issues
+                with patch.object(export_svc, '_get_forensic_data', return_value=mock_forensic_data):
+>                   forensic_report = await export_svc.export_forensic_report_pdf(
+                        case_id="case-123"
+                    )
+
+tests/test_integration_complete_workflow.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.export_service.ExportService object at 0x10e4e3890>
+case_id = 'case-123', source_ids = None, include_statistics = True
+include_network_analysis = True, include_raw_data = False
+
+    async def export_forensic_report_pdf(
+        self,
+        case_id: str,
+        source_ids: Optional[List[str]] = None,
+        include_statistics: bool = True,
+        include_network_analysis: bool = True,
+        include_raw_data: bool = False
+    ) -> bytes:
+        """
+        Export comprehensive forensic analysis report as PDF
+    
+        Args:
+            case_id: UUID of the case
+            source_ids: Optional list of specific forensic source IDs
+            include_statistics: Whether to include communication statistics
+            include_network_analysis: Whether to include network graphs
+            include_raw_data: Whether to include raw message data
+    
+        Returns:
+            PDF content as bytes
+        """
+        try:
+            async with AsyncSessionLocal() as db:
+                # Get forensic data
+                forensic_data = await self._get_forensic_data(db, case_id, source_ids)
+    
+                # Generate PDF
+                pdf_buffer = io.BytesIO()
+                doc = SimpleDocTemplate(
+                    pdf_buffer,
+                    pagesize=A4,
+                    rightMargin=72,
+                    leftMargin=72,
+                    topMargin=72,
+                    bottomMargin=18
+                )
+    
+                story = []
+                styles = getSampleStyleSheet()
+    
+                # Title
+                title_style = ParagraphStyle(
+                    'CustomTitle',
+                    parent=styles['Heading1'],
+                    fontSize=18,
+                    spaceAfter=30,
+                    alignment=TA_CENTER
+                )
+    
+                story.append(Paragraph("Forensic Analysis Report", title_style))
+                story.append(Spacer(1, 12))
+                story.append(Paragraph(f"Case: {forensic_data['case']['title']}", styles['Heading2']))
+                story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+                story.append(Spacer(1, 20))
+    
+                # Executive summary
+                story.append(Paragraph("Executive Summary", styles['Heading2']))
+                summary_data = [
+                    ['Total Sources', str(len(forensic_data['sources']))],
+                    ['Total Messages', str(forensic_data['statistics']['total_messages'])],
+                    ['Unique Participants', str(forensic_data['statistics']['unique_participants'])],
+                    ['Date Range', f"{forensic_data['statistics']['date_range']['start']} to {forensic_data['statistics']['date_range']['end']}"],
+                    ['Analysis Status', 'Complete']
+                ]
+    
+                summary_table = Table(summary_data, colWidths=[2*inch, 4*inch])
+                summary_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, -1), HexColor('#f0f0f0')),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), black),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('GRID', (0, 0), (-1, -1), 1, black)
+                ]))
+                story.append(summary_table)
+                story.append(Spacer(1, 20))
+    
+                # Communication statistics
+                if include_statistics:
+                    story.append(Paragraph("Communication Statistics", styles['Heading2']))
+    
+                    stats = forensic_data['statistics']
+                    stats_data = [
+                        ['Messages by Type', ''],
+                        ['Email', str(stats.get('email_count', 0))],
+                        ['SMS/Text', str(stats.get('sms_count', 0))],
+                        ['WhatsApp', str(stats.get('whatsapp_count', 0))],
+                        ['Other', str(stats.get('other_count', 0))],
+                        ['', ''],
+                        ['Sentiment Analysis', ''],
+                        ['Positive Messages', str(stats.get('positive_sentiment', 0))],
+                        ['Neutral Messages', str(stats.get('neutral_sentiment', 0))],
+                        ['Negative Messages', str(stats.get('negative_sentiment', 0))],
+                        ['', ''],
+                        ['Temporal Patterns', ''],
+                        ['Peak Activity Hour', str(stats.get('peak_hour', 'N/A'))],
+                        ['Weekend Messages', str(stats.get('weekend_messages', 0))],
+                        ['Deleted Messages', str(stats.get('deleted_messages', 0))]
+                    ]
+    
+                    stats_table = Table(stats_data, colWidths=[2*inch, 2*inch])
+                    stats_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (0, -1), HexColor('#f0f0f0')),
+                        ('TEXTCOLOR', (0, 0), (-1, -1), black),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 9),
+                        ('GRID', (0, 0), (-1, -1), 1, black)
+                    ]))
+                    story.append(stats_table)
+                    story.append(Spacer(1, 20))
+    
+                # Network analysis
+                if include_network_analysis:
+                    story.append(Paragraph("Communication Network Analysis", styles['Heading2']))
+                    story.append(Paragraph("Key Participants and Relationships:", styles['Heading3']))
+    
+                    for participant in forensic_data['network_analysis']['key_participants'][:10]:
+                        participant_text = f"• {participant['name']} - {participant['message_count']} messages"
+                        if participant.get('centrality_score'):
+                            participant_text += f" (Centrality: {participant['centrality_score']:.2f})"
+                        story.append(Paragraph(participant_text, styles['Normal']))
+    
+                    story.append(Spacer(1, 12))
+    
+                # Source details
+                story.append(PageBreak())
+                story.append(Paragraph("Forensic Sources", styles['Heading2']))
+    
+                for source in forensic_data['sources']:
+                    story.append(Paragraph(f"Source: {source['source_name']}", styles['Heading3']))
+    
+                    source_details = [
+                        ['Source Type', source['source_type']],
+                        ['Device Info', source.get('device_info', 'N/A')],
+                        ['Account Info', source.get('account_info', 'N/A')],
+                        ['Messages Extracted', str(source['message_count'])],
+                        ['Analysis Status', source['analysis_status']]
+                    ]
+    
+                    source_table = Table(source_details, colWidths=[2*inch, 4*inch])
+                    source_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (0, -1), HexColor('#f0f0f0')),
+                        ('TEXTCOLOR', (0, 0), (-1, -1), black),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 9),
+                        ('GRID', (0, 0), (-1, -1), 1, black)
+                    ]))
+                    story.append(source_table)
+                    story.append(Spacer(1, 12))
+    
+                # Build PDF
+                doc.build(story)
+                pdf_content = pdf_buffer.getvalue()
+                pdf_buffer.close()
+    
+                logger.info("Generated forensic report PDF",
+                           case_id=case_id,
+                           sources_count=len(forensic_data['sources']),
+                           pdf_size=len(pdf_content))
+    
+                return pdf_content
+    
+        except Exception as e:
+            logger.error("Failed to export forensic report PDF", case_id=case_id, error=str(e))
+>           raise CaseManagementException(f"Forensic report PDF export failed: {str(e)}")
+E           core.exceptions.CaseManagementException: Forensic report PDF export failed: 'case'
+
+services/export_service.py:489: CaseManagementException
+----------------------------- Captured stdout call -----------------------------
+2026-01-17 10:12:16 [error    ] Failed to export forensic report PDF case_id=case-123 error="'case'"
+______________ TestCompleteWorkflows.test_collaboration_workflow _______________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x10e574b00>
+mock_db_session = <AsyncMock name='mock.__aenter__()' id='4549706480'>
+
+    @pytest.mark.asyncio
+    async def test_collaboration_workflow(self, mock_db_session):
+        """
+        Test real-time collaboration workflow
+        """
+        collaboration_service = CollaborationService()
+    
+        # Use proper async context manager mock for AsyncSessionLocal
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_db_session
+    
+        with patch('services.timeline_collaboration_service.AsyncSessionLocal', return_value=mock_cm):
+            with patch('core.redis.redis_service') as mock_redis:
+                mock_redis.set = AsyncMock()
+                mock_redis.get = AsyncMock(return_value="active")
+                mock_redis.publish = AsyncMock()
+    
+                # Step 1: Create collaboration session
+                mock_session = MagicMock()
+                mock_session.id = "session-123"
+                mock_session.case_id = "case-123"
+                mock_session.created_by = "user-123"
+    
+                # Setup mock for execute().scalar_one_or_none()
+                # Use a regular Mock for the result of await execute()
+                execute_result = MagicMock()
+                execute_result.scalar_one_or_none.return_value = None # No existing collab
+                mock_db_session.execute.return_value = execute_result
+    
+                # Step 2: Share timeline
+>               share_result = await collaboration_service.share_timeline(
+                    case_id="case-123",
+                    user_id="user-456",
+                    permissions={"can_view": True, "can_comment": True},
+                    shared_by_id="user-123"
+                )
+E               TypeError: TimelineCollaborationService.share_timeline() got an unexpected keyword argument 'case_id'
+
+tests/test_integration_complete_workflow.py:251: TypeError
+______________ TestCompleteWorkflows.test_background_job_workflow ______________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x10e574d60>
+mock_db_session = <AsyncMock id='4549718576'>
+
+    @pytest.mark.asyncio
+    async def test_background_job_workflow(self, mock_db_session):
+        """
+        Test background job processing workflow
+        """
+        # BackgroundJobService doesn't take db/audit in __init__ based on file inspection,
+        # but if it fails, I'll check if it's being patched elsewhere.
+        job_service = BackgroundJobService()
+        webhook_service = WebhookService(job_service)
+    
+        # Step 1: Submit background job
+>       job_id = await job_service.submit_job(
+            task_name="forensic_analysis",
+            payload={"case_id": "case-123"},
+            priority=JobPriority.HIGH
+        )
+E       TypeError: BackgroundJobService.submit_job() got an unexpected keyword argument 'payload'
+
+tests/test_integration_complete_workflow.py:297: TypeError
+_________________ TestCompleteWorkflows.test_security_workflow _________________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x10e5669f0>
+
+    @pytest.mark.asyncio
+    async def test_security_workflow(self):
+        """
+        Test security and encryption workflow
+        """
+        security_service = SecurityService()
+        encryption_service = EncryptionService()
+    
+        # Step 1: Validate password strength
+        password_result = await security_service.validate_password_strength("StrongP@ss123!")
+    
+        # Verify password validation
+        assert password_result["is_valid"] is True
+        assert password_result["strength_score"] >= 80
+    
+        # Step 2: Encrypt sensitive data
+        test_data = "Sensitive case information"
+>       encrypted_result = await encryption_service.encrypt_document_content(
+            content=test_data,
+            document_id="doc-123"
+        )
+E       AttributeError: 'EncryptionService' object has no attribute 'encrypt_document_content'
+
+tests/test_integration_complete_workflow.py:357: AttributeError
+----------------------------- Captured stdout call -----------------------------
+2026-01-17 10:12:16 [info     ] Password validation completed  is_valid=True strength_score=100
+=============================== warnings summary ===============================
+../../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: 15 warnings
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+core/database.py:210
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/core/database.py:210: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+schemas/case.py:69
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/case.py:69: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('closure_reason')
+
+schemas/timeline.py:53
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/timeline.py:53: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_date')
+
+schemas/media.py:83
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:89
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:89: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('privilege_reason')
+
+schemas/media.py:113
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:113: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:119
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:119: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:143
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:143: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:162
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:162: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('annotation_type')
+
+schemas/media.py:169
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:169: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:175
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:175: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:181
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:181: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:187
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_time')
+
+schemas/media.py:206
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:206: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:212
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:212: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:218
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:218: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:375
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:375: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('analysis_types')
+
+schemas/media.py:383
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:383: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('priority')
+
+tests/test_integration_complete_workflow.py: 45 warnings
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.timestamp = datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:95: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow - AttributeError: <module 'services.case_service' from '/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/case_service.py'> does not have the attribute 'get_db'
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow - core.exceptions.CaseManagementException: Forensic report PDF export failed: 'case'
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_collaboration_workflow - TypeError: TimelineCollaborationService.share_timeline() got an unexpected keyword argument 'case_id'
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow - TypeError: BackgroundJobService.submit_job() got an unexpected keyword argument 'payload'
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow - AttributeError: 'EncryptionService' object has no attribute 'encrypt_document_content'
+ERROR tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_data_consistency_under_failure
+============== 5 failed, 2 passed, 80 warnings, 1 error in 1.34s ===============

@@ -124,8 +124,8 @@ async def search_audit_logs(
     case_id: Optional[UUID] = Query(None, description="Filter by case ID"),
     start_date: Optional[datetime] = Query(None, description="Start date for filtering"),
     end_date: Optional[datetime] = Query(None, description="End date for filtering"),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(50, ge=1, le=200, description="Items per page"),
+    page: int = Query(1, description="Page number"),
+    page_size: int = Query(50, description="Items per page"),
     current_user: Dict[str, Any] = Depends(get_current_user),
     audit_service: AuditService = Depends(get_audit_service)
 ):
@@ -139,7 +139,7 @@ async def search_audit_logs(
     - **start_date**: Start date for filtering (optional)
     - **end_date**: End date for filtering (optional)
     - **page**: Page number (starts at 1)
-    - **page_size**: Number of items per page (max 200)
+    - **page_size**: Number of items per page
     """
     try:
         # Calculate offset
@@ -193,6 +193,7 @@ async def search_audit_logs(
         )
         
     except CaseManagementException as e:
+        print(f"AUDIT SEARCH ERROR: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)

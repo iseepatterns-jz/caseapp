@@ -39,8 +39,9 @@ A comprehensive legal case management platform built on AWS with AI-powered docu
 - **Auto-detection** of timeline events from case documents
 - **Relevance scoring** and context notes for evidence
 
-### 🔍 Forensic Digital Analysis
+### 🔍 Forensic Digital & Financial Analysis
 
+- **Financial Forensic Analysis**: Automated risk detection (structuring, large withdrawals), transaction aggregation, and interactive financial dashboards.
 - **Email analysis** (.mbox, .eml, .pst archives)
 - **Text message analysis** (iPhone/Android backup databases)
 - **WhatsApp database** forensic extraction
@@ -60,14 +61,14 @@ A comprehensive legal case management platform built on AWS with AI-powered docu
 
 ## 🏗️ Architecture
 
-**Frontend**: Next.js with TypeScript and Material-UI
+**Frontend**: React (Vite) with TypeScript and Glassmorphism design
 **Backend**: Python FastAPI with async SQLAlchemy
-**Database**: Amazon RDS PostgreSQL with read replicas
+**Database**: Amazon RDS PostgreSQL with VPC isolation
 **Cache**: Amazon ElastiCache Redis
 **Search**: Amazon OpenSearch for full-text search
 **Storage**: Amazon S3 with lifecycle policies
 **AI Services**: Textract, Comprehend, Bedrock
-**Infrastructure**: AWS CDK for Infrastructure as Code
+**Infrastructure**: AWS CDK for Infrastructure as Code (Verified for x86_64)
 
 ## 🚀 Quick Start
 
@@ -91,9 +92,13 @@ npm run setup
 npm run dev
 ```
 
-**Services will be available at:**
+**Production (Live):**
+- **Frontend App**: [https://dazppyusbx807.cloudfront.net](https://dazppyusbx807.cloudfront.net)
+- **Backend Health**: [Check API Status](http://CourtC-Backe-tR6BFUjBDQ6j-1007266332.us-east-1.elb.amazonaws.com/health/ready)
+- **Monitoring**: [CloudWatch Dashboard](https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=CourtCase-Deployment-Monitoring)
 
-- Frontend: http://localhost:3000
+**Local Development:**
+- Frontend: http://localhost:5173 (Vite)
 - Backend API: http://localhost:8000
 - API Documentation: http://localhost:8000/api/docs
 - Database: localhost:5432
@@ -109,7 +114,7 @@ caseapp/
 │   ├── models/                # SQLAlchemy database models
 │   ├── services/              # Business logic services
 │   └── schemas/               # Pydantic request/response schemas
-├── frontend/                   # Next.js React application
+├── frontend/                   # Vite React application
 │   └── components/            # React components
 │       ├── timeline/          # Timeline building components
 │       └── forensic/          # Forensic analysis components
@@ -135,8 +140,9 @@ caseapp/
 ### Frontend Technologies
 
 - **React** with TypeScript for type safety
-- **Material-UI** - Professional component library
-- **React Timeline** - Interactive timeline visualization
+- **Lucide React** - Modern icon library
+- **Framer Motion** - Animation transitions
+- **Vite** - High performance build tool
 - **Recharts** - Data visualization and analytics
 - **React Beautiful DnD** - Drag and drop interactions
 

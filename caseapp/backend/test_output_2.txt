@@ -1,0 +1,379 @@
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform darwin -- Python 3.13.1, pytest-8.3.5, pluggy-1.5.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend
+configfile: pytest.ini
+plugins: langsmith-0.3.3, anyio-4.8.0, asyncio-1.3.0, hypothesis-6.150.0, typeguard-2.13.3
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow FAILED [ 12%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow PASSED [ 25%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_collaboration_workflow FAILED [ 37%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow PASSED [ 50%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow FAILED [ 62%]
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow PASSED [ 75%]
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery PASSED [ 87%]
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_data_consistency_under_failure FAILED [100%]
+
+=================================== FAILURES ===================================
+__________ TestCompleteWorkflows.test_complete_case_creation_workflow __________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x1192a16d0>
+mock_db_session = <AsyncMock id='4816184592'>
+sample_case_data = {'case_number': 'CASE-2024-001', 'case_type': 'civil', 'client_id': 'client-123', 'description': 'Test case for integration testing', ...}
+
+    @pytest.mark.asyncio
+    async def test_complete_case_creation_workflow(self, mock_db_session, sample_case_data):
+        """
+        Test complete case creation workflow
+        """
+        # Initialize services
+        audit_service = AuditService(mock_db_session)
+        case_service = CaseService(mock_db_session, audit_service)
+        document_service = DocumentService(mock_db_session, audit_service)
+        timeline_service = TimelineService(mock_db_session, audit_service)
+        insight_service = CaseInsightService()
+        export_service = ExportService()
+    
+        # Mock database operations
+        # Removed redundant/incorrect get_db patches
+        if True:
+    
+                    # Step 1: Create case (Mocked as it is not the focus here)
+                    mock_case = MagicMock()
+                    mock_case.id = "case-123"
+                    mock_case.case_number = sample_case_data["case_number"]
+                    mock_case.title = sample_case_data["title"]
+                    mock_case.status = "active"
+    
+                    mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_case
+    
+                    # Use a proper mock for the result of create_case
+                    with patch.object(case_service, 'create_case', return_value=mock_case):
+                        # The created_case variable was missing, using case instead
+                        case = await case_service.create_case(sample_case_data, "user-123")
+                        created_case = case
+    
+                        # Verify case creation
+                        assert case.id == "case-123"
+                        assert case.case_number == sample_case_data["case_number"]
+    
+                        # Step 2: Upload document
+                        mock_document = MagicMock()
+                        mock_document.id = "doc-123"
+                        mock_document.filename = "test_document.pdf"
+                        mock_document.case_id = created_case.id
+    
+                        mock_db_session.scalar.return_value = mock_document
+    
+>                       with patch('services.document_service.s3_client') as mock_s3:
+
+tests/test_integration_complete_workflow.py:116: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1495: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x11fcad1d0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'services.document_service' from '/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/document_service.py'> does not have the attribute 's3_client'
+
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1465: AttributeError
+______________ TestCompleteWorkflows.test_collaboration_workflow _______________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x11f174d60>
+mock_db_session = <AsyncMock name='mock.__aenter__()' id='4830777696'>
+
+    @pytest.mark.asyncio
+    async def test_collaboration_workflow(self, mock_db_session):
+        """
+        Test real-time collaboration workflow
+        """
+        collaboration_service = CollaborationService()
+    
+        # Use proper async context manager mock for AsyncSessionLocal
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_db_session
+    
+        with patch('services.timeline_collaboration_service.AsyncSessionLocal', return_value=mock_cm):
+            with patch('core.redis.redis_service') as mock_redis:
+                mock_redis.set = AsyncMock()
+                mock_redis.get = AsyncMock(return_value="active")
+                mock_redis.publish = AsyncMock()
+    
+                # Step 1: Create collaboration session
+                mock_session = MagicMock()
+                mock_session.id = "session-123"
+                mock_session.case_id = "case-123"
+                mock_session.created_by = "user-123"
+    
+                # Setup mock for execute().scalar_one_or_none()
+                # Use a regular Mock for the result of await execute()
+                execute_result = MagicMock()
+                execute_result.scalar_one_or_none.return_value = None # No existing collab
+                mock_db_session.execute.return_value = execute_result
+    
+                # Step 2: Share timeline
+>               share_result = await collaboration_service.share_timeline(
+                    timeline_id="case-123",
+                    user_id="user-456",
+                    permissions={"can_view": True, "can_comment": True},
+                    shared_by_id="user-123"
+                )
+
+tests/test_integration_complete_workflow.py:262: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.timeline_collaboration_service.TimelineCollaborationService object at 0x11fcb30e0>
+timeline_id = 'case-123', user_id = 'user-456'
+permissions = {'can_comment': True, 'can_view': True}, shared_by_id = 'user-123'
+message = None
+
+    async def share_timeline(
+        self,
+        timeline_id: str,
+        user_id: str,
+        permissions: Dict[str, bool],
+        shared_by_id: str,
+        message: Optional[str] = None
+    ) -> TimelineCollaboration:
+        """Share timeline with a user with granular permissions"""
+    
+        async with AsyncSessionLocal() as db:
+            # Verify timeline exists
+            timeline_result = await db.execute(
+                select(CaseTimeline).where(CaseTimeline.id == timeline_id)
+            )
+            timeline = timeline_result.scalar_one_or_none()
+    
+            if not timeline:
+>               raise ValueError(f"Timeline {timeline_id} not found")
+E               ValueError: Timeline case-123 not found
+
+services/timeline_collaboration_service.py:44: ValueError
+_________________ TestCompleteWorkflows.test_security_workflow _________________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x11f166b10>
+
+    @pytest.mark.asyncio
+    async def test_security_workflow(self):
+        """
+        Test security and encryption workflow
+        """
+        security_service = SecurityService()
+        encryption_service = EncryptionService()
+    
+        # Step 1: Validate password strength
+        password_result = await security_service.validate_password_strength("StrongP@ss123!")
+    
+        # Verify password validation
+        assert password_result["is_valid"] is True
+        assert password_result["strength_score"] >= 80
+    
+        # Step 2: Encrypt sensitive data
+        test_data = "Sensitive case information"
+        encrypted_result = await encryption_service.encrypt_document(
+            content=test_data.encode(),
+            document_id="doc-123"
+        )
+    
+        # Verify encryption
+        assert encrypted_result is not None
+        assert "encrypted_content" in encrypted_result
+>       assert "encryption_key_id" in encrypted_result
+E       AssertionError: assert 'encryption_key_id' in {'encrypted_content': 'Z0FBQUFBQnBhN1VKQ2hqUDlkQ1E0V19fTE0wWWJKRVl5SW45cl9zTDJ4UG9XMXhSbDA1b1JwRzVoSGxPQW9NZVZ6Yk5MZWFqV0psNUdUZ2tZR2c2QTFsVkNhTWVRU0J2N1NTaGVLZm5lVFlKamZGTU9CbjEzOHc9', 'encrypted_metadata': 'Z0FBQUFBQnBhN1VKQkNXY1Q5VldsZEM5U1g1Z0kzZ3kxd2tMT3BOX3NOYUdhb01TRjVPRmZZbERDNWJRSmJpejRMdkZ4dmQ5SUxMNGxTWmlmc2dldEZkbF9Zd3ZUSVlzdkg1V3pHVmpFWTdOdGMzckwtemcxZjJtTkFKSndzQ2V2TEd4X3pyS2hnTU82VV8teHVnbGZpd1AzaDUyRVpERElQS0ZJc3I0WEtDeW5odkJiX05hZlZ5UE1RRDhIRkdKT3ZWbkhYcmEtd282X2gySTVYVEp6YkZOWWlWaGtKcnJXbFEwMVNaVlVyR0djbDRhMEN4eHRVX0dCX2ViMHZ5SmJ6b1VkTnp2MDd4Ui11bTJQV1NweTEwRkZSMzhIamwxajN6TUtOZ1N1ZWJsbVR3NTVoTHNkUTR3cnA5VFhxekUzYzBmVVBOTnlFc2FObjJST05qZDVSQ1JSTXpoZWdteUM2Z0xva0JiMDlUTFpKbkZOczFQQVlGM2ZPTGlRMlZGdkY1NHFFMU1MYjJLSEE5YzF0emFnTTR5VWZoeWJZWnhkUT09', 'encrypted_data_key': 'bnlYc3AzSzA0Nng3emcyOENsSHZKc1pTcmNZbEU3TnQ4STMyUUFWWGtVRT0=', 'key_id': 'local-dev-key', 'encryption_context': {'document_id': 'doc-123', 'purpose': 'document_encryption'}}
+
+tests/test_integration_complete_workflow.py:376: AssertionError
+----------------------------- Captured stdout call -----------------------------
+2026-01-17 10:12:57 [info     ] Password validation completed  is_valid=True strength_score=100
+2026-01-17 10:12:57 [info     ] Document encrypted successfully content_size=26 document_id=doc-123
+_______ TestErrorHandlingAndRecovery.test_data_consistency_under_failure _______
+
+self = <tests.test_integration_complete_workflow.TestErrorHandlingAndRecovery object at 0x11f0eb250>
+mock_db_session = <AsyncMock id='4828380672'>
+
+    @pytest.mark.asyncio
+    async def test_data_consistency_under_failure(self, mock_db_session):
+        """Test data consistency when operations fail"""
+        audit_service = AuditService(mock_db_session)
+        case_service = CaseService(mock_db_session, audit_service)
+    
+        # Test case creation with database failure
+>       with patch('services.case_service.get_db', return_value=mock_db_session):
+
+tests/test_integration_complete_workflow.py:451: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1495: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x11fcbae50>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'services.case_service' from '/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/case_service.py'> does not have the attribute 'get_db'
+
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/mock.py:1465: AttributeError
+=============================== warnings summary ===============================
+../../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: 15 warnings
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+core/database.py:210
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/core/database.py:210: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+schemas/case.py:69
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/case.py:69: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('closure_reason')
+
+schemas/timeline.py:53
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/timeline.py:53: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_date')
+
+schemas/media.py:83
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:89
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:89: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('privilege_reason')
+
+schemas/media.py:113
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:113: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:119
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:119: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:143
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:143: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:162
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:162: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('annotation_type')
+
+schemas/media.py:169
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:169: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:175
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:175: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:181
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:181: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:187
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_time')
+
+schemas/media.py:206
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:206: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:212
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:212: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:218
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:218: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:375
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:375: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('analysis_types')
+
+schemas/media.py:383
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:383: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('priority')
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/export_service.py:375: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:137: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:135: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:136: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    updated_at=datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:270: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/encryption_service.py:65: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'encrypted_at': datetime.utcnow().isoformat(),
+
+tests/test_integration_complete_workflow.py: 45 warnings
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.timestamp = datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:95: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow - AttributeError: <module 'services.document_service' from '/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/document_service.py'> does not have the attribute 's3_client'
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_collaboration_workflow - ValueError: Timeline case-123 not found
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow - AssertionError: assert 'encryption_key_id' in {'encrypted_content': 'Z0FBQUFBQnBhN1VKQ2hqUDlkQ1E0V19fTE0wWWJKRVl5SW45cl9zTDJ4UG9XMXhSbDA1b1JwRzVoSGxPQW9NZVZ6Yk5MZWFqV0psNUdUZ2tZR2c2QTFsVkNhTWVRU0J2N1NTaGVLZm5lVFlKamZGTU9CbjEzOHc9', 'encrypted_metadata': 'Z0FBQUFBQnBhN1VKQkNXY1Q5VldsZEM5U1g1Z0kzZ3kxd2tMT3BOX3NOYUdhb01TRjVPRmZZbERDNWJRSmJpejRMdkZ4dmQ5SUxMNGxTWmlmc2dldEZkbF9Zd3ZUSVlzdkg1V3pHVmpFWTdOdGMzckwtemcxZjJtTkFKSndzQ2V2TEd4X3pyS2hnTU82VV8teHVnbGZpd1AzaDUyRVpERElQS0ZJc3I0WEtDeW5odkJiX05hZlZ5UE1RRDhIRkdKT3ZWbkhYcmEtd282X2gySTVYVEp6YkZOWWlWaGtKcnJXbFEwMVNaVlVyR0djbDRhMEN4eHRVX0dCX2ViMHZ5SmJ6b1VkTnp2MDd4Ui11bTJQV1NweTEwRkZSMzhIamwxajN6TUtOZ1N1ZWJsbVR3NTVoTHNkUTR3cnA5VFhxekUzYzBmVVBOTnlFc2FObjJST05qZDVSQ1JSTXpoZWdteUM2Z0xva0JiMDlUTFpKbkZOczFQQVlGM2ZPTGlRMlZGdkY1NHFFMU1MYjJLSEE5YzF0emFnTTR5VWZoeWJZWnhkUT09', 'encrypted_data_key': 'bnlYc3AzSzA0Nng3emcyOENsSHZKc1pTcmNZbEU3TnQ4STMyUUFWWGtVRT0=', 'key_id': 'local-dev-key', 'encryption_context': {'document_id': 'doc-123', 'purpose': 'document_encryption'}}
+FAILED tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_data_consistency_under_failure - AttributeError: <module 'services.case_service' from '/Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/case_service.py'> does not have the attribute 'get_db'
+=================== 4 failed, 4 passed, 86 warnings in 1.25s ===================

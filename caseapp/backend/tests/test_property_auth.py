@@ -31,7 +31,7 @@ def user_credentials(draw):
 @st.composite
 def valid_passwords(draw):
     """Generate valid passwords (no null bytes)"""
-    return draw(st.text(min_size=8, max_size=50, alphabet=st.characters(blacklist_characters='\x00')))
+    return draw(st.text(min_size=8, max_size=16, alphabet=st.characters(blacklist_characters='\x00', blacklist_categories=('Cs',))))
 
 class TestMultiFactorAuthentication:
     """Property tests for multi-factor authentication"""

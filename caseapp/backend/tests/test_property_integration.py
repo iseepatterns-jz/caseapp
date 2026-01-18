@@ -8,7 +8,7 @@ from hypothesis import given, strategies as st, settings as hypothesis_settings
 from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List
 
 # Mock the integration service to avoid import issues
@@ -18,21 +18,21 @@ class MockIntegrationService:
     def __init__(self):
         self.webhook_configs = {}
         self.sync_operations = {}
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(UTC)
     
     async def get_health_status(self) -> Dict[str, Any]:
         """Mock health status"""
         return {
             "status": "active",
             "version": "1.0.0",
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(UTC),
             "services": {
                 "database": "healthy",
                 "s3": "healthy",
                 "redis": "healthy",
                 "aws_services": "healthy"
             },
-            "uptime_seconds": int((datetime.utcnow() - self.start_time).total_seconds())
+            "uptime_seconds": int((datetime.now(UTC) - self.start_time).total_seconds())
         }
     
     async def get_usage_statistics(self, days: int = 30) -> Dict[str, Any]:
@@ -75,8 +75,8 @@ class MockIntegrationService:
                 "assigned_attorney": f"attorney_{i % 3}",
                 "priority": "medium",
                 "metadata": {"source": "integration_test"},
-                "created_at": datetime.utcnow() - timedelta(days=i),
-                "updated_at": datetime.utcnow() - timedelta(hours=i)
+                "created_at": datetime.now(UTC) - timedelta(days=i),
+                "updated_at": datetime.now(UTC) - timedelta(hours=i)
             }
             cases.append(case_data)
         
@@ -101,8 +101,8 @@ class MockIntegrationService:
             "assigned_attorney": "attorney_1",
             "priority": "medium",
             "metadata": {"source": "integration_test"},
-            "created_at": datetime.utcnow() - timedelta(days=1),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(UTC) - timedelta(days=1),
+            "updated_at": datetime.now(UTC)
         }
         
         if include_documents:
@@ -112,7 +112,7 @@ class MockIntegrationService:
                     "filename": f"document_{i}.pdf",
                     "file_type": "pdf",
                     "file_size": 1024 * (i + 1),
-                    "created_at": datetime.utcnow() - timedelta(hours=i)
+                    "created_at": datetime.now(UTC) - timedelta(hours=i)
                 }
                 for i in range(3)
             ]
@@ -123,8 +123,8 @@ class MockIntegrationService:
                     "id": f"event_{i}",
                     "title": f"Event {i}",
                     "event_type": "meeting",
-                    "event_date": datetime.utcnow() - timedelta(days=i),
-                    "created_at": datetime.utcnow() - timedelta(days=i)
+                    "event_date": datetime.now(UTC) - timedelta(days=i),
+                    "created_at": datetime.now(UTC) - timedelta(days=i)
                 }
                 for i in range(2)
             ]
@@ -144,8 +144,8 @@ class MockIntegrationService:
             "description": case_data.get("description"),
             "case_type": case_data["case_type"],
             "status": "active",
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC)
         }
         
         return created_case
@@ -164,8 +164,8 @@ class MockIntegrationService:
             "description": case_data.get("description"),
             "case_type": case_data.get("case_type", "civil"),
             "status": case_data.get("status", "active"),
-            "created_at": datetime.utcnow() - timedelta(days=1),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(UTC) - timedelta(days=1),
+            "updated_at": datetime.now(UTC)
         }
         
         return updated_case
@@ -180,8 +180,8 @@ class MockIntegrationService:
                 "url": config["url"],
                 "events": config["events"],
                 "active": config.get("active", True),
-                "created_at": config.get("created_at", datetime.utcnow()),
-                "updated_at": config.get("updated_at", datetime.utcnow())
+                "created_at": config.get("created_at", datetime.now(UTC)),
+                "updated_at": config.get("updated_at", datetime.now(UTC))
             }
             webhooks.append(webhook_data)
         
@@ -200,8 +200,8 @@ class MockIntegrationService:
             "events": webhook_data["events"],
             "active": webhook_data.get("active", True),
             "created_by": created_by,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC)
         }
         
         self.webhook_configs[webhook_id] = config
@@ -242,8 +242,8 @@ class MockIntegrationService:
             "sync_id": sync_id,
             "operation_type": "case_sync",
             "status": "completed",
-            "started_at": datetime.utcnow() - timedelta(minutes=5),
-            "completed_at": datetime.utcnow(),
+            "started_at": datetime.now(UTC) - timedelta(minutes=5),
+            "completed_at": datetime.now(UTC),
             "total_items": 100,
             "processed_items": 100,
             "failed_items": 0,

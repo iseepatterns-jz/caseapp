@@ -15,7 +15,7 @@ from hypothesis import given, strategies as st, settings, assume, HealthCheck
 from hypothesis.strategies import composite
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any, List
 import json
 
@@ -44,8 +44,8 @@ def document_strategy(draw):
         "status": DocumentStatus.UPLOADED.value,
         "case_id": uuid4(),
         "uploaded_by": uuid4(),
-        "upload_date": datetime.utcnow(),
-        "created_at": datetime.utcnow()
+        "upload_date": datetime.now(UTC),
+        "created_at": datetime.now(UTC)
     }
 
 @composite

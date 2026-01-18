@@ -1,0 +1,436 @@
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform darwin -- Python 3.13.1, pytest-8.3.5, pluggy-1.5.0
+rootdir: /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend
+configfile: pytest.ini
+plugins: langsmith-0.3.3, anyio-4.8.0, asyncio-1.3.0, hypothesis-6.150.0, typeguard-2.13.3
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/test_integration_complete_workflow.py F.F.F...                     [100%]
+
+=================================== FAILURES ===================================
+__________ TestCompleteWorkflows.test_complete_case_creation_workflow __________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x107945950>
+mock_db_session = <AsyncMock id='4780328000'>
+sample_case_data = {'case_number': 'CASE-2024-001', 'case_type': 'civil', 'client_id': 'client-123', 'description': 'Test case for integration testing', ...}
+
+    @pytest.mark.asyncio
+    async def test_complete_case_creation_workflow(self, mock_db_session, sample_case_data):
+        """
+        Test complete case creation workflow
+        """
+        # Initialize services
+        audit_service = AuditService(mock_db_session)
+        case_service = CaseService(mock_db_session, audit_service)
+        document_service = DocumentService(mock_db_session, audit_service)
+        timeline_service = TimelineService(mock_db_session, audit_service)
+        insight_service = CaseInsightService()
+        export_service = ExportService()
+    
+        # Mock database operations
+        # Removed redundant/incorrect get_db patches
+        if True:
+    
+                    # Step 1: Create case (Mocked as it is not the focus here)
+                    mock_case = MagicMock()
+                    mock_case.id = "case-123"
+                    mock_case.case_number = sample_case_data["case_number"]
+                    mock_case.title = sample_case_data["title"]
+                    mock_case.status = "active"
+    
+                    mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_case
+    
+                    # Use a proper mock for the result of create_case
+                    with patch.object(case_service, 'create_case', return_value=mock_case):
+                        # The created_case variable was missing, using case instead
+                        case = await case_service.create_case(sample_case_data, "user-123")
+                        created_case = case
+    
+                        # Verify case creation
+                        assert case.id == "case-123"
+                        assert case.case_number == sample_case_data["case_number"]
+    
+                        # Step 2: Upload document
+                        mock_document = MagicMock()
+                        mock_document.id = "doc-123"
+                        mock_document.filename = "test_document.pdf"
+                        mock_document.case_id = created_case.id
+    
+                        mock_db_session.scalar.return_value = mock_document
+    
+                        # Fix: patch.object on the service instance instead of module
+                        document_service.s3_client = MagicMock()
+                        document_service.s3_client.put_object = MagicMock()
+    
+                        # Mock the dependencies of upload_document if needed
+                        with patch.object(document_service, '_get_case', return_value=MagicMock()):
+                            # Create a mock file and upload request
+                            mock_file = MagicMock()
+                            mock_file.read = AsyncMock(return_value=b"Mock content")
+                            mock_file.content_type = "application/pdf"
+                            mock_file.filename = "test_document.pdf"
+    
+>                           upload_request = DocumentUploadRequest(
+                                case_id=created_case.id,
+                                document_type=DocumentType.OTHER
+                            )
+E                           pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentUploadRequest
+E                           case_id
+E                             Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `s` at 3 [type=uuid_parsing, input_value='case-123', input_type=str]
+E                               For further information visit https://errors.pydantic.dev/2.10/v/uuid_parsing
+
+tests/test_integration_complete_workflow.py:128: ValidationError
+______________ TestCompleteWorkflows.test_collaboration_workflow _______________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x11cdc7360>
+mock_db_session = <AsyncMock name='mock.__aenter__()' id='4794028048'>
+
+    @pytest.mark.asyncio
+    async def test_collaboration_workflow(self, mock_db_session):
+        """
+        Test real-time collaboration workflow
+        """
+        collaboration_service = CollaborationService()
+    
+        # Use proper async context manager mock for AsyncSessionLocal
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_db_session
+    
+        with patch('services.timeline_collaboration_service.AsyncSessionLocal', return_value=mock_cm):
+            with patch('core.redis.redis_service') as mock_redis:
+                mock_redis.set = AsyncMock()
+                mock_redis.get = AsyncMock(return_value="active")
+                mock_redis.publish = AsyncMock()
+    
+                # Step 1: Create collaboration session
+                mock_session = MagicMock()
+                mock_session.id = "session-123"
+                mock_session.case_id = "case-123"
+                mock_session.created_by = "user-123"
+    
+                # Setup mock for user
+                mock_user = MagicMock()
+                mock_user.id = "user-456"
+    
+                # Mock the result of selective timelines
+                execute_result = MagicMock()
+                # 1. share_timeline: timeline check, user check, existing collab check
+                # 2. add_comment: timeline check, user check, collab check
+                execute_result.scalar_one_or_none.side_effect = [
+>                   mock_timeline, mock_user, None,
+                    mock_timeline, mock_user, mock_collab
+                ]
+E               NameError: name 'mock_timeline' is not defined
+
+tests/test_integration_complete_workflow.py:275: NameError
+_________________ TestCompleteWorkflows.test_security_workflow _________________
+
+self = <cryptography.fernet.Fernet object at 0x11daa4cd0>
+data = b'\x80\x00\x00\x00\x00ik\xb5\x856~\x81\xed\xc91[;P\xd1\xaf\xf0(\xb3M\x94\xa3\xa9*\xe1\xdabc\x1b\xc2\x12\x0f\x1dE\x10\x...\xce3\x06\x96\xf3\x81\x94\xd1E\x15U\xe8\x07\x17\xd4C\xdaai\xab\xdb\x96\xedAH\xad\xccO\x82\xc49\x1f\x8br}\x19C!\xb7\x8a'
+
+    def _verify_signature(self, data: bytes) -> None:
+        h = HMAC(self._signing_key, hashes.SHA256())
+        h.update(data[:-32])
+        try:
+>           h.verify(data[-32:])
+E           cryptography.exceptions.InvalidSignature: Signature did not match digest.
+
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/cryptography/fernet.py:130: InvalidSignature
+
+During handling of the above exception, another exception occurred:
+
+self = <services.encryption_service.EncryptionService object at 0x11daa5090>
+encrypted_data = {'encrypted_content': 'Z0FBQUFBQnBhN1dGTm42Qjdja3hXenRRMGFfd0tMTk5sS09wS3VIYVltTWJ3aElQSFVVUUVralJXYV9GaWR6UEZNNHpCcGJ...Z09BMll3S1haOE95Q1FINTkwZz09', 'encryption_context': {'document_id': 'doc-123', 'purpose': 'document_encryption'}, ...}
+
+    async def decrypt_document(
+        self,
+        encrypted_data: Dict[str, Any]
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """
+        Decrypt document content and return content with metadata
+    
+        Args:
+            encrypted_data: Dictionary containing encrypted content and keys
+    
+        Returns:
+            Tuple of (decrypted_content, metadata)
+        """
+        try:
+            # Decrypt the data key using KMS
+            encrypted_key = base64.b64decode(encrypted_data['encrypted_data_key'])
+    
+            decrypted_key_response = self.kms_client.decrypt(
+                CiphertextBlob=encrypted_key,
+                EncryptionContext=encrypted_data['encryption_context']
+            )
+    
+            plaintext_key = decrypted_key_response['Plaintext']
+    
+            # Create Fernet cipher with the decrypted key
+            fernet = Fernet(base64.urlsafe_b64encode(plaintext_key[:32]))
+    
+            # Decrypt the content
+            encrypted_content = base64.b64decode(encrypted_data['encrypted_content'])
+>           decrypted_content = fernet.decrypt(encrypted_content)
+
+services/encryption_service.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/cryptography/fernet.py:89: in decrypt
+    return self._decrypt_data(data, timestamp, time_info)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/cryptography/fernet.py:148: in _decrypt_data
+    self._verify_signature(data)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cryptography.fernet.Fernet object at 0x11daa4cd0>
+data = b'\x80\x00\x00\x00\x00ik\xb5\x856~\x81\xed\xc91[;P\xd1\xaf\xf0(\xb3M\x94\xa3\xa9*\xe1\xdabc\x1b\xc2\x12\x0f\x1dE\x10\x...\xce3\x06\x96\xf3\x81\x94\xd1E\x15U\xe8\x07\x17\xd4C\xdaai\xab\xdb\x96\xedAH\xad\xccO\x82\xc49\x1f\x8br}\x19C!\xb7\x8a'
+
+    def _verify_signature(self, data: bytes) -> None:
+        h = HMAC(self._signing_key, hashes.SHA256())
+        h.update(data[:-32])
+        try:
+            h.verify(data[-32:])
+        except InvalidSignature:
+>           raise InvalidToken
+E           cryptography.fernet.InvalidToken
+
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/cryptography/fernet.py:132: InvalidToken
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x11cdf3650>
+
+    @pytest.mark.asyncio
+    async def test_security_workflow(self):
+        """
+        Test security and encryption workflow
+        """
+        security_service = SecurityService()
+    
+        with patch('boto3.client') as mock_boto:
+            mock_kms = MagicMock()
+            mock_boto.return_value = mock_kms
+    
+            # Mock KMS operations
+            mock_kms.generate_data_key.return_value = {
+                'Plaintext': b'0' * 32,
+                'CiphertextBlob': b'encrypted_key',
+                'KeyId': 'key-123'
+            }
+            mock_kms.decrypt.return_value = {
+                'Plaintext': b'0' * 32,
+                'KeyId': 'key-123'
+            }
+    
+            encryption_service = EncryptionService()
+    
+            # Step 1: Validate password strength
+            password_result = await security_service.validate_password_strength("StrongP@ss123!")
+    
+            # Verify password validation
+            assert password_result["is_valid"] is True
+            assert password_result["strength_score"] >= 80
+    
+            # Step 2: Encrypt sensitive data
+            test_data = "Sensitive case information"
+            encrypted_result = await encryption_service.encrypt_document(
+                content=test_data.encode(),
+                document_id="doc-123"
+            )
+    
+            # Verify encryption
+            assert encrypted_result is not None
+            assert "encrypted_content" in encrypted_result
+            assert "key_id" in encrypted_result
+    
+            # Step 3: Decrypt and verify integrity
+>           decrypted_content_bytes, _ = await encryption_service.decrypt_document(
+                encrypted_data=encrypted_result
+            )
+
+tests/test_integration_complete_workflow.py:410: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.encryption_service.EncryptionService object at 0x11daa5090>
+encrypted_data = {'encrypted_content': 'Z0FBQUFBQnBhN1dGTm42Qjdja3hXenRRMGFfd0tMTk5sS09wS3VIYVltTWJ3aElQSFVVUUVralJXYV9GaWR6UEZNNHpCcGJ...Z09BMll3S1haOE95Q1FINTkwZz09', 'encryption_context': {'document_id': 'doc-123', 'purpose': 'document_encryption'}, ...}
+
+    async def decrypt_document(
+        self,
+        encrypted_data: Dict[str, Any]
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """
+        Decrypt document content and return content with metadata
+    
+        Args:
+            encrypted_data: Dictionary containing encrypted content and keys
+    
+        Returns:
+            Tuple of (decrypted_content, metadata)
+        """
+        try:
+            # Decrypt the data key using KMS
+            encrypted_key = base64.b64decode(encrypted_data['encrypted_data_key'])
+    
+            decrypted_key_response = self.kms_client.decrypt(
+                CiphertextBlob=encrypted_key,
+                EncryptionContext=encrypted_data['encryption_context']
+            )
+    
+            plaintext_key = decrypted_key_response['Plaintext']
+    
+            # Create Fernet cipher with the decrypted key
+            fernet = Fernet(base64.urlsafe_b64encode(plaintext_key[:32]))
+    
+            # Decrypt the content
+            encrypted_content = base64.b64decode(encrypted_data['encrypted_content'])
+            decrypted_content = fernet.decrypt(encrypted_content)
+    
+            # Decrypt the metadata
+            encrypted_metadata = base64.b64decode(encrypted_data['encrypted_metadata'])
+            decrypted_metadata_json = fernet.decrypt(encrypted_metadata)
+            metadata = json.loads(decrypted_metadata_json.decode())
+    
+            # Verify content integrity
+            content_hash = hashlib.sha256(decrypted_content).hexdigest()
+            if content_hash != metadata['content_hash']:
+                raise CaseManagementException("Content integrity verification failed")
+    
+            logger.info("Document decrypted successfully",
+                       document_id=metadata['document_id'],
+                       content_size=len(decrypted_content))
+    
+            return decrypted_content, metadata
+    
+        except ClientError as e:
+            logger.error("KMS decryption failed", error=str(e))
+            raise CaseManagementException(f"Document decryption failed: {str(e)}")
+        except Exception as e:
+            logger.error("Document decryption failed", error=str(e))
+>           raise CaseManagementException(f"Document decryption failed: {str(e)}")
+E           core.exceptions.CaseManagementException: Document decryption failed:
+
+services/encryption_service.py:151: CaseManagementException
+----------------------------- Captured stdout call -----------------------------
+2026-01-17 10:15:01 [info     ] Password validation completed  is_valid=True strength_score=100
+2026-01-17 10:15:01 [info     ] Document encrypted successfully content_size=26 document_id=doc-123
+2026-01-17 10:15:01 [error    ] Document decryption failed     error=
+=============================== warnings summary ===============================
+../../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: 15 warnings
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+core/database.py:210
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/core/database.py:210: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+schemas/case.py:69
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/case.py:69: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('closure_reason')
+
+schemas/timeline.py:53
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/timeline.py:53: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_date')
+
+schemas/media.py:83
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:89
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:89: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('privilege_reason')
+
+schemas/media.py:113
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:113: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:119
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:119: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:143
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:143: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:162
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:162: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('annotation_type')
+
+schemas/media.py:169
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:169: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:175
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:175: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:181
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:181: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:187
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_time')
+
+schemas/media.py:206
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:206: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:212
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:212: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:218
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:218: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:375
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:375: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('analysis_types')
+
+schemas/media.py:383
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:383: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('priority')
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/export_service.py:375: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:137: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:135: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:136: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    updated_at=datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:270: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/encryption_service.py:65: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'encrypted_at': datetime.utcnow().isoformat(),
+
+tests/test_integration_complete_workflow.py: 45 warnings
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.timestamp = datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:95: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_collaboration_workflow
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow
+=================== 3 failed, 5 passed, 86 warnings in 1.27s ===================

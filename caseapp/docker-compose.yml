@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -94,6 +92,8 @@ services:
       target: frontend
     ports:
       - "3000:80"
+    volumes:
+      - ./nginx/frontend.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
 

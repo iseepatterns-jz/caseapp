@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     
     # API
     API_V1_STR: str = "/api/v1"
-    ALLOWED_HOSTS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    ALLOWED_HOSTS: List[str] = ["*"]
     
     # Database - Individual components for RDS secret compatibility
     DB_HOST: str = "localhost"

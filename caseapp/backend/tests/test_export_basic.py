@@ -3,7 +3,7 @@ Basic tests for export service functionality
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from unittest.mock import AsyncMock, patch, MagicMock
 import uuid
 
@@ -73,7 +73,7 @@ def test_date_range_validation():
         from pydantic import ValidationError
         
         # Valid date range
-        start_date = datetime.utcnow()
+        start_date = datetime.now(UTC)
         end_date = start_date + timedelta(days=30)
         
         date_range = DateRange(start_date=start_date, end_date=end_date)

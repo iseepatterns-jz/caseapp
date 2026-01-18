@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, AsyncMock, patch
 from uuid import UUID, uuid4
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from typing import List, Dict, Any
 import json
 import os
@@ -39,7 +39,7 @@ class TestMultiFormatExport:
         """
         # Create mock timeline events
         case_id = uuid4()
-        base_date = datetime.utcnow()
+        base_date = datetime.now(UTC)
         
         events = []
         for i in range(event_count):
@@ -96,7 +96,7 @@ class TestMultiFormatExport:
             "case_id": str(case_id),
             "title": export_request.title,
             "export_format": export_format,
-            "exported_at": datetime.utcnow().isoformat(),
+            "exported_at": datetime.now(UTC).isoformat(),
             "exported_by": str(uuid4()),
             "events": [],
             "statistics": {
@@ -204,7 +204,7 @@ class TestMultiFormatExport:
         """
         # Create consistent test data
         case_id = uuid4()
-        base_date = datetime.utcnow()
+        base_date = datetime.now(UTC)
         
         events = []
         for i in range(event_count):
@@ -331,7 +331,7 @@ class TestSelectiveExportFiltering:
         """
         # Create timeline events with varied dates and types
         case_id = uuid4()
-        base_date = datetime.utcnow()
+        base_date = datetime.now(UTC)
         
         available_types = ['meeting', 'incident', 'filing', 'other']
         events = []

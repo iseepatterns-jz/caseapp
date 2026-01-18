@@ -47,10 +47,15 @@ cd frontend && npm run dev
 
 Once setup is complete, you can access:
 
-- **Frontend Application**: http://localhost:3000
-- **Backend API**: http://localhost:8000
+- **Live Frontend (Production)**: [https://dazppyusbx807.cloudfront.net](https://dazppyusbx807.cloudfront.net)
+- **Live Dashboard**: [Recent Activity & Audit Logs](https://dazppyusbx807.cloudfront.net/dashboard) (Fixed & Synchronized)
+- **Local Frontend**: http://localhost:5173
+- **Local Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/api/docs
 - **Interactive API**: http://localhost:8000/api/redoc
+
+> [!NOTE]
+> The production API and Dashboard are now fully synchronized with the database schema. If you encounter `400 Bad Request` errors in the future, refer to the [Emergency Runbook](./EMERGENCY-PROCEDURES-RUNBOOK.md) for schema recovery steps.
 
 ## 🔧 Configuration
 
@@ -97,12 +102,11 @@ The system uses several AWS services:
 - Click "Add Event" to create timeline entries
 - Use "Pin Evidence" to attach documents/media to events
 
-### 3. Upload Forensic Data
+### 3. Upload Forensic & Financial Data
 
-- Go to Forensic Analysis
-- Click "Upload Data"
-- Select your .db, .mbox, or other forensic files
-- Wait for AI analysis to complete
+- **Forensic Logs**: Go to Forensic Analysis -> Click "Upload Data" -> Select .db, .mbox files.
+- **Financial Data**: Go to **Financial Analysis** -> View automated transaction summaries and risk alerts.
+- Wait for AI analysis to complete for insight correlation.
 
 ### 4. Collaborate with Team
 

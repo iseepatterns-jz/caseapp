@@ -7,7 +7,7 @@ import tempfile
 import os
 from io import BytesIO
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, UTC
 from hypothesis import given, strategies as st, settings, assume
 from hypothesis.stateful import RuleBasedStateMachine, Bundle, rule, initialize, invariant
 from fastapi.testclient import TestClient
@@ -1088,7 +1088,7 @@ class TestMediaStreamingAndSharingProperties:
             
             # Generate access log entry
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "link_id": link_id,
                 "user_ip": user_ip,
                 "user_agent": user_agent,

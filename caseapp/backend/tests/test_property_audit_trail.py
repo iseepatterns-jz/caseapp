@@ -9,7 +9,7 @@ from hypothesis import given, settings, strategies as st
 from hypothesis.strategies import composite
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4, UUID
-from datetime import datetime, timedelta
+from datetime import datetime, UTC, timedelta
 from typing import Dict, Any, Optional
 
 from models.case import Case, CaseType, CaseStatus, CasePriority, AuditLog
@@ -433,7 +433,7 @@ class TestAuditTrailProperties:
                     user_id=user_id
                 )
                 # Set timestamp manually for testing (normally set by database)
-                mock_log.timestamp = datetime.now() + timedelta(seconds=i)
+                mock_log.timestamp = datetime.now(UTC) + timedelta(seconds=i)
                 mock_audit_logs.append(mock_log)
             
             # Mock the database query for audit trail retrieval
@@ -496,7 +496,7 @@ class TestAuditTrailProperties:
         # Property: Audit entries should maintain integrity and immutability
         async def run_test():
             user_id = uuid4()
-            operation_time = datetime.now()
+            operation_time = datetime.now(UTC)
             
             # Mock database operations
             self.mock_db.add = MagicMock()

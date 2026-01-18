@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
 import json
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 # Mock the services to avoid import issues
 class MockSecurityService:
@@ -48,7 +48,7 @@ class MockSecurityService:
         self.failed_login_attempts[user_id] += 1
         
         if self.failed_login_attempts[user_id] >= 5:  # Mock max attempts
-            self.locked_accounts[user_id] = datetime.utcnow()
+            self.locked_accounts[user_id] = datetime.now(UTC)
             return True
         
         return False
@@ -67,7 +67,7 @@ class MockSecurityService:
             "qr_code": "mock_qr_code_base64",
             "backup_codes": ["CODE1", "CODE2", "CODE3"],
             "hashed_backup_codes": ["HASH1", "HASH2", "HASH3"],
-            "setup_timestamp": datetime.utcnow().isoformat()
+            "setup_timestamp": datetime.now(UTC).isoformat()
         }
     
     async def validate_data_access_permissions(
@@ -93,8 +93,8 @@ class MockSecurityService:
         """Mock security report generation"""
         return {
             "report_period": {
-                "start_date": (datetime.utcnow() - timedelta(days=days)).isoformat(),
-                "end_date": datetime.utcnow().isoformat(),
+                "start_date": (datetime.now(UTC) - timedelta(days=days)).isoformat(),
+                "end_date": datetime.now(UTC).isoformat(),
                 "days": days
             },
             "authentication_metrics": {
@@ -150,7 +150,7 @@ class MockEncryptionService:
         
         metadata = {
             "document_id": encrypted_data["encryption_context"]["document_id"],
-            "encrypted_at": datetime.utcnow().isoformat(),
+            "encrypted_at": datetime.now(UTC).isoformat(),
             "content_hash": "mock_hash"
         }
         

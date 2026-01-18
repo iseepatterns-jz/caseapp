@@ -4,7 +4,7 @@ Validates Requirements 6.1 (granular permissions) and 6.3 (comment threading)
 """
 
 import pytest
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any, List
 from hypothesis import given, strategies as st, settings, assume
 import uuid
@@ -21,7 +21,7 @@ class MockTimelineCollaboration:
         self.can_pin_evidence = kwargs.get('can_pin_evidence', False)
         self.can_share = kwargs.get('can_share', False)
         self.can_comment = kwargs.get('can_comment', True)
-        self.created_at = kwargs.get('created_at', datetime.utcnow())
+        self.created_at = kwargs.get('created_at', datetime.now(UTC))
         self.updated_at = kwargs.get('updated_at')
         self.created_by_id = kwargs.get('created_by_id')
         self.updated_by_id = kwargs.get('updated_by_id')
@@ -34,7 +34,7 @@ class MockTimelineComment:
         self.is_internal = kwargs.get('is_internal', True)
         self.parent_comment_id = kwargs.get('parent_comment_id')
         self.thread_depth = kwargs.get('thread_depth', 0)
-        self.created_at = kwargs.get('created_at', datetime.utcnow())
+        self.created_at = kwargs.get('created_at', datetime.now(UTC))
         self.created_by = kwargs.get('created_by')
 
 # Test data generators
@@ -137,7 +137,7 @@ class TestCollaborationPermissionLogic:
         collaboration.can_pin_evidence = updated_permissions['can_pin_evidence']
         collaboration.can_share = updated_permissions['can_share']
         collaboration.can_comment = updated_permissions['can_comment']
-        collaboration.updated_at = datetime.utcnow()
+        collaboration.updated_at = datetime.now(UTC)
         
         # Property: All permissions should be updated atomically
         assert collaboration.can_view == updated_permissions['can_view']

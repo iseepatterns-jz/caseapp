@@ -4,7 +4,7 @@ Validates Requirements 6.4 (external sharing) and 6.5 (notifications)
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional
 from hypothesis import given, strategies as st, settings, assume
 import uuid
@@ -17,7 +17,7 @@ class MockExternalShareLink:
         self.id = kwargs.get('id', str(uuid.uuid4()))
         self.share_token = kwargs.get('share_token', secrets.token_urlsafe(32))
         self.timeline_id = kwargs.get('timeline_id', str(uuid.uuid4()))
-        self.expires_at = kwargs.get('expires_at', datetime.utcnow() + timedelta(hours=24))
+        self.expires_at = kwargs.get('expires_at', datetime.now(UTC) + timedelta(hours=24))
         self.view_limit = kwargs.get('view_limit')
         self.password_hash = kwargs.get('password_hash')
         self.allow_download = kwargs.get('allow_download', False)
@@ -27,7 +27,7 @@ class MockExternalShareLink:
         self.view_count = kwargs.get('view_count', 0)
         self.last_accessed_at = kwargs.get('last_accessed_at')
         self.last_accessed_ip = kwargs.get('last_accessed_ip')
-        self.created_at = kwargs.get('created_at', datetime.utcnow())
+        self.created_at = kwargs.get('created_at', datetime.now(UTC))
         self.created_by_id = kwargs.get('created_by_id', str(uuid.uuid4()))
 
 class MockCollaborationNotification:
@@ -46,7 +46,7 @@ class MockCollaborationNotification:
         self.delivered_at = kwargs.get('delivered_at', {})
         self.is_read = kwargs.get('is_read', False)
         self.read_at = kwargs.get('read_at')  # Add missing read_at attribute
-        self.created_at = kwargs.get('created_at', datetime.utcnow())
+        self.created_at = kwargs.get('created_at', datetime.now(UTC))
         self.created_by_id = kwargs.get('created_by_id')
 
 # Test data generators
@@ -96,7 +96,7 @@ class TestExternalSharingProperties:
         
         # Create share link with configuration
         share_link = MockExternalShareLink(
-            expires_at=datetime.utcnow() + timedelta(hours=config['expires_in_hours']),
+            expires_at=datetime.now(UTC) + timedelta(hours=config['expires_in_hours']),
             view_limit=config['view_limit'],
             password_hash=hashlib.sha256(config['password'].encode()).hexdigest() if config['password'] else None,
             allow_download=config['allow_download'],
@@ -108,7 +108,7 @@ class TestExternalSharingProperties:
         assert len(share_link.share_token) >= 32, "Share token should be sufficiently long for security"
         
         # Property: Expiration should be set correctly
-        expected_expiration = datetime.utcnow() + timedelta(hours=config['expires_in_hours'])
+        expected_expiration = datetime.now(UTC) + timedelta(hours=config['expires_in_hours'])
         time_diff = abs((share_link.expires_at - expected_expiration).total_seconds())
         assert time_diff < 60, "Expiration should be set within 1 minute of expected time"
         
@@ -206,7 +206,7 @@ class TestExternalSharingProperties:
         """
         
         # Create share link with specific expiration
-        base_time = datetime.utcnow()
+        base_time = datetime.now(UTC)
         expires_at = base_time + timedelta(hours=config['expires_in_hours'])
         current_time = base_time + timedelta(hours=hours_offset)
         
@@ -331,7 +331,7 @@ class TestNotificationProperties:
         delivery_results = {}
         for channel in notification.channels:
             # Simulate successful delivery
-            delivery_results[channel] = datetime.utcnow().isoformat()
+            delivery_results[channel] = datetime.now(UTC).isoformat()
         
         notification.delivered_at = delivery_results
         
@@ -381,7 +381,7 @@ class TestNotificationProperties:
         
         for index in valid_read_indices:
             created_notifications[index].is_read = True
-            created_notifications[index].read_at = datetime.utcnow()
+            created_notifications[index].read_at = datetime.now(UTC)
         
         # Property: Read status should be tracked independently
         for i, notification in enumerate(created_notifications):
@@ -439,7 +439,7 @@ class TestNotificationProperties:
                 title=f"Notification {i}",
                 message=f"Message for {notif_type}",
                 priority=priority,
-                created_at=datetime.utcnow() - timedelta(minutes=i)  # Different timestamps
+                created_at=datetime.now(UTC) - timedelta(minutes=i)  # Different timestamps
             )
             notifications.append(notification)
         
@@ -518,7 +518,7 @@ class TestIntegrationProperties:
         
         # Create share link
         share_link = MockExternalShareLink(
-            expires_at=datetime.utcnow() + timedelta(hours=share_config['expires_in_hours']),
+            expires_at=datetime.now(UTC) + timedelta(hours=share_config['expires_in_hours']),
             view_limit=share_config['view_limit']
         )
         

@@ -5,7 +5,7 @@ Tests core logic without heavy dependencies like ReportLab and Matplotlib
 
 import pytest
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List
 from hypothesis import given, strategies as st, settings, assume, HealthCheck
 import uuid
@@ -25,7 +25,7 @@ def case_data_strategy(draw):
 @st.composite
 def timeline_event_strategy(draw):
     """Generate timeline event data for export testing"""
-    base_date = datetime.utcnow() - timedelta(days=draw(st.integers(min_value=1, max_value=365)))
+    base_date = datetime.now(UTC) - timedelta(days=draw(st.integers(min_value=1, max_value=365)))
     return {
         'id': str(uuid.uuid4()),
         'title': draw(st.text(min_size=5, max_size=100)),
@@ -57,8 +57,8 @@ def forensic_data_strategy(draw):
             'total_messages': total_messages,
             'unique_participants': len(participants),
             'date_range': {
-                'start': (datetime.utcnow() - timedelta(days=90)).strftime('%Y-%m-%d'),
-                'end': datetime.utcnow().strftime('%Y-%m-%d')
+                'start': (datetime.now(UTC) - timedelta(days=90)).strftime('%Y-%m-%d'),
+                'end': datetime.now(UTC).strftime('%Y-%m-%d')
             },
             'email_count': draw(st.integers(min_value=0, max_value=total_messages // 2)),
             'sms_count': draw(st.integers(min_value=0, max_value=total_messages // 2)),
@@ -87,7 +87,7 @@ def export_filters_strategy(draw):
     
     # Date range filter
     if draw(st.booleans()):
-        start_date = datetime.utcnow() - timedelta(days=draw(st.integers(min_value=30, max_value=365)))
+        start_date = datetime.now(UTC) - timedelta(days=draw(st.integers(min_value=30, max_value=365)))
         end_date = start_date + timedelta(days=draw(st.integers(min_value=1, max_value=90)))
         filters['date_range'] = {
             'start': start_date,
@@ -224,7 +224,7 @@ class TestExportFunctionalityProperties:
         mock_dashboard = {
             'case_id': forensic_data['case_id'],
             'case_title': 'Test Forensic Case',
-            'generated_at': datetime.utcnow().isoformat(),
+            'generated_at': datetime.now(UTC).isoformat(),
             'dashboard_type': 'court_presentation'
         }
         
@@ -349,7 +349,7 @@ class TestExportFunctionalityProperties:
         mock_stats_report = {
             'case_id': forensic_data['case_id'],
             'report_type': 'communication_statistics',
-            'generated_at': datetime.utcnow().isoformat(),
+            'generated_at': datetime.now(UTC).isoformat(),
             'communication_metrics': {
                 'total_messages': stats['total_messages'],
                 'unique_participants': stats['unique_participants'],
@@ -421,7 +421,7 @@ class TestExportFunctionalityProperties:
         mock_network_data = {
             'case_id': forensic_data['case_id'],
             'network_type': 'communication_network',
-            'generated_at': datetime.utcnow().isoformat(),
+            'generated_at': datetime.now(UTC).isoformat(),
             'nodes': [
                 {
                     'id': p['name'],
@@ -637,7 +637,7 @@ class TestExportFunctionalityProperties:
                     'title': 'Test Event',
                     'description': 'Test event description',
                     'event_type': 'meeting',
-                    'event_date': datetime.utcnow(),
+                    'event_date': datetime.now(UTC),
                     'location': 'Test Location',
                     'participants': ['Participant 1', 'Participant 2'],
                     'evidence_pins': []
@@ -702,7 +702,7 @@ class TestExportFunctionalityProperties:
         """Test export scalability with varying data sizes"""
         # Generate mock events
         events = []
-        base_date = datetime.utcnow() - timedelta(days=365)
+        base_date = datetime.now(UTC) - timedelta(days=365)
         
         for i in range(event_count):
             event = {
@@ -732,7 +732,7 @@ class TestExportFunctionalityProperties:
                 'include_evidence': include_evidence,
                 'include_metadata': include_metadata
             },
-            'export_timestamp': datetime.utcnow().isoformat()
+            'export_timestamp': datetime.now(UTC).isoformat()
         }
         
         # Verify scalability properties
@@ -788,8 +788,8 @@ if __name__ == "__main__":
             'total_messages': 50,
             'unique_participants': 5,
             'date_range': {
-                'start': (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d'),
-                'end': datetime.utcnow().strftime('%Y-%m-%d')
+                'start': (datetime.now(UTC) - timedelta(days=30)).strftime('%Y-%m-%d'),
+                'end': datetime.now(UTC).strftime('%Y-%m-%d')
             },
             'email_count': 30,
             'sms_count': 20,

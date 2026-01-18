@@ -5,7 +5,7 @@ Validates Requirements 7.1, 7.4, 7.5, 7.6 (AI-powered case insights)
 
 import pytest
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List
 from hypothesis import given, strategies as st, settings, assume, HealthCheck
 import uuid
@@ -52,7 +52,7 @@ def document_data_strategy(draw):
 @st.composite
 def forensic_item_data_strategy(draw):
     """Generate forensic item data for anomaly detection testing"""
-    base_time = datetime.utcnow() - timedelta(days=draw(st.integers(min_value=1, max_value=365)))
+    base_time = datetime.now(UTC) - timedelta(days=draw(st.integers(min_value=1, max_value=365)))
     return {
         'sender': draw(st.emails()),
         'recipients': draw(st.lists(st.emails(), min_size=1, max_size=5)),
@@ -176,7 +176,7 @@ class TestAIInsightGenerationProperties:
             
             mock_case.title = case_data['title']
             mock_case.description = case_data['description']
-            mock_case.created_at = datetime.utcnow()
+            mock_case.created_at = datetime.now(UTC)
             mock_case.court_date = None
             mock_case.deadline_date = None
             mock_case.court_name = None
@@ -201,7 +201,7 @@ class TestAIInsightGenerationProperties:
                 mock_doc.uploaded_by = uuid.uuid4()
                 mock_doc.is_privileged = False
                 mock_doc.is_confidential = False
-                mock_doc.created_at = datetime.utcnow()
+                mock_doc.created_at = datetime.now(UTC)
                 mock_documents.append(mock_doc)
             
             mock_case.documents = mock_documents
@@ -222,7 +222,7 @@ class TestAIInsightGenerationProperties:
                     'description': case_data['description'],
                     'case_type': case_data['case_type'].value,
                     'status': case_data['status'].value,
-                    'created_at': datetime.utcnow().isoformat()
+                    'created_at': datetime.now(UTC).isoformat()
                 },
                 'documents': [
                     {
@@ -249,7 +249,7 @@ class TestAIInsightGenerationProperties:
                     'summary': doc['ai_summary'],
                     'entities': doc['entities'],
                     'keywords': doc['keywords'],
-                    'created_at': datetime.utcnow().isoformat(),
+                    'created_at': datetime.now(UTC).isoformat(),
                     'metadata': {
                         'document_type': 'legal_document',
                         'file_size': doc['file_size'],
@@ -387,7 +387,7 @@ class TestAIInsightGenerationProperties:
                         'total_evidence_items': len(documents),
                         'overall_quality_score': 0.75
                     },
-                    'generated_at': datetime.utcnow().isoformat()
+                    'generated_at': datetime.now(UTC).isoformat()
                 }
                 mock_risk_assessment.return_value = mock_risk_result
                 

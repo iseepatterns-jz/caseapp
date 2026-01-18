@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+import { financialAnalysisService } from '../services/api';
+
 interface FinancialSummary {
     total_accounts: number;
     total_transactions: number;
@@ -49,18 +51,20 @@ export const FinancialAnalysis: React.FC = () => {
     const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
 
     useEffect(() => {
-        // Fetch financial data from backend
+        if (!caseId) return;
+
+        // Fetch financial data from backend using centralized service
         const fetchData = async () => {
             try {
-                const [summaryRes, transactionsRes, alertsRes] = await Promise.all([
-                    fetch(`http://localhost:8000/api/v1/financial/case/${caseId}/summary`),
-                    fetch(`http://localhost:8000/api/v1/financial/case/${caseId}/transactions`),
-                    fetch(`http://localhost:8000/api/v1/financial/case/${caseId}/alerts`)
+                const [summaryData, transactionsData, alertsData] = await Promise.all([
+                    financialAnalysisService.getSummary(caseId),
+                    financialAnalysisService.getTransactions(caseId),
+                    financialAnalysisService.getAlerts(caseId)
                 ]);
 
-                if (summaryRes.ok) setSummary(await summaryRes.json());
-                if (transactionsRes.ok) setTransactions(await transactionsRes.json());
-                if (alertsRes.ok) setAlerts(await alertsRes.json());
+                setSummary(summaryData);
+                setTransactions(transactionsData);
+                setAlerts(alertsData);
                 
                 setLoading(false);
             } catch (error) {

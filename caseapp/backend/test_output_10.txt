@@ -1,0 +1,423 @@
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform darwin -- Python 3.13.1, pytest-8.3.5, pluggy-1.5.0
+rootdir: /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend
+configfile: pytest.ini
+plugins: langsmith-0.3.3, anyio-4.8.0, asyncio-1.3.0, hypothesis-6.150.0, typeguard-2.13.3
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/test_integration_complete_workflow.py F.......                     [100%]
+
+=================================== FAILURES ===================================
+__________ TestCompleteWorkflows.test_complete_case_creation_workflow __________
+
+self = <services.timeline_service.TimelineService object at 0x1174e7a10>
+event_request = TimelineEventCreateRequest(case_id=UUID('bda88b8e-02ac-45f6-b72e-84a8331279eb'), title='Document Uploaded', descriptio...l_day=False, location=None, participants=None, importance_level=3, is_milestone=False, color=None, event_metadata=None)
+created_by = UUID('b104c82b-ad84-4499-9b25-5b6d631225f3')
+
+    async def create_timeline_event(
+        self,
+        event_request: TimelineEventCreateRequest,
+        created_by: UUID
+    ) -> TimelineEvent:
+        """
+        Create a new timeline event with validation
+    
+        Args:
+            event_request: Event creation data
+            created_by: UUID of the user creating the event
+    
+        Returns:
+            Created timeline event instance
+    
+        Raises:
+            CaseManagementException: If validation fails or case not found
+        """
+        try:
+            # Validate case exists
+            case = await self._get_case(event_request.case_id)
+            if not case:
+                raise CaseManagementException(
+                    f"Case with ID {event_request.case_id} not found",
+                    error_code="CASE_NOT_FOUND"
+                )
+    
+            # Validate date constraints
+            if event_request.end_date and event_request.end_date < event_request.event_date:
+                raise CaseManagementException(
+                    "End date must be after event date",
+                    error_code="INVALID_DATE_RANGE"
+                )
+    
+            # Get display order for events on the same date
+>           display_order = await self._get_next_display_order(
+                event_request.case_id,
+                event_request.event_date
+            )
+
+services/timeline_service.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.timeline_service.TimelineService object at 0x1174e7a10>
+case_id = UUID('bda88b8e-02ac-45f6-b72e-84a8331279eb')
+event_date = datetime.datetime(2026, 1, 17, 16, 19, 14, 972854)
+
+    async def _get_next_display_order(self, case_id: UUID, event_date: datetime) -> int:
+        """Get the next display order for events on the same date"""
+        result = await self.db.execute(
+            select(func.coalesce(func.max(TimelineEvent.display_order), 0))
+            .where(TimelineEvent.case_id == case_id)
+            .where(func.date(TimelineEvent.event_date) == event_date.date())
+        )
+        max_order = result.scalar() or 0
+>       return max_order + 1
+E       TypeError: unsupported operand type(s) for +: 'coroutine' and 'int'
+
+services/timeline_service.py:612: TypeError
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x107123390>
+mock_db_session = <AsyncMock id='4685972544'>
+sample_case_data = {'case_number': 'CASE-2024-001', 'case_type': 'civil', 'client_id': 'client-123', 'description': 'Test case for integration testing', ...}
+
+    @pytest.mark.asyncio
+    async def test_complete_case_creation_workflow(self, mock_db_session, sample_case_data):
+        """
+        Test complete case creation workflow
+        """
+        # Initialize services
+        audit_service = AuditService(mock_db_session)
+        case_service = CaseService(mock_db_session, audit_service)
+        document_service = DocumentService(mock_db_session, audit_service)
+        timeline_service = TimelineService(mock_db_session, audit_service)
+        insight_service = CaseInsightService()
+        export_service = ExportService()
+    
+        # Mock database operations
+        # Removed redundant/incorrect get_db patches
+        if True:
+    
+                    # Step 1: Create case (Mocked as it is not the focus here)
+                    case_id = uuid.uuid4()
+                    user_id = uuid.uuid4()
+                    mock_case = MagicMock()
+                    mock_case.id = case_id
+                    mock_case.case_number = sample_case_data["case_number"]
+                    mock_case.title = sample_case_data["title"]
+                    mock_case.status = "active"
+    
+                    mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_case
+    
+                    # Use a proper mock for the result of create_case
+                    with patch.object(case_service, 'create_case', return_value=mock_case):
+                        # The created_case variable was missing, using case instead
+                        case = await case_service.create_case(sample_case_data, user_id)
+                        created_case = case
+    
+                        # Verify case creation
+                        assert case.id == case_id
+                        assert case.case_number == sample_case_data["case_number"]
+    
+                        # Step 2: Upload document
+                        mock_document = MagicMock()
+                        mock_document.id = "doc-123"
+                        mock_document.filename = "test_document.pdf"
+                        mock_document.case_id = created_case.id
+    
+                        mock_db_session.scalar.return_value = mock_document
+    
+                        # Fix: patch.object on the service instance instead of module
+                        document_service.s3_client = MagicMock()
+                        document_service.s3_client.put_object = MagicMock()
+    
+                        # Mock the dependencies of upload_document if needed
+                        with patch.object(document_service, '_get_case', return_value=MagicMock()):
+                            # Create a mock file and upload request
+                            mock_file = MagicMock()
+                            mock_file.read = AsyncMock(return_value=b"Mock content")
+                            mock_file.content_type = "application/pdf"
+                            mock_file.filename = "test_document.pdf"
+    
+                            upload_request = DocumentUploadRequest(
+                                case_id=created_case.id,
+                                document_type=DocumentType.OTHER
+                            )
+    
+                        # Mock DocumentAnalysisService.analyze_document to avoid coroutine issues
+                        with patch('services.document_analysis_service.DocumentAnalysisService.analyze_document', new_callable=AsyncMock) as mock_analyze:
+                            mock_analyze.return_value = MagicMock()
+    
+                            uploaded_doc = await document_service.upload_document(
+                                file=mock_file,
+                                upload_request=upload_request,
+                                uploaded_by=user_id
+                            )
+    
+                        # Verify document upload
+                        assert uploaded_doc is not None
+                        assert uploaded_doc.original_filename == "test_document.pdf"
+    
+                        # Step 3: Create timeline event
+                        mock_event = MagicMock()
+                        mock_event.id = "event-123"
+                        mock_event.title = "Document Uploaded"
+                        mock_event.case_id = created_case.id
+    
+                        mock_db_session.scalar.return_value = mock_event
+    
+                        # Fixed method name from create_event to create_timeline_event
+>                       timeline_event = await timeline_service.create_timeline_event(
+                            event_request=TimelineEventCreateRequest(
+                                case_id=created_case.id,
+                                title="Document Uploaded",
+                                description="Test document uploaded",
+                                event_date=datetime.utcnow(),
+                                event_type=EventType.EVIDENCE_COLLECTION
+                            ),
+                            created_by=user_id
+                        )
+
+tests/test_integration_complete_workflow.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.timeline_service.TimelineService object at 0x1174e7a10>
+event_request = TimelineEventCreateRequest(case_id=UUID('bda88b8e-02ac-45f6-b72e-84a8331279eb'), title='Document Uploaded', descriptio...l_day=False, location=None, participants=None, importance_level=3, is_milestone=False, color=None, event_metadata=None)
+created_by = UUID('b104c82b-ad84-4499-9b25-5b6d631225f3')
+
+    async def create_timeline_event(
+        self,
+        event_request: TimelineEventCreateRequest,
+        created_by: UUID
+    ) -> TimelineEvent:
+        """
+        Create a new timeline event with validation
+    
+        Args:
+            event_request: Event creation data
+            created_by: UUID of the user creating the event
+    
+        Returns:
+            Created timeline event instance
+    
+        Raises:
+            CaseManagementException: If validation fails or case not found
+        """
+        try:
+            # Validate case exists
+            case = await self._get_case(event_request.case_id)
+            if not case:
+                raise CaseManagementException(
+                    f"Case with ID {event_request.case_id} not found",
+                    error_code="CASE_NOT_FOUND"
+                )
+    
+            # Validate date constraints
+            if event_request.end_date and event_request.end_date < event_request.event_date:
+                raise CaseManagementException(
+                    "End date must be after event date",
+                    error_code="INVALID_DATE_RANGE"
+                )
+    
+            # Get display order for events on the same date
+            display_order = await self._get_next_display_order(
+                event_request.case_id,
+                event_request.event_date
+            )
+    
+            # Create timeline event
+            timeline_event = TimelineEvent(
+                case_id=event_request.case_id,
+                title=event_request.title,
+                description=event_request.description,
+                event_type=event_request.event_type.value,
+                event_date=event_request.event_date,
+                end_date=event_request.end_date,
+                all_day=event_request.all_day,
+                location=event_request.location,
+                participants=event_request.participants or [],
+                importance_level=event_request.importance_level,
+                is_milestone=event_request.is_milestone,
+                display_order=display_order,
+                color=event_request.color,
+                event_metadata=event_request.event_metadata or {},
+                created_by=created_by
+            )
+    
+            self.db.add(timeline_event)
+            await self.db.flush()  # Get the ID without committing
+    
+            # Create audit log
+            await self.audit_service.log_action(
+                entity_type="timeline_event",
+                entity_id=timeline_event.id,
+                action="create",
+                user_id=created_by,
+                case_id=event_request.case_id,
+                new_value=f"Created event: {event_request.title} on {event_request.event_date}"
+            )
+    
+            await self.db.commit()
+            await self.db.refresh(timeline_event)
+    
+            logger.info(
+                "Timeline event created",
+                event_id=str(timeline_event.id),
+                title=event_request.title,
+                case_id=str(event_request.case_id)
+            )
+    
+            return timeline_event
+    
+        except Exception as e:
+            await self.db.rollback()
+            if isinstance(e, CaseManagementException):
+                raise
+            logger.error("Failed to create timeline event", error=str(e))
+>           raise CaseManagementException(f"Failed to create timeline event: {str(e)}")
+E           core.exceptions.CaseManagementException: Failed to create timeline event: unsupported operand type(s) for +: 'coroutine' and 'int'
+
+services/timeline_service.py:123: CaseManagementException
+----------------------------- Captured stdout call -----------------------------
+2026-01-17 10:19:14 [info     ] File uploaded to S3            file_size=12 s3_key=documents/bda88b8e-02ac-45f6-b72e-84a8331279eb/2026/01/17/5a5e372c483e42669f8153ffbe0d0623/7e00d74d.pdf
+2026-01-17 10:19:14 [info     ] Audit log created              action=upload audit_id=None entity_id=None entity_name=test_document.pdf entity_type=document user_id=b104c82b-ad84-4499-9b25-5b6d631225f3
+2026-01-17 10:19:14 [info     ] Document uploaded successfully case_id=bda88b8e-02ac-45f6-b72e-84a8331279eb document_id=None filename=test_document.pdf
+2026-01-17 10:19:14 [error    ] Failed to create timeline event error="unsupported operand type(s) for +: 'coroutine' and 'int'"
+=============================== warnings summary ===============================
+../../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: 15 warnings
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+core/database.py:210
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/core/database.py:210: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+schemas/case.py:69
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/case.py:69: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('closure_reason')
+
+schemas/timeline.py:53
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/timeline.py:53: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_date')
+
+schemas/media.py:83
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:89
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:89: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('privilege_reason')
+
+schemas/media.py:113
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:113: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:119
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:119: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:143
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:143: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:162
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:162: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('annotation_type')
+
+schemas/media.py:169
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:169: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:175
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:175: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:181
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:181: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:187
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_time')
+
+schemas/media.py:206
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:206: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:212
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:212: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:218
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:218: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:375
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:375: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('analysis_types')
+
+schemas/media.py:383
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:383: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('priority')
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/document_service.py:102: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    unique_filename = f"{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}/{file_hash[:8]}{file_extension}"
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/document_service.py:116: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'upload_timestamp': datetime.utcnow().isoformat()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/tests/test_integration_complete_workflow.py:141: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    uploaded_doc = await document_service.upload_document(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/tests/test_integration_complete_workflow.py:165: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    event_date=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/export_service.py:375: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:137: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:135: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:136: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    updated_at=datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:270: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/encryption_service.py:65: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'encrypted_at': datetime.utcnow().isoformat(),
+
+tests/test_integration_complete_workflow.py: 45 warnings
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.timestamp = datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:95: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+=================== 1 failed, 7 passed, 90 warnings in 1.39s ===================
+<sys>:0: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback

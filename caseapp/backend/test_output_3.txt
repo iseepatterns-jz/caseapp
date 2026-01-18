@@ -1,0 +1,522 @@
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform darwin -- Python 3.13.1, pytest-8.3.5, pluggy-1.5.0
+rootdir: /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend
+configfile: pytest.ini
+plugins: langsmith-0.3.3, anyio-4.8.0, asyncio-1.3.0, hypothesis-6.150.0, typeguard-2.13.3
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/test_integration_complete_workflow.py F.F.F...                     [100%]
+
+=================================== FAILURES ===================================
+__________ TestCompleteWorkflows.test_complete_case_creation_workflow __________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x11238d950>
+mock_db_session = <AsyncMock id='4834853952'>
+sample_case_data = {'case_number': 'CASE-2024-001', 'case_type': 'civil', 'client_id': 'client-123', 'description': 'Test case for integration testing', ...}
+
+    @pytest.mark.asyncio
+    async def test_complete_case_creation_workflow(self, mock_db_session, sample_case_data):
+        """
+        Test complete case creation workflow
+        """
+        # Initialize services
+        audit_service = AuditService(mock_db_session)
+        case_service = CaseService(mock_db_session, audit_service)
+        document_service = DocumentService(mock_db_session, audit_service)
+        timeline_service = TimelineService(mock_db_session, audit_service)
+        insight_service = CaseInsightService()
+        export_service = ExportService()
+    
+        # Mock database operations
+        # Removed redundant/incorrect get_db patches
+        if True:
+    
+                    # Step 1: Create case (Mocked as it is not the focus here)
+                    mock_case = MagicMock()
+                    mock_case.id = "case-123"
+                    mock_case.case_number = sample_case_data["case_number"]
+                    mock_case.title = sample_case_data["title"]
+                    mock_case.status = "active"
+    
+                    mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_case
+    
+                    # Use a proper mock for the result of create_case
+                    with patch.object(case_service, 'create_case', return_value=mock_case):
+                        # The created_case variable was missing, using case instead
+                        case = await case_service.create_case(sample_case_data, "user-123")
+                        created_case = case
+    
+                        # Verify case creation
+                        assert case.id == "case-123"
+                        assert case.case_number == sample_case_data["case_number"]
+    
+                        # Step 2: Upload document
+                        mock_document = MagicMock()
+                        mock_document.id = "doc-123"
+                        mock_document.filename = "test_document.pdf"
+                        mock_document.case_id = created_case.id
+    
+                        mock_db_session.scalar.return_value = mock_document
+    
+                        # Fix: patch.object on the service instance instead of module
+>                       doc_service.s3_client = MagicMock()
+E                       NameError: name 'doc_service' is not defined
+
+tests/test_integration_complete_workflow.py:117: NameError
+______________ TestCompleteWorkflows.test_collaboration_workflow _______________
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x1201c7360>
+mock_db_session = <AsyncMock name='mock.__aenter__()' id='4848266816'>
+
+    @pytest.mark.asyncio
+    async def test_collaboration_workflow(self, mock_db_session):
+        """
+        Test real-time collaboration workflow
+        """
+        collaboration_service = CollaborationService()
+    
+        # Use proper async context manager mock for AsyncSessionLocal
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_db_session
+    
+        with patch('services.timeline_collaboration_service.AsyncSessionLocal', return_value=mock_cm):
+            with patch('core.redis.redis_service') as mock_redis:
+                mock_redis.set = AsyncMock()
+                mock_redis.get = AsyncMock(return_value="active")
+                mock_redis.publish = AsyncMock()
+    
+                # Step 1: Create collaboration session
+                mock_session = MagicMock()
+                mock_session.id = "session-123"
+                mock_session.case_id = "case-123"
+                mock_session.created_by = "user-123"
+    
+                # Setup mock for execute() results
+                # We need to mock the timeline existence Check
+                mock_timeline = MagicMock()
+                mock_timeline.id = "case-123"
+    
+                # Mock the result of selective timelines
+                execute_result = MagicMock()
+                execute_result.scalar_one_or_none.side_effect = [mock_timeline, None, mock_timeline, None]
+                mock_db_session.execute.return_value = execute_result
+    
+                # Step 2: Share timeline
+>               share_result = await collaboration_service.share_timeline(
+                    timeline_id="case-123",
+                    user_id="user-456",
+                    permissions={"can_view": True, "can_comment": True},
+                    shared_by_id="user-123"
+                )
+
+tests/test_integration_complete_workflow.py:277: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.timeline_collaboration_service.TimelineCollaborationService object at 0x120fab8c0>
+timeline_id = 'case-123', user_id = 'user-456'
+permissions = {'can_comment': True, 'can_view': True}, shared_by_id = 'user-123'
+message = None
+
+    async def share_timeline(
+        self,
+        timeline_id: str,
+        user_id: str,
+        permissions: Dict[str, bool],
+        shared_by_id: str,
+        message: Optional[str] = None
+    ) -> TimelineCollaboration:
+        """Share timeline with a user with granular permissions"""
+    
+        async with AsyncSessionLocal() as db:
+            # Verify timeline exists
+            timeline_result = await db.execute(
+                select(CaseTimeline).where(CaseTimeline.id == timeline_id)
+            )
+            timeline = timeline_result.scalar_one_or_none()
+    
+            if not timeline:
+                raise ValueError(f"Timeline {timeline_id} not found")
+    
+            # Verify user exists
+            user_result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = user_result.scalar_one_or_none()
+    
+            if not user:
+>               raise ValueError(f"User {user_id} not found")
+E               ValueError: User user-456 not found
+
+services/timeline_collaboration_service.py:53: ValueError
+_________________ TestCompleteWorkflows.test_security_workflow _________________
+
+self = <services.encryption_service.EncryptionService object at 0x120f86c10>
+encrypted_data = {'encrypted_content': 'Z0FBQUFBQnBhN1ZrUnVONS0tTlhqdGc5LURTdTY2ay1IMFRYTnVnbzRIZXBtd09Nb01GLUVCbWViZkIteWp1VnQtbEhjaXA...UTdVblJLXzItOWxvYkIzZUFSUT09', 'encryption_context': {'document_id': 'doc-123', 'purpose': 'document_encryption'}, ...}
+
+    async def decrypt_document(
+        self,
+        encrypted_data: Dict[str, Any]
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """
+        Decrypt document content and return content with metadata
+    
+        Args:
+            encrypted_data: Dictionary containing encrypted content and keys
+    
+        Returns:
+            Tuple of (decrypted_content, metadata)
+        """
+        try:
+            # Decrypt the data key using KMS
+            encrypted_key = base64.b64decode(encrypted_data['encrypted_data_key'])
+    
+>           decrypted_key_response = self.kms_client.decrypt(
+                CiphertextBlob=encrypted_key,
+                EncryptionContext=encrypted_data['encryption_context']
+            )
+
+services/encryption_service.py:116: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/client.py:602: in _api_call
+    return self._make_api_call(operation_name, kwargs)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/context.py:123: in wrapper
+    return func(*args, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/client.py:1060: in _make_api_call
+    http, parsed_response = self._make_request(
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/client.py:1084: in _make_request
+    return self._endpoint.make_request(operation_model, request_dict)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/endpoint.py:119: in make_request
+    return self._send_request(request_dict, operation_model)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/endpoint.py:196: in _send_request
+    request = self.create_request(request_dict, operation_model)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/endpoint.py:132: in create_request
+    self._event_emitter.emit(
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/hooks.py:412: in emit
+    return self._emitter.emit(aliased_event_name, **kwargs)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/hooks.py:256: in emit
+    return self._emit(event_name, kwargs)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/hooks.py:239: in _emit
+    response = handler(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/signers.py:108: in handler
+    return self.sign(operation_name, request)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/signers.py:191: in sign
+    auth = self.get_auth_instance(**kwargs)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/signers.py:312: in get_auth_instance
+    frozen_credentials = credentials.get_frozen_credentials()
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py:697: in get_frozen_credentials
+    self._refresh()
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py:584: in _refresh
+    self._protected_refresh(is_mandatory=is_mandatory_refresh)
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py:600: in _protected_refresh
+    metadata = self._refresh_using()
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py:750: in fetch_credentials
+    return self._get_cached_credentials()
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py:760: in _get_cached_credentials
+    response = self._get_credentials()
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py:2317: in _get_credentials
+    token = initial_token_data.get_frozen_token().token
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py:89: in get_frozen_token
+    self._refresh()
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py:102: in _refresh
+    self._protected_refresh()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <botocore.tokens.DeferredRefreshableToken object at 0x120fb8d10>
+
+    def _protected_refresh(self):
+        # This should only be called after acquiring the refresh lock
+        # Another thread may have already refreshed, double check refresh
+        refresh_type = self._should_refresh()
+        if not refresh_type:
+            return None
+    
+        try:
+            now = self._time_fetcher()
+            self._next_refresh = now + timedelta(seconds=self._attempt_timeout)
+            self._frozen_token = self._refresh_using()
+        except Exception:
+            logger.warning(
+                "Refreshing token failed during the %s refresh period.",
+                refresh_type,
+                exc_info=True,
+            )
+            if refresh_type == "mandatory":
+                # This refresh was mandatory, error must be propagated back
+                raise
+    
+        if self._is_expired():
+            # Fresh credentials should never be expired
+>           raise TokenRetrievalError(
+                provider=self.method,
+                error_msg="Token has expired and refresh failed",
+            )
+E           botocore.exceptions.TokenRetrievalError: Error when retrieving token from sso: Token has expired and refresh failed
+
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py:129: TokenRetrievalError
+
+During handling of the above exception, another exception occurred:
+
+self = <tests.test_integration_complete_workflow.TestCompleteWorkflows object at 0x1201ef530>
+
+    @pytest.mark.asyncio
+    async def test_security_workflow(self):
+        """
+        Test security and encryption workflow
+        """
+        security_service = SecurityService()
+        encryption_service = EncryptionService()
+    
+        # Step 1: Validate password strength
+        password_result = await security_service.validate_password_strength("StrongP@ss123!")
+    
+        # Verify password validation
+        assert password_result["is_valid"] is True
+        assert password_result["strength_score"] >= 80
+    
+        # Step 2: Encrypt sensitive data
+        test_data = "Sensitive case information"
+        encrypted_result = await encryption_service.encrypt_document(
+            content=test_data.encode(),
+            document_id="doc-123"
+        )
+    
+        # Verify encryption
+        assert encrypted_result is not None
+        assert "encrypted_content" in encrypted_result
+        assert "key_id" in encrypted_result
+    
+        # Step 3: Decrypt and verify integrity
+>       decrypted_content_bytes, _ = await encryption_service.decrypt_document(
+            encrypted_data=encrypted_result
+        )
+
+tests/test_integration_complete_workflow.py:396: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <services.encryption_service.EncryptionService object at 0x120f86c10>
+encrypted_data = {'encrypted_content': 'Z0FBQUFBQnBhN1ZrUnVONS0tTlhqdGc5LURTdTY2ay1IMFRYTnVnbzRIZXBtd09Nb01GLUVCbWViZkIteWp1VnQtbEhjaXA...UTdVblJLXzItOWxvYkIzZUFSUT09', 'encryption_context': {'document_id': 'doc-123', 'purpose': 'document_encryption'}, ...}
+
+    async def decrypt_document(
+        self,
+        encrypted_data: Dict[str, Any]
+    ) -> Tuple[bytes, Dict[str, Any]]:
+        """
+        Decrypt document content and return content with metadata
+    
+        Args:
+            encrypted_data: Dictionary containing encrypted content and keys
+    
+        Returns:
+            Tuple of (decrypted_content, metadata)
+        """
+        try:
+            # Decrypt the data key using KMS
+            encrypted_key = base64.b64decode(encrypted_data['encrypted_data_key'])
+    
+            decrypted_key_response = self.kms_client.decrypt(
+                CiphertextBlob=encrypted_key,
+                EncryptionContext=encrypted_data['encryption_context']
+            )
+    
+            plaintext_key = decrypted_key_response['Plaintext']
+    
+            # Create Fernet cipher with the decrypted key
+            fernet = Fernet(base64.urlsafe_b64encode(plaintext_key[:32]))
+    
+            # Decrypt the content
+            encrypted_content = base64.b64decode(encrypted_data['encrypted_content'])
+            decrypted_content = fernet.decrypt(encrypted_content)
+    
+            # Decrypt the metadata
+            encrypted_metadata = base64.b64decode(encrypted_data['encrypted_metadata'])
+            decrypted_metadata_json = fernet.decrypt(encrypted_metadata)
+            metadata = json.loads(decrypted_metadata_json.decode())
+    
+            # Verify content integrity
+            content_hash = hashlib.sha256(decrypted_content).hexdigest()
+            if content_hash != metadata['content_hash']:
+                raise CaseManagementException("Content integrity verification failed")
+    
+            logger.info("Document decrypted successfully",
+                       document_id=metadata['document_id'],
+                       content_size=len(decrypted_content))
+    
+            return decrypted_content, metadata
+    
+        except ClientError as e:
+            logger.error("KMS decryption failed", error=str(e))
+            raise CaseManagementException(f"Document decryption failed: {str(e)}")
+        except Exception as e:
+            logger.error("Document decryption failed", error=str(e))
+>           raise CaseManagementException(f"Document decryption failed: {str(e)}")
+E           core.exceptions.CaseManagementException: Document decryption failed: Error when retrieving token from sso: Token has expired and refresh failed
+
+services/encryption_service.py:151: CaseManagementException
+----------------------------- Captured stdout call -----------------------------
+2026-01-17 10:14:28 [info     ] Password validation completed  is_valid=True strength_score=100
+2026-01-17 10:14:28 [info     ] Document encrypted successfully content_size=26 document_id=doc-123
+2026-01-17 10:14:28 [error    ] Document decryption failed     error='Error when retrieving token from sso: Token has expired and refresh failed'
+------------------------------ Captured log call -------------------------------
+WARNING  botocore.tokens:tokens.py:306 SSO token refresh attempt failed
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py", line 304, in _refresh_access_token
+    return self._attempt_create_token(token)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py", line 263, in _attempt_create_token
+    response = self._client.create_token(
+        grantType=self._GRANT_TYPE,
+    ...<2 lines>...
+        refreshToken=token["refreshToken"],
+    )
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.InvalidGrantException: An error occurred (InvalidGrantException) when calling the CreateToken operation: 
+WARNING  botocore.credentials:credentials.py:603 Refreshing temporary credentials failed during mandatory refresh period.
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py", line 600, in _protected_refresh
+    metadata = self._refresh_using()
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py", line 750, in fetch_credentials
+    return self._get_cached_credentials()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py", line 760, in _get_cached_credentials
+    response = self._get_credentials()
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/credentials.py", line 2317, in _get_credentials
+    token = initial_token_data.get_frozen_token().token
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py", line 89, in get_frozen_token
+    self._refresh()
+    ~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py", line 102, in _refresh
+    self._protected_refresh()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/botocore/tokens.py", line 129, in _protected_refresh
+    raise TokenRetrievalError(
+    ...<2 lines>...
+    )
+botocore.exceptions.TokenRetrievalError: Error when retrieving token from sso: Token has expired and refresh failed
+=============================== warnings summary ===============================
+../../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: 15 warnings
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pydantic/_internal/_config.py:295: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+core/database.py:210
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/core/database.py:210: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+schemas/case.py:69
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/case.py:69: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('closure_reason')
+
+schemas/timeline.py:53
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/timeline.py:53: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_date')
+
+schemas/media.py:83
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:89
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:89: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('privilege_reason')
+
+schemas/media.py:113
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:113: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('tags', 'categories')
+
+schemas/media.py:119
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:119: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:143
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:143: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('admissibility_status')
+
+schemas/media.py:162
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:162: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('annotation_type')
+
+schemas/media.py:169
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:169: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:175
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:175: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:181
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:181: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:187
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('end_time')
+
+schemas/media.py:206
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:206: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('color')
+
+schemas/media.py:212
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:212: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('opacity')
+
+schemas/media.py:218
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:218: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('relevance_score')
+
+schemas/media.py:375
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:375: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('analysis_types')
+
+schemas/media.py:383
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/schemas/media.py:383: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.10/migration/
+    @validator('priority')
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_forensic_analysis_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/export_service.py:375: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:137: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:135: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at=datetime.utcnow(),
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/webhook_service.py:136: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    updated_at=datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_background_job_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/background_job_service.py:270: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/encryption_service.py:65: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'encrypted_at': datetime.utcnow().isoformat(),
+
+tests/test_integration_complete_workflow.py: 45 warnings
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.timestamp = datetime.utcnow()
+
+tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_service_manager_workflow
+tests/test_integration_complete_workflow.py::TestErrorHandlingAndRecovery::test_service_failure_recovery
+  /Users/showboat/locker/AGRAV-ISEEPATTERNS/caseapp/backend/services/health_service.py:95: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_complete_case_creation_workflow
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_collaboration_workflow
+FAILED tests/test_integration_complete_workflow.py::TestCompleteWorkflows::test_security_workflow
+=================== 3 failed, 5 passed, 86 warnings in 1.50s ===================

@@ -68,6 +68,7 @@ The Deployment Orchestration Service provides unified management of the entire d
 - No critical issues found
 - Service health score ≥ 70%
 - Deployment snapshot created successfully
+- **Architecture Validation**: Docker images must be built for `linux/amd64` (x86_64) to ensure compatibility with AWS Fargate nodes. Builds on ARM64 (Apple Silicon) machines MUST use the `--platform linux/amd64` flag.
 
 **API Endpoint**: `POST /api/v1/deployment-orchestration/orchestrate/{cluster_name}/{service_name}`
 
@@ -502,6 +503,24 @@ Automated deployment snapshots provide rollback capability:
 3. Execute rollback operation
 4. Monitor rollback progress
 5. Validate service health
+
+### Remote Database Migration
+
+For RDS instances isolated in private subnets, migrations must be executed via one-off ECS Fargate tasks using the backend image with a command override.
+
+**Procedure**:
+1. Build and push the `linux/amd64` backend image.
+2. Trigger an ECS `run-task` command with security groups allowed to access the RDS.
+3. Command override: `["alembic", "upgrade", "head"]` or `["alembic", "stamp", "head"]`.
+
+> [!IMPORTANT]
+> **SSL Requirement**: The production RDS instance strictly requires encrypted connections. 
+> - For Alembic, the `sqlalchemy.url` in `alembic.ini` or the environment-provided URL must include `?ssl=require` (or correspond to `ssl_mode=require` in asyncpg).
+> - For manual scripts, ensure the DSN includes `ssl=require` to prevent `no pg_hba.conf entry` errors.
+
+**Monitoring Migration Status**:
+- Status: `GET /health/ready`
+- Details: `migrations` object in response.
 
 **API Endpoints**:
 

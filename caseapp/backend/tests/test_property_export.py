@@ -5,7 +5,7 @@ Validates Requirements 8.1, 8.2, 8.4 (Export and Reporting Capabilities)
 
 import pytest
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, Any, List, Optional
 from hypothesis import given, strategies as st, settings, assume, HealthCheck
 import uuid
@@ -42,7 +42,7 @@ def case_data_strategy(draw):
 @st.composite
 def timeline_event_strategy(draw):
     """Generate timeline event data for export testing"""
-    base_date = datetime.utcnow() - timedelta(days=draw(st.integers(min_value=1, max_value=365)))
+    base_date = datetime.now(UTC) - timedelta(days=draw(st.integers(min_value=1, max_value=365)))
     return {
         'id': str(uuid.uuid4()),
         'title': draw(st.text(min_size=5, max_size=100)),
@@ -56,7 +56,7 @@ def timeline_event_strategy(draw):
 @st.composite
 def date_range_strategy(draw):
     """Generate date range for filtering"""
-    start_date = datetime.utcnow() - timedelta(days=draw(st.integers(min_value=30, max_value=365)))
+    start_date = datetime.now(UTC) - timedelta(days=draw(st.integers(min_value=30, max_value=365)))
     end_date = start_date + timedelta(days=draw(st.integers(min_value=1, max_value=90)))
     return {
         'start': start_date,
@@ -521,7 +521,7 @@ class TestExportFunctionalityProperties:
                     mock_item.id = i + 1
                     mock_item.sender = f"user{i % 5}@example.com"
                     mock_item.recipients = [f"recipient{i % 3}@example.com"]
-                    mock_item.timestamp = datetime.utcnow() - timedelta(days=i % 30)
+                    mock_item.timestamp = datetime.now(UTC) - timedelta(days=i % 30)
                     mock_items.append(mock_item)
                 
                 mock_source.forensic_items = mock_items
@@ -666,7 +666,7 @@ class TestExportFunctionalityProperties:
             
             # Create several events with different dates
             mock_events = []
-            base_date = datetime.utcnow() - timedelta(days=30)
+            base_date = datetime.now(UTC) - timedelta(days=30)
             
             for i in range(5):
                 mock_event = MagicMock()
