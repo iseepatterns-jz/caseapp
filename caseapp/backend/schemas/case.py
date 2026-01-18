@@ -32,6 +32,21 @@ class CaseBase(BaseModel):
     
     # Flexible metadata
     case_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional case metadata")
+    
+    @model_validator(mode='before')
+    @classmethod
+    def validate_enums_case_insensitive(cls, data: Any) -> Any:
+        """Allow case-insensitive enum values"""
+        if isinstance(data, dict):
+            # Handle case_type
+            if 'case_type' in data and isinstance(data['case_type'], str):
+                data['case_type'] = data['case_type'].upper()
+            
+            # Handle priority
+            if 'priority' in data and isinstance(data['priority'], str):
+                data['priority'] = data['priority'].upper()
+                
+        return data
 
 class CaseCreate(CaseBase):
     """Schema for creating a new case"""
@@ -59,6 +74,25 @@ class CaseUpdate(BaseModel):
     
     # Flexible metadata
     case_metadata: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_enums_case_insensitive(cls, data: Any) -> Any:
+        """Allow case-insensitive enum values"""
+        if isinstance(data, dict):
+            # Handle case_type
+            if 'case_type' in data and isinstance(data['case_type'], str):
+                data['case_type'] = data['case_type'].upper()
+            
+            # Handle priority
+            if 'priority' in data and isinstance(data['priority'], str):
+                data['priority'] = data['priority'].upper()
+                
+            # Handle status
+            if 'status' in data and isinstance(data['status'], str):
+                data['status'] = data['status'].upper()
+                
+        return data
 
 class CaseStatusUpdate(BaseModel):
     """Schema for updating case status with closure workflow"""
@@ -132,6 +166,25 @@ class CaseSearchRequest(BaseModel):
     # Sorting
     sort_by: str = Field("created_at", description="Field to sort by")
     sort_order: str = Field("desc", pattern="^(asc|desc)$", description="Sort order")
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_enums_case_insensitive(cls, data: Any) -> Any:
+        """Allow case-insensitive enum values"""
+        if isinstance(data, dict):
+            # Handle case_type
+            if 'case_type' in data and isinstance(data['case_type'], str):
+                data['case_type'] = data['case_type'].upper()
+            
+            # Handle priority
+            if 'priority' in data and isinstance(data['priority'], str):
+                data['priority'] = data['priority'].upper()
+                
+            # Handle status
+            if 'status' in data and isinstance(data['status'], str):
+                data['status'] = data['status'].upper()
+                
+        return data
 
 class CaseStatsResponse(BaseResponse):
     """Schema for case statistics response"""

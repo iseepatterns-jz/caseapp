@@ -44,6 +44,8 @@ services:
       - AWS_REGION=us-east-1
       - S3_BUCKET_NAME=court-case-documents
       - ENABLE_AI_FEATURES=true
+      - COGNITO_USER_POOL_ID=us-east-1_Nc0OZJRgL
+      - COGNITO_CLIENT_ID=g0krs2pf69ephllpnrkvl5ktg
     volumes:
       - ./backend:/app
       - ./shared:/app/shared

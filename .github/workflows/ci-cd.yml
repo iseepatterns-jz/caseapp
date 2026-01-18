@@ -42,10 +42,30 @@ jobs:
 
       - name: Run tests
         working-directory: ./caseapp/backend
-        run: python -m pytest tests/test_ci_basic.py -v
+        run: python -m pytest tests/ -v
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        working-directory: caseapp/frontend
+        run: npm install
+      - name: Build frontend
+        working-directory: caseapp/frontend
+        run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: caseapp/frontend/dist
 
   build-and-push:
-    # needs: test  # Temporarily disabled to unblock deployment
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -84,7 +104,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy-staging:
-    needs: build-and-push
+    needs: [build-and-push, build-frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
@@ -145,6 +165,24 @@ jobs:
           # Only deploy the staging stack
           cdk deploy CourtCaseManagementStack-Staging --require-approval never --method=direct
 
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Deploy frontend to S3
+        run: |
+          STACK_NAME="CourtCaseManagementStack-Staging"
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text --region ${{ env.AWS_REGION }})
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionId'].OutputValue" --output text --region ${{ env.AWS_REGION }})
+          
+          echo "Syncing frontend assets to S3: $BUCKET_NAME"
+          aws s3 sync dist/ s3://$BUCKET_NAME --delete --region ${{ env.AWS_REGION }}
+          
+          echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*" --region ${{ env.AWS_REGION }}
+
       - name: Verify deployment
         run: |
           echo "Waiting for services to stabilize..."
@@ -153,7 +191,7 @@ jobs:
           aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region ${{ env.AWS_REGION }}
 
   deploy-production:
-    needs: [build-and-push, deploy-staging]
+    needs: [build-and-push, build-frontend, deploy-staging]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
@@ -213,6 +251,24 @@ jobs:
           pip install -r requirements.txt
           # Only deploy the production stack
           cdk deploy CourtCaseManagementStack --require-approval never --method=direct
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Deploy frontend to S3
+        run: |
+          STACK_NAME="CourtCaseManagementStack"
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text --region ${{ env.AWS_REGION }})
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionId'].OutputValue" --output text --region ${{ env.AWS_REGION }})
+          
+          echo "Syncing frontend assets to S3: $BUCKET_NAME"
+          aws s3 sync dist/ s3://$BUCKET_NAME --delete --region ${{ env.AWS_REGION }}
+          
+          echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*" --region ${{ env.AWS_REGION }}
 
       - name: Verify deployment
         run: |

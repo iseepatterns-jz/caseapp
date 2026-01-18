@@ -418,27 +418,48 @@ class CaseService:
                 select(Case.status, func.count(Case.id))
                 .group_by(Case.status)
             )
-            status_counts = {status.value: count for status, count in status_result.all()}
+            status_counts = {status.value.lower(): count for status, count in status_result.all()}
             
             # Cases by type
             type_result = await self.db.execute(
                 select(Case.case_type, func.count(Case.id))
                 .group_by(Case.case_type)
             )
-            type_counts = {case_type.value: count for case_type, count in type_result.all()}
+            type_counts = {case_type.value.lower(): count for case_type, count in type_result.all()}
             
             # Cases by priority
             priority_result = await self.db.execute(
                 select(Case.priority, func.count(Case.id))
                 .group_by(Case.priority)
             )
-            priority_counts = {priority.value: count for priority, count in priority_result.all()}
+            priority_counts = {priority.value.lower(): count for priority, count in priority_result.all()}
+            
+            # Financial alerts heuristic (High/Urgent cases in financial-heavy domains)
+            financial_alert_types = [
+                CaseType.BANKRUPTCY, 
+                CaseType.CORPORATE, 
+                CaseType.REAL_ESTATE, 
+                CaseType.INTELLECTUAL_PROPERTY
+            ]
+            financial_alert_priorities = [CasePriority.HIGH, CasePriority.URGENT]
+            
+            financial_alerts_result = await self.db.execute(
+                select(func.count(Case.id)).where(
+                    and_(
+                        Case.case_type.in_(financial_alert_types),
+                        Case.priority.in_(financial_alert_priorities),
+                        Case.status == CaseStatus.ACTIVE
+                    )
+                )
+            )
+            financial_alerts = financial_alerts_result.scalar() or 0
             
             return {
                 "total_cases": total_cases,
                 "by_status": status_counts,
                 "by_type": type_counts,
                 "by_priority": priority_counts,
+                "financial_alerts": financial_alerts,
                 "generated_at": datetime.now(UTC).isoformat()
             }
             

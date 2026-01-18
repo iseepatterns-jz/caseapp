@@ -1061,12 +1061,7 @@ class CourtCaseManagementStack(Stack):
             ],
             error_configurations=[
                 # Support Single Page Application (SPA) routing
-                cloudfront.CfnDistribution.CustomErrorResponseProperty(
-                    error_code=403,
-                    response_code=200,
-                    response_page_path="/index.html",
-                    error_caching_min_ttl=300
-                ),
+                # Only 404 is restored. 403 remains removed to allow backend auth errors (403) to pass through.
                 cloudfront.CfnDistribution.CustomErrorResponseProperty(
                     error_code=404,
                     response_code=200,

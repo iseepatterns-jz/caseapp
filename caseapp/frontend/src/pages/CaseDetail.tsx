@@ -18,11 +18,12 @@ import {
     Loader2
 } from 'lucide-react';
 import { caseService, mediaService } from '../services/api';
+import type { Case } from '../types/case';
 
 export const CaseDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [caseData, setCaseData] = useState<any>(null);
+    const [caseData, setCaseData] = useState<Case | null>(null);
     const [mediaItems, setMediaItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
@@ -155,6 +156,7 @@ export const CaseDetail: React.FC = () => {
                 </div>
             </header>
 
+
             {/* Quick Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -163,7 +165,9 @@ export const CaseDetail: React.FC = () => {
                     </div>
                     <div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Filed Date</div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{caseData.filed_date || 'Not recorded'}</div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>
+                            {caseData.filed_date ? new Date(caseData.filed_date).toLocaleDateString() : 'Not recorded'}
+                        </div>
                     </div>
                 </div>
                 <div className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>

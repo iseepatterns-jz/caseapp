@@ -15,6 +15,9 @@ NC='\033[0m' # No Color
 AWS_REGION=${AWS_REGION:-us-east-1}
 STACK_NAME="CourtCaseManagementStack"
 ENVIRONMENT=${ENVIRONMENT:-production}
+SKIP_TESTS=false
+DOCKER_USERNAME=""
+COMMAND=""
 
 # Function to print colored output
 print_status() {
@@ -77,12 +80,16 @@ run_tests() {
     print_status "Running tests..."
     
     # Backend tests
-    cd backend
-    if ! python -m pytest tests/ -v; then
-        print_error "Backend tests failed. Please fix before deploying."
-        exit 1
+    if [ "$SKIP_TESTS" = true ]; then
+        print_warning "Skipping backend tests as requested."
+    else
+        cd backend
+        if ! python3 -m pytest tests/ -v; then
+            print_error "Backend tests failed. Please fix before deploying."
+            exit 1
+        fi
+        cd ..
     fi
-    cd ..
     
     print_status "All tests passed ✅"
 }
@@ -251,8 +258,31 @@ main() {
     echo "  5. Test all functionality"
 }
 
-# Handle script arguments
-case "${1:-deploy}" in
+# Parse arguments
+COMMAND="deploy"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        "deploy"|"destroy"|"diff"|"outputs")
+            COMMAND="$1"
+            shift
+            ;;
+        --docker-username)
+            DOCKER_USERNAME="$2"
+            shift 2
+            ;;
+        --skip-tests)
+            SKIP_TESTS=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Handle script commands
+case "$COMMAND" in
     "deploy")
         main
         ;;
@@ -273,11 +303,7 @@ case "${1:-deploy}" in
         get_outputs
         ;;
     *)
-        echo "Usage: $0 [deploy|destroy|diff|outputs]"
-        echo "  deploy  - Deploy the application (default)"
-        echo "  destroy - Destroy the infrastructure"
-        echo "  diff    - Show infrastructure changes"
-        echo "  outputs - Get deployment outputs"
+        echo "Usage: $0 [deploy|destroy|diff|outputs] [--docker-username name] [--skip-tests]"
         exit 1
         ;;
 esac

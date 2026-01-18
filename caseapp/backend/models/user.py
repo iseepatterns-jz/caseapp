@@ -14,10 +14,10 @@ from core.database import Base
 
 class UserRole(PyEnum):
     """User role enumeration"""
-    ADMIN = "admin"
-    ATTORNEY = "attorney"
-    STAFF = "staff"
-    CLIENT = "client"
+    ADMIN = "ADMIN"
+    ATTORNEY = "ATTORNEY"
+    STAFF = "STAFF"
+    CLIENT = "CLIENT"
 
 class User(Base):
     """User model"""

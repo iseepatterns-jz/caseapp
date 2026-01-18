@@ -8,6 +8,7 @@ interface DashboardStats {
     by_status: Record<string, number>;
     by_type: Record<string, number>;
     by_priority: Record<string, number>;
+    financial_alerts: number;
 }
 
 interface ActivityLog {
@@ -64,7 +65,7 @@ export const Dashboard: React.FC = () => {
         { label: 'Total Cases', value: statsData?.total_cases || 0, icon: FileText, trend: 'Overall', color: 'var(--accent-primary)' },
         { label: 'Active', value: statsData?.by_status?.active || 0, icon: Activity, trend: 'Current', color: 'var(--accent-secondary)' },
         { label: 'High Priority', value: statsData?.by_priority?.high || 0, icon: Clock, trend: 'Action Required', color: 'hsl(0, 80%, 60%)' },
-        { label: 'Financial Alerts', value: 12, icon: ShieldAlert, trend: 'Review Needed', color: 'hsl(30, 100%, 50%)' },
+        { label: 'Financial Alerts', value: statsData?.financial_alerts || 0, icon: ShieldAlert, trend: 'Review Needed', color: 'hsl(30, 100%, 50%)' },
     ];
 
     return (

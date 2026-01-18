@@ -2,12 +2,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { CaseList } from './pages/CaseList';
-import { CaseDetail } from './pages/CaseDetail'; // Named export from my refactor
+import { CaseDetail } from './pages/CaseDetail';
 import { FinancialAnalysis } from './pages/FinancialAnalysis';
-import { MediaAnalysis } from './pages/MediaAnalysis'; // Named export from my refactor
+import { MediaAnalysis } from './pages/MediaAnalysis';
 import Login from './pages/Login';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { NewCase } from './pages/NewCase';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           }>
             <Route path="/" element={<Dashboard />} />
             <Route path="/cases" element={<CaseList />} />
+            <Route path="/cases/new" element={<NewCase />} />
             <Route path="/cases/:id" element={<CaseDetail />} />
             <Route path="/financial" element={<FinancialAnalysis />} />
             <Route path="/media-analysis/:id" element={<MediaAnalysis />} />

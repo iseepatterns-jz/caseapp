@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { fetchAuthSession } from 'aws-amplify/auth';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -9,6 +9,25 @@ const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+// Add response interceptor to handle auth errors
+apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            try {
+                // Clear local session
+                await signOut();
+            } catch (signOutError) {
+                console.error('Error signing out during auth redirect:', signOutError);
+            } finally {
+                // Redirect to login
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 // Add request interceptor to inject Authorization header
 apiClient.interceptors.request.use(async (config) => {
@@ -36,12 +55,24 @@ export const healthService = {
 };
 
 export const caseService = {
-    getAll: async () => {
-        const response = await apiClient.get('/api/v1/cases/');
+    getAll: async (params?: any) => {
+        const response = await apiClient.get('/api/v1/cases/', { params });
         return response.data;
     },
     getById: async (id: string) => {
         const response = await apiClient.get(`/api/v1/cases/${id}`);
+        return response.data;
+    },
+    create: async (data: any) => {
+        const response = await apiClient.post('/api/v1/cases/', data);
+        return response.data;
+    },
+    update: async (id: string, data: any) => {
+        const response = await apiClient.put(`/api/v1/cases/${id}`, data);
+        return response.data;
+    },
+    delete: async (id: string) => {
+        const response = await apiClient.delete(`/api/v1/cases/${id}`);
         return response.data;
     },
 };
