@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     
     # Security Configuration
     MFA_REQUIRED: bool = True
-    MFA_ISSUER_NAME: str = "Court Case Management System"
+    MFA_ISSUER_NAME: str = "iseepatterns"
     PASSWORD_MIN_LENGTH: int = 12
     PASSWORD_REQUIRE_UPPERCASE: bool = True
     PASSWORD_REQUIRE_LOWERCASE: bool = True
