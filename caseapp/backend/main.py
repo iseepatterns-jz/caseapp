@@ -100,9 +100,9 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application with comprehensive API documentation
 app = FastAPI(
-    title="Court Case Management API",
+    title="iseepatterns API",
     description="""
-    ## AI-Powered Legal Case Management System
+    ## iseepatterns - AI-Powered Legal Intelligence
 
     A comprehensive legal case management platform with advanced AI capabilities, 
     forensic analysis, and real-time collaboration features.

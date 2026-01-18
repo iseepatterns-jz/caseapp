@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Application
-    APP_NAME: str = "Court Case Management System"
+    APP_NAME: str = "iseepatterns"
     DEBUG: bool = False
     VERSION: str = "1.0.0"
     
