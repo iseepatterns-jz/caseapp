@@ -52,5 +52,10 @@ class User(Base):
     # Metadata
     user_metadata = Column(JSON)
     
+    @property
+    def full_name(self):
+        """Get user's full name"""
+        return f"{self.first_name} {self.last_name}"
+    
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"

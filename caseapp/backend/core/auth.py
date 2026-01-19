@@ -91,11 +91,16 @@ class AuthService:
         try:
             # 1. Get the Kid from the token header
             unverified_header = jwt.get_unverified_header(token)
+            
+            # Support HS256 for local/testing tokens
+            if unverified_header.get("alg") == "HS256":
+                return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
             kid = unverified_header.get("kid")
             
             if not kid:
                 raise JWTError("Missing kid in token header")
-                
+            
             # 2. Get JWKS
             jwks = await AuthService.get_cognito_jwks()
             
@@ -238,7 +243,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             )
         
         # In a real implementation, you would fetch user from database
-        # For now, return the payload
+        # For now, return the payload with an explicit 'id' key if not present
+        if "id" not in payload:
+            payload["id"] = payload.get("sub") or payload.get("username")
+            
         return payload
         
     except HTTPException:

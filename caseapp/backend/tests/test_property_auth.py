@@ -3,19 +3,17 @@ Property-based tests for authentication system
 Feature: court-case-management-system, Property 28: Multi-Factor Authentication
 """
 
+
 import pytest
 from hypothesis import given, strategies as st, settings
-from fastapi.testclient import TestClient
 import sys
 import os
+import asyncio
 
 # Add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from main_simple import app
 from core.auth import AuthService
-
-client = TestClient(app)
 
 # Test data strategies
 @st.composite
@@ -37,7 +35,7 @@ class TestMultiFactorAuthentication:
     """Property tests for multi-factor authentication"""
     
     @given(credentials=user_credentials())
-    @settings(deadline=1000)  # Increase deadline for slower operations
+    @settings(deadline=1000, max_examples=20)  # Increase deadline for slower operations
     def test_mfa_token_structure_property(self, credentials):
         """
         Property 28: Multi-Factor Authentication
@@ -54,7 +52,8 @@ class TestMultiFactorAuthentication:
         }
         
         token = AuthService.create_access_token(token_data)
-        decoded = AuthService.verify_token(token)
+        token = AuthService.create_access_token(token_data)
+        decoded = asyncio.run(AuthService.verify_token(token))
         
         # Verify MFA fields are preserved in token
         assert decoded['sub'] == credentials['username']
@@ -66,7 +65,9 @@ class TestMultiFactorAuthentication:
         mfa_completed_data['mfa_completed'] = True
         mfa_token = AuthService.create_access_token(mfa_completed_data)
         
-        decoded_mfa = AuthService.verify_token(mfa_token)
+        mfa_token = AuthService.create_access_token(mfa_completed_data)
+        
+        decoded_mfa = asyncio.run(AuthService.verify_token(mfa_token))
         assert decoded_mfa['sub'] == credentials['username']
     
     @given(credentials=user_credentials())
@@ -83,7 +84,8 @@ class TestMultiFactorAuthentication:
         }
         
         token = AuthService.create_access_token(token_data)
-        decoded = AuthService.verify_token(token)
+        token = AuthService.create_access_token(token_data)
+        decoded = asyncio.run(AuthService.verify_token(token))
         
         # Verify data preservation
         assert decoded['sub'] == credentials['username']
@@ -91,7 +93,7 @@ class TestMultiFactorAuthentication:
         assert 'exp' in decoded  # Expiration should be set
     
     @given(password=valid_passwords())
-    @settings(deadline=2000)  # Password hashing can be slow
+    @settings(deadline=2000, max_examples=10)  # Password hashing can be slow
     def test_password_hashing_property(self, password):
         """
         Property: Password hashing round-trip

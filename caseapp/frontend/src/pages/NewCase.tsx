@@ -15,7 +15,7 @@ export const NewCase: React.FC = () => {
         court_name: '',
         judge_name: '',
         case_jurisdiction: '',
-        filed_date: new Date().toISOString().split('T')[0], // Default to today
+        filed_date: new Date().toISOString(), // Default to today full ISO
         court_date: ''
     });
 
@@ -26,17 +26,19 @@ export const NewCase: React.FC = () => {
         e.preventDefault();
         setLoading(true);
         setError(null);
-        
+
         try {
-            await caseService.create({
+            const payload = {
                 ...formData,
                 priority: formData.priority.toLowerCase(), // Backend expects lowercase enums
                 case_type: 'civil', // Defaulting for now as it's required by backend schema
                 client_id: null,
-                // Ensure empty strings are sent as null if API prefers, or kept as strings. 
-                // Using exact values from form.
-                court_date: formData.court_date || null
-            });
+                // Ensure dates are sent as full ISO strings
+                filed_date: formData.filed_date ? new Date(formData.filed_date).toISOString() : null,
+                court_date: formData.court_date ? new Date(formData.court_date).toISOString() : null
+            };
+
+            await caseService.create(payload);
             navigate('/cases');
         } catch (err: any) {
             console.error('Failed to create case:', err);
@@ -57,10 +59,10 @@ export const NewCase: React.FC = () => {
     };
 
     const labelStyle = {
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px', 
-        color: 'var(--text-secondary)', 
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: 'var(--text-secondary)',
         fontSize: '0.9rem',
         marginBottom: '8px'
     };
@@ -72,11 +74,11 @@ export const NewCase: React.FC = () => {
                     <h1 className="gradient-text" style={{ fontSize: '2rem', marginBottom: '8px' }}>Create New Case</h1>
                     <p style={{ color: 'var(--text-secondary)' }}>Initialize a new forensic investigation or legal record.</p>
                 </div>
-                <button 
+                <button
                     onClick={() => navigate('/cases')}
-                    style={{ 
-                        background: 'transparent', 
-                        border: '1px solid var(--border-subtle)', 
+                    style={{
+                        background: 'transparent',
+                        border: '1px solid var(--border-subtle)',
                         color: 'var(--text-secondary)',
                         padding: '10px 20px',
                         borderRadius: 'var(--radius-md)',
@@ -92,9 +94,9 @@ export const NewCase: React.FC = () => {
             </header>
 
             {error && (
-                <div style={{ 
-                    padding: '16px', 
-                    background: 'hsla(0, 100%, 50%, 0.1)', 
+                <div style={{
+                    padding: '16px',
+                    background: 'hsla(0, 100%, 50%, 0.1)',
                     border: '1px solid hsla(0, 100%, 50%, 0.2)',
                     borderRadius: 'var(--radius-md)',
                     color: 'hsl(0, 100%, 60%)',
@@ -147,14 +149,14 @@ export const NewCase: React.FC = () => {
                         placeholder="Provide initial background and investigation details..."
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        style={{...inputStyle, resize: 'vertical'}}
+                        style={{ ...inputStyle, resize: 'vertical' }}
                     />
                 </div>
 
                 {/* Court Details Section */}
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '24px' }}>
-                     <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Court Information</h3>
-                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Court Information</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                         <div>
                             <label style={labelStyle}>
                                 <Scale size={16} />
@@ -195,16 +197,16 @@ export const NewCase: React.FC = () => {
                             />
                         </div>
                         <div>
-                             {/* Empty placeholder to align grid if needed, or add another field */}
+                            {/* Empty placeholder to align grid if needed, or add another field */}
                         </div>
-                     </div>
+                    </div>
                 </div>
 
                 {/* Dates Section */}
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '24px' }}>
                     <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)' }}>Key Dates</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                         <div>
+                        <div>
                             <label style={labelStyle}>
                                 <Calendar size={16} />
                                 Date Filed
@@ -260,10 +262,10 @@ export const NewCase: React.FC = () => {
                     </div>
                 </div>
 
-                <div style={{ 
-                    marginTop: '8px', 
-                    padding: '16px', 
-                    background: 'hsla(30, 100%, 50%, 0.1)', 
+                <div style={{
+                    marginTop: '8px',
+                    padding: '16px',
+                    background: 'hsla(30, 100%, 50%, 0.1)',
                     border: '1px solid hsla(30, 100%, 50%, 0.2)',
                     borderRadius: 'var(--radius-md)',
                     display: 'flex',

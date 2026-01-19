@@ -22,6 +22,7 @@ from aws_cdk import (
     aws_cloudwatch_actions as cw_actions,
     aws_sns as sns,
     aws_secretsmanager as secretsmanager,
+    aws_s3_deployment as s3_deploy,
     Duration,
     RemovalPolicy
 )
@@ -435,7 +436,12 @@ class CourtCaseManagementStack(Stack):
                 enable=True  # Explicitly enable circuit breaker for automatic rollback
             ),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-backend:latest"),
+                image=ecs.ContainerImage.from_asset(
+                    directory="..",
+                    target="backend-base",
+                    file="Dockerfile",
+                    exclude=["infrastructure/cdk.out", "**/node_modules", ".git"]
+                ),
                 container_port=8000,
                 execution_role=execution_role,
                 task_role=task_role,
@@ -860,7 +866,12 @@ class CourtCaseManagementStack(Stack):
         # Media processing container
         media_container = media_task_def.add_container(
             "MediaProcessor",
-            image=ecs.ContainerImage.from_registry(f"{docker_username}/court-case-media:latest"),
+                image=ecs.ContainerImage.from_asset(
+                    directory="..",
+                    target="media-processor",
+                    file="Dockerfile",
+                    exclude=["infrastructure/cdk.out", "**/node_modules", ".git"]
+                ),
             environment={
                 "AWS_REGION": self.region,
                 "S3_BUCKET_NAME": self.media_bucket.bucket_name,
@@ -1103,6 +1114,15 @@ class CourtCaseManagementStack(Stack):
             self, "UserPoolClientId",
             value=self.user_pool_client.user_pool_client_id,
             description="Cognito User Pool Client ID"
+        )
+        
+        # Frontend Deployment
+        s3_deploy.BucketDeployment(
+            self, "DeployFrontend",
+            sources=[s3_deploy.Source.asset("../frontend/dist", exclude=["**/node_modules", ".git"])],
+            destination_bucket=self.frontend_bucket,
+            distribution=self.distribution,
+            distribution_paths=["/*"]
         )
 
 

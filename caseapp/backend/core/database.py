@@ -6,7 +6,7 @@ import asyncio
 from typing import AsyncGenerator, Optional
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy import text, event
 from sqlalchemy.exc import DisconnectionError, OperationalError
 import structlog
@@ -35,35 +35,38 @@ class DatabaseConnectionManager:
         database_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
         
         # Create engine with connection pooling and retry logic
-        self.engine = create_async_engine(
-            database_url,
-            # Connection pool configuration for production reliability
-            # Note: Async engines use AsyncAdaptedQueuePool by default
-            pool_size=10,                    # Number of connections to maintain in pool
-            max_overflow=20,                 # Additional connections beyond pool_size
-            pool_pre_ping=True,              # Validate connections before use
-            pool_recycle=3600,               # Recycle connections every hour
-            pool_timeout=30,                 # Timeout for getting connection from pool
-            
-            # Connection arguments for better reliability
-            connect_args={
+        # Prepare engine arguments
+        engine_args = {
+            "echo": settings.DEBUG,
+            "echo_pool": settings.DEBUG,
+            "execution_options": {
+                "isolation_level": "READ_COMMITTED"
+            },
+            "connect_args": {
                 "server_settings": {
                     "application_name": "court_case_management",
-                    "jit": "off"  # Disable JIT for more predictable performance
+                    "jit": "off"
                 },
-                "command_timeout": 60,       # Command timeout in seconds
-                # Remove statement_timeout as it's not supported in asyncpg connect_args
-            },
-            
-            # Logging and debugging
-            echo=settings.DEBUG,
-            echo_pool=settings.DEBUG,
-            
-            # Retry configuration
-            execution_options={
-                "isolation_level": "READ_COMMITTED"
+                "command_timeout": 60,
             }
-        )
+        }
+        
+        # Configure pooling based on environment
+        if settings.TESTING:
+            # Use NullPool for testing to avoid connection persistence across event loops
+            engine_args["poolclass"] = NullPool
+        else:
+            # Production pool configuration
+            engine_args.update({
+                "pool_size": 10,
+                "max_overflow": 20,
+                "pool_pre_ping": True,
+                "pool_recycle": 3600,
+                "pool_timeout": 30,
+            })
+            
+        # Create engine
+        self.engine = create_async_engine(database_url, **engine_args)
         
         # Add connection event listeners for monitoring
         @event.listens_for(self.engine.sync_engine, "connect")

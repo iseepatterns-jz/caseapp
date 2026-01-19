@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "iseepatterns"
     DEBUG: bool = False
+    TESTING: bool = False
     VERSION: str = "1.0.0"
     
     # API

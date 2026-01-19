@@ -128,12 +128,7 @@ class TestCaseOperationProperties:
                 return False
         
         # Run the async test
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(run_test())
-        finally:
-            loop.close()
+        asyncio.run(run_test())
 
     @given(closure_data=closure_data_strategy())
     @settings(deadline=2000, max_examples=20)
@@ -208,12 +203,7 @@ class TestCaseOperationProperties:
                 pytest.fail(f"Case closure with valid metadata failed: {e}")
         
         # Run the async test
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(run_test())
-        finally:
-            loop.close()
+        asyncio.run(run_test())
 
     def test_closure_without_reason_validation_property(self):
         """
@@ -251,8 +241,8 @@ class TestCaseOperationProperties:
         # Property: The system should support exactly the case types specified in requirements
         supported_types = set(CaseType)
         required_types = {
-            "civil", "criminal", "family", "corporate", "immigration", 
-            "personal_injury", "real_estate", "bankruptcy", "intellectual_property"
+            "CIVIL", "CRIMINAL", "FAMILY", "CORPORATE", "IMMIGRATION", 
+            "PERSONAL_INJURY", "REAL_ESTATE", "BANKRUPTCY", "INTELLECTUAL_PROPERTY"
         }
         
         # Verify all required types are supported

@@ -32,6 +32,7 @@ services:
       target: backend-base
     ports:
       - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       # Database configuration (individual fields for RDS compatibility)
       - DB_HOST=postgres

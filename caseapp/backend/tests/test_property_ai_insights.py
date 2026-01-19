@@ -94,14 +94,7 @@ def ai_response_strategy(draw):
 class TestAIInsightGenerationProperties:
     """Property-based tests for AI insight generation"""
     
-    def run_async_test(self, async_func, *args, **kwargs):
-        """Helper to run async functions in sync context"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(async_func(*args, **kwargs))
-        finally:
-            loop.close()
+
     
     @given(
         case_data=case_data_strategy(),
@@ -128,7 +121,7 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.1, 7.4, 7.5, 7.6
         """
-        self.run_async_test(self._test_ai_insight_generation_async, case_data, documents, ai_response, confidence_threshold)
+        asyncio.run(self._test_ai_insight_generation_async(case_data, documents, ai_response, confidence_threshold))
     
     async def _test_ai_insight_generation_async(
         self, 
@@ -446,7 +439,7 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.3 (anomaly detection)
         """
-        self.run_async_test(self._test_anomaly_detection_async, case_data, forensic_items, anomaly_threshold)
+        asyncio.run(self._test_anomaly_detection_async(case_data, forensic_items, anomaly_threshold))
     
     async def _test_anomaly_detection_async(
         self,
@@ -672,7 +665,7 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.6 (confidence scores and source attribution)
         """
-        self.run_async_test(self._test_confidence_threshold_async, confidence_threshold)
+        asyncio.run(self._test_confidence_threshold_async(confidence_threshold))
     
     async def _test_confidence_threshold_async(
         self,
@@ -794,7 +787,7 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.1-7.6 (error handling)
         """
-        self.run_async_test(self._test_error_handling_async)
+        asyncio.run(self._test_error_handling_async())
     
     async def _test_error_handling_async(self):
         """
@@ -904,9 +897,8 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.2, 7.6 (timeline event suggestions structure)
         """
-        self.run_async_test(
-            self._test_timeline_suggestions_structure_async, 
-            confidence_threshold, max_suggestions
+        asyncio.run(
+            self._test_timeline_suggestions_structure_async(confidence_threshold, max_suggestions)
         )
     
     async def _test_timeline_suggestions_structure_async(

@@ -1,19 +1,9 @@
-import sys
-from unittest.mock import MagicMock
 
-# Mock problematic dependencies before they are imported by services
-mock_modules = [
-    'biplist', 'spacy', 'textblob', 'networkx', 
-    'sklearn', 'sklearn.feature_extraction', 'sklearn.feature_extraction.text',
-    'sklearn.cluster', 'sklearn.decomposition',
-    'pandas', 'numpy'
-]
-for mod in mock_modules:
-    sys.modules[mod] = MagicMock()
+# Validates fixes for service robustness
 
 import pytest
 import unittest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from datetime import datetime
 from services.case_insight_service import CaseInsightService
 from services.forensic_analysis_service import ForensicAnalysisService

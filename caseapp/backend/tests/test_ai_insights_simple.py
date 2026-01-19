@@ -10,31 +10,24 @@ from typing import Dict, Any, List
 from hypothesis import given, strategies as st, settings, HealthCheck
 import uuid
 from unittest.mock import patch, MagicMock
+from sqlalchemy import text
 
 from models.case import Case, CaseType, CaseStatus
 from models.document import Document
 from models.user import User, UserRole
 from services.case_insight_service import CaseInsightService
-from core.database import AsyncSessionLocal
+from core.database import AsyncSessionLocal, engine
 from core.exceptions import CaseManagementException
 
 class TestAIInsightGenerationProperties:
     """Property-based tests for AI insight generation"""
     
-    def run_async_test(self, async_func, *args, **kwargs):
-        """Helper to run async functions in sync context"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(async_func(*args, **kwargs))
-        finally:
-            loop.close()
-    
+    @pytest.mark.asyncio
     @given(
         confidence_threshold=st.floats(min_value=0.1, max_value=0.9)
     )
     @settings(max_examples=5, deadline=10000, suppress_health_check=[HealthCheck.function_scoped_fixture])
-    def test_property_24_ai_insight_generation(self, confidence_threshold: float):
+    async def test_property_24_ai_insight_generation(self, confidence_threshold: float):
         """
         Property 24: AI Insight Generation
         
@@ -46,16 +39,13 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.1, 7.4, 7.5, 7.6
         """
-        self.run_async_test(self._test_ai_insight_generation_async, confidence_threshold)
-    
-    async def _test_ai_insight_generation_async(self, confidence_threshold: float):
-        """Async implementation of AI insight generation test"""
-        # Create database session and test user
+        # Create database session and unique test user
+        username = f"test_user_{uuid.uuid4()}"
         async with AsyncSessionLocal() as db_session:
             test_user = User(
                 id=uuid.uuid4(),
-                username="test_user",
-                email="test@example.com",
+                username=username,
+                email=f"{username}@example.com",
                 hashed_password="test_hash",
                 first_name="Test",
                 last_name="User",
@@ -86,7 +76,7 @@ class TestAIInsightGenerationProperties:
                 # Create test case
                 case = Case(
                     id=uuid.uuid4(),
-                    case_number="TEST-001",
+                    case_number=f"TEST-{uuid.uuid4().hex[:8].upper()}",
                     title="Test Case",
                     description="Test case for AI insight generation",
                     case_type=CaseType.CIVIL,
@@ -194,8 +184,20 @@ class TestAIInsightGenerationProperties:
                 except CaseManagementException:
                     # Service may fail with insufficient data, which is acceptable for testing
                     pass
-    
-    def test_property_24_error_handling_robustness(self):
+                
+                finally:
+                    # Cleanup data
+                    try:
+                        await db_session.execute(text(f"DELETE FROM audit_logs WHERE user_id = '{test_user.id}'"))
+                        await db_session.execute(text(f"DELETE FROM documents WHERE uploaded_by = '{test_user.id}'"))
+                        await db_session.execute(text(f"DELETE FROM cases WHERE created_by = '{test_user.id}'"))
+                        await db_session.execute(text(f"DELETE FROM users WHERE id = '{test_user.id}'"))
+                        await db_session.commit()
+                    except Exception:
+                        await db_session.rollback()
+
+    @pytest.mark.asyncio
+    async def test_property_24_error_handling_robustness(self):
         """
         Property 24: Error Handling Robustness
         
@@ -206,10 +208,6 @@ class TestAIInsightGenerationProperties:
         
         Validates Requirements 7.1-7.6 (error handling)
         """
-        self.run_async_test(self._test_error_handling_async)
-    
-    async def _test_error_handling_async(self):
-        """Async implementation of error handling test"""
         service = CaseInsightService()
         
         # Test with non-existent case - this should fail with database connection or case not found
@@ -224,6 +222,10 @@ class TestAIInsightGenerationProperties:
             # Should get either "not found" or database connection error
             error_msg = str(e).lower()
             assert ("not found" in error_msg or 
-                   "connect" in error_msg or 
-                   "database" in error_msg or
-                   "connection" in error_msg), f"Unexpected error message: {e}"
+                   "connect" in error_msg or                    "database" in error_msg or
+                    "connection" in error_msg), f"Unexpected error message: {e}"
+    
+    @pytest.fixture(autouse=True)
+    async def cleanup_database(self):
+        yield
+        # await engine.dispose() - removed to prevent event loop closed error

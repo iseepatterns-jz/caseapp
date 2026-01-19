@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from core.config import settings
 from core.database import engine, Base, get_db
 from core.redis import redis_service
-from core.audit_middleware import audit_middleware
+from core.audit_middleware import AuditMiddleware
 from core.service_manager import ServiceManager
 from core.exceptions import (
     CaseManagementException,
@@ -216,10 +216,14 @@ app = FastAPI(
             "description": "System health monitoring - check service status and dependencies"
         }
     ],
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False
 )
 
-# Configure CORS
+# Add audit logging middleware
+app.add_middleware(AuditMiddleware)
+
+# Configure CORS - handles preflight requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_HOSTS,
@@ -227,9 +231,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Add audit logging middleware
-app.middleware("http")(audit_middleware)
 
 # Add exception handlers
 app.add_exception_handler(CaseManagementException, case_management_exception_handler)
