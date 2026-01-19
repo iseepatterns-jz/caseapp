@@ -503,14 +503,6 @@ class CourtCaseManagementStack(Stack):
         # Configure ECS service health check settings
         cfn_service.add_property_override("HealthCheckGracePeriodSeconds", 300)
         
-        # Add Docker Hub credentials to backend task definition
-        cfn_task_def = self.backend_service.task_definition.node.default_child
-        cfn_task_def.add_property_override(
-            "ContainerDefinitions.0.RepositoryCredentials",
-            {
-                "CredentialsParameter": dockerhub_secret.secret_arn
-            }
-        )
         
         # Configure load balancer health check
         # Use root endpoint / which is simple and doesn't require database
@@ -892,14 +884,6 @@ class CourtCaseManagementStack(Stack):
             )
         )
         
-        # Add Docker Hub credentials to media container
-        cfn_task_def = media_task_def.node.default_child
-        cfn_task_def.add_property_override(
-            "ContainerDefinitions.0.RepositoryCredentials",
-            {
-                "CredentialsParameter": dockerhub_secret.secret_arn
-            }
-        )
         
         # Media processing service
         self.media_service = ecs.FargateService(
